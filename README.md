@@ -96,12 +96,7 @@ npm -v
 
 - ダウンロード: [https://desktop.github.com/](https://desktop.github.com/)
 - GitHub アカウントでログイン
-- 初期画面で：
-  - `Add Local Repository` → プロジェクトフォルダを選択
-  - `Commit to main` で変更を保存
-  - `Push origin` でGitHubにアップロード
-- `.gitignore` はGitHub Desktopで編集も可能（`node_modules`, `.env` など除外）
-
+- 以降の説明は省略
 ---
 
 ## ■ 4. **Docker Desktop**
