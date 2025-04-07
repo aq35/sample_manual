@@ -188,7 +188,7 @@ npm run start:dev
 
 ## ■ ステップ 5：GitHub Desktopで管理する
 
-1. 慣れている方は、vscodeのgitツールでも、OKです。
+1. 慣れているgitツールでOKです。
 
 ---
 
