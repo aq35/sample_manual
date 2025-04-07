@@ -4,6 +4,35 @@
 
 ---
 
+```mermaid
+graph TD
+    A[Developer's Mac] --> |管理| B[GitHub Desktop]
+    A --> |コード編集| C[Visual Studio Code]
+    
+    subgraph プロジェクト構成
+        D[Frontend: Vue 3 + Vite] 
+        E[Backend: NestJS]
+        F[Database: DynamoDB Local]
+    end
+    
+    B --> |バージョン管理| D
+    B --> |バージョン管理| E
+    
+    C --> |開発| D
+    C --> |開発| E
+    
+    G[Docker Desktop] --> |コンテナ管理| F
+    
+    D --> |HTTP通信| E
+    E --> |データアクセス| F
+    
+    classDef tool fill:#f9f,stroke:#333,stroke-width:2px;
+    classDef service fill:#bbf,stroke:#333,stroke-width:2px;
+    
+    class A,B,C,G tool;
+    class D,E,F service;
+```
+
 ## ■ 0. **Homebrew のインストール（Macのパッケージ管理ツール）**
 
 ターミナルを開いて、以下のコマンドを1行ずつコピー＆貼り付けて実行：
