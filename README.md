@@ -139,7 +139,7 @@ npm -v
 
 ## ■ ステップ 2：DynamoDB Local のセットアップ（Docker使用）
 
-### 1. `docker-compose.yml` を作成（ルートに）
+### 1. `docker-compose.yml` を確認。
 
 ```yaml
 version: '3.8'
