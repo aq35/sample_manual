@@ -79,7 +79,7 @@ npm -v
 ## ■ 2. **Visual Studio Code (VSCode)**
 
 - ダウンロード: [https://code.visualstudio.com/](https://code.visualstudio.com/)
-- インストール後、起動してください。：
+- インストール後、起動してください。
 
 ### VSCodeの使い方（最小限）
 
