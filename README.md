@@ -6,14 +6,25 @@
 
 ```mermaid
 graph TD
-    A[Developer's Mac] --> |管理| B[GitHub Desktop]
-    A --> |コード編集| C[Visual Studio Code]
+    A[Developer's Mac] --> |パッケージ管理| H[Homebrew]
+    H --> |インストール| I[Node.js]
+    
+    subgraph 開発ツール
+        B[GitHub Desktop]
+        C[Visual Studio Code]
+    end
     
     subgraph プロジェクト構成
         D[Frontend: Vue 3 + Vite] 
         E[Backend: NestJS]
         F[Database: DynamoDB Local]
     end
+    
+    A --> |管理| B
+    A --> |コード編集| C
+    
+    I --> |npm管理| D
+    I --> |npm管理| E
     
     B --> |バージョン管理| D
     B --> |バージョン管理| E
@@ -28,8 +39,9 @@ graph TD
     
     classDef tool fill:#f9f,stroke:#333,stroke-width:2px;
     classDef service fill:#bbf,stroke:#333,stroke-width:2px;
+    classDef infrastructure fill:#bfb,stroke:#333,stroke-width:2px;
     
-    class A,B,C,G tool;
+    class A,B,C,G,H,I infrastructure;
     class D,E,F service;
 ```
 
