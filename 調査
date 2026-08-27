@@ -1,0 +1,230 @@
+以下をそのままAIに渡すのがよいです。ポイントは、**コードレビューだけで根本原因を断定させず、実行時観測との突合を必須にすること**です。
+
+DB接続数が増加し、RDS Proxyの`ClientConnections`が100付近まで到達する事象を調査してください。
+
+## 現在分かっていること
+
+* バックエンドはGo＋MySQL
+* RDS Proxy経由でAurora MySQLへ接続している
+* ECSタスク数は2
+* Goの`database/sql`で`SetMaxOpenConns(100)`を設定している
+* Aurora側の利用可能接続数は約1,000
+* RDS Proxyの`MaxIdleConnectionsPercent`は50%
+* Workerで`GET_LOCK()`を使用している
+* タスクがシグナルキルされる場合がある
+* CloudWatchの`ClientConnections`が100付近まで増える
+* `GET_LOCK()`以外のSQLでもセッションピン留めが発生している可能性がある
+
+## 調査目的
+
+次のどれが支配的な原因かを、推測ではなく観測結果から判定してください。
+
+1. 生きているGoプロセスが、並列処理によって正当に多数の接続を使用している
+2. `Rows`、`Tx`、`Conn`などの終了処理漏れにより、Go側で接続を返却できていない
+3. `GET_LOCK()`または他のSQLによるRDS Proxyのセッションピン留め
+4. タスク停止時のGraceful Shutdown不足により、旧タスクと新タスクの接続が一時的に重複している
+5. Goの接続プール設定がワークロードに対して過大
+6. Go以外の別プロセス・別サービスが接続を使用している
+7. 上記以外の原因
+
+複数が存在する場合は、それぞれを「根本原因」「誘因」「助長要因」「結果」に分けてください。
+
+## 1. コードの静的調査
+
+以下をリポジトリ全体から洗い出してください。
+
+* `sql.Open`、GORM初期化など、すべてのDB接続生成箇所
+* `SetMaxOpenConns`
+* `SetMaxIdleConns`
+* `SetConnMaxIdleTime`
+* `SetConnMaxLifetime`
+* コンテナ・プロセスごとの`sql.DB`インスタンス数
+* Worker、API、バッチなど、DBへ接続する全プロセス
+* goroutineや並列処理数を決めている箇所
+* `GET_LOCK()`と`RELEASE_LOCK()`の全呼び出し
+* ロック取得から解放までの処理内容
+* ロック保持中の外部API呼び出し、sleep、リトライ、待機処理
+* `Query`、`QueryContext`後の`rows.Close()`
+* `Begin`、`BeginTx`後の`Commit()`または`Rollback()`
+* `db.Conn()`後の`conn.Close()`
+* `Prepare`後の`stmt.Close()`
+* Graceful Shutdown、SIGTERM、SIGKILL、ECSの停止設定
+* タスク終了時に`db.Close()`まで到達するか
+* 無制限リトライ、再接続ループ、タイムアウト不足
+
+各箇所について、ファイル名・関数名・該当行・問題になる条件を示してください。
+
+静的解析だけで「漏れている」と断定せず、確定・疑い・問題なしに分類してください。
+
+## 2. Go側の実行時観測
+
+全DBプロセスで`db.Stats()`を10〜30秒間隔で記録できるか確認してください。
+
+最低限、以下を出力します。
+
+```go
+stats := db.Stats()
+
+log.Printf(
+    "db_stats task_id=%s max_open=%d open=%d in_use=%d idle=%d "+
+        "wait_count=%d wait_duration=%s "+
+        "max_idle_closed=%d max_idle_time_closed=%d max_lifetime_closed=%d",
+    taskID,
+    stats.MaxOpenConnections,
+    stats.OpenConnections,
+    stats.InUse,
+    stats.Idle,
+    stats.WaitCount,
+    stats.WaitDuration,
+    stats.MaxIdleClosed,
+    stats.MaxIdleTimeClosed,
+    stats.MaxLifetimeClosed,
+)
+```
+
+次の識別情報も必ず付けてください。
+
+* サービス名
+* ECSタスクID
+* コンテナIDまたはホスト名
+* プロセスID
+* DB接続プールを識別する名前
+* 計測時刻
+
+`WaitCount`と`WaitDuration`は累積値なので、前回値との差分も出してください。
+
+本番への計測追加が必要な場合は、勝手にデプロイせず、追加するコードと影響を先に提示してください。
+
+## 3. RDS Proxyとの時刻突合
+
+同じ時間帯について、CloudWatchから以下を確認してください。
+
+* `ClientConnections`
+* `DatabaseConnections`
+* `DatabaseConnectionsCurrentlySessionPinned`
+* `DatabaseConnectionsBorrowLatency`
+
+可能であれば、ECSの次のイベントも同じ時系列に重ねてください。
+
+* タスク起動
+* SIGTERM受信
+* Graceful Shutdown開始
+* `db.Close()`開始・完了
+* タスク停止
+* 新タスク起動
+
+比較する際は、1タスクの値ではなく、次の合計を使用してください。
+
+```text
+全Goプロセス・全DBプールのOpenConnections合計
+対
+RDS ProxyのClientConnections
+```
+
+## 4. MySQL側の確認
+
+事象発生中に、可能であれば次を取得してください。
+
+```sql
+SELECT
+    ID,
+    USER,
+    HOST,
+    DB,
+    COMMAND,
+    TIME,
+    STATE,
+    LEFT(INFO, 200) AS INFO
+FROM information_schema.PROCESSLIST
+ORDER BY TIME DESC;
+```
+
+```sql
+SELECT
+    trx_mysql_thread_id,
+    trx_started,
+    trx_state,
+    trx_query
+FROM information_schema.innodb_trx
+ORDER BY trx_started;
+```
+
+以下を確認してください。
+
+* 長時間`Sleep`している接続数
+* 長時間実行中のSQL
+* `GET_LOCK()`待機
+* 長時間トランザクション
+* 同じSQLの大量並列実行
+* アプリケーション処理終了後も残る接続
+
+本番DBへのクエリ実行権限がない場合は、実行せず、必要なSQLと採取依頼内容を提示してください。
+
+## 5. 判定基準
+
+以下の基準で結果を判定してください。
+
+* `OpenConnections≈100`かつ`InUse≈100`
+
+  * 生きているGoプロセスが接続を使い切っている
+* `OpenConnections≈100`かつ`Idle`が多い
+
+  * Go側のidle保持またはプール設定が過大
+* `WaitCount`・`WaitDuration`の差分が増加
+
+  * Go接続プール内で接続待ちが発生
+* `DatabaseConnectionsCurrentlySessionPinned`が増加
+
+  * `GET_LOCK()`などのピン留めが影響
+* `DatabaseConnectionsBorrowLatency`が増加
+
+  * RDS ProxyからDB接続を借りる箇所で待ちが発生
+* 全Goプロセスの`OpenConnections`合計と`ClientConnections`が近い
+
+  * 生存中のアプリ接続でおおむね説明できる
+* `ClientConnections`がGoの合計より明らかに多い
+
+  * 別サービス、旧タスク、計測漏れ、切断認識遅延を調査する
+* タスク再起動ごとに`ClientConnections`が階段状に増加
+
+  * 新旧タスクの接続重複または回収遅延を疑う
+* 再起動とは無関係に負荷と連動して増加
+
+  * 並列処理や接続保持時間を主に疑う
+
+## 6. 注意事項
+
+* `SetMaxOpenConns(100)`とRDS Proxyの`ClientConnections`を同じ値として扱わないでください
+* `SetMaxOpenConns(100)`は1プロセス・1接続プール単位です
+* タスク数2でも、各タスク内の並列SQLにより多数の接続を使用します
+* `ClientConnections`との比較には全プロセスの`OpenConnections`合計を使ってください
+* `GET_LOCK()`はRDS Proxyのピン留め要因ですが、`ClientConnections`増加の直接原因とは限りません
+* MySQLセッションが切断されれば、`GET_LOCK()`は異常終了時でも解放されます
+* シグナルキル後の接続残留は、停止前後の時系列が確認できるまで確定原因にしないでください
+* `MaxIdleConnectionsPercent=50%`はRDS ProxyからAuroraへのidle DB接続設定であり、Goのidle接続数や`ClientConnections`上限ではありません
+* 設定値を変更して症状を移動させる前に、現在の状態を計測してください
+* 調査中に本番設定、DB、ECSサービスを変更しないでください
+
+## 7. 報告形式
+
+次の順番で報告してください。
+
+1. 結論
+2. 確認できた事実
+3. 未確認事項
+4. 原因候補一覧
+5. 各候補を支持する証拠
+6. 各候補に反する証拠
+7. 根本原因・誘因・助長要因・結果の分類
+8. 時系列表
+9. Go・RDS Proxy・Aurora間の接続数比較表
+10. 最小限の追加計測
+11. 対策案と優先順位
+12. 対策ごとの副作用
+13. Mermaidによる因果関係図
+
+証拠が不足している場合は、根本原因を断定せず「未確定」としてください。
+
+最初は読み取りと調査だけを行い、修正や設定変更はしないでください。
+
+この指示なら、AIがコードだけを見て「`GET_LOCK()`が原因」「シグナルキルが原因」と早合点するのを防ぎつつ、**生存中の接続利用と終了後の接続残留を切り分けられます**。
