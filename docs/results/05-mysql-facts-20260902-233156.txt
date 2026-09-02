@@ -1,0 +1,58 @@
+# ⑤ MySQL の挙動確認（§9 の未検証項目）
+# 実行: 2026-09-02T23:33:15+00:00
+# コマンド: go test ./internal/mysqlfacts/ -v -timeout 10m
+
+=== RUN   TestFact_flush_log_at_trx_commit
+    facts_test.go:36: MySQL 8.0.46-0ubuntu0.24.04.4
+    facts_test.go:42: GLOBAL の現在値: 1
+    facts_test.go:49: SET SESSION は拒否される → サーバ全体の設定で確定: Error 1229 (HY000): Variable 'innodb_flush_log_at_trx_commit' is a GLOBAL variable and should be set with SET GLOBAL
+    facts_test.go:67: SET GLOBAL で動的に変更できる（再起動不要）
+    facts_test.go:68: ★ただしサーバ全体に効くため、同居している他の業務データにも一律で効く。専用インスタンスでない限り触らないこと
+--- PASS: TestFact_flush_log_at_trx_commit (0.00s)
+=== RUN   TestFact_flush設定ごとのコミット速度
+    facts_test.go:104: innodb_flush_log_at_trx_commit=1: autocommit 1件あたり 1.442652ms (693 tx/s)
+    facts_test.go:104: innodb_flush_log_at_trx_commit=2: autocommit 1件あたり 957.805µs (1044 tx/s)
+    facts_test.go:104: innodb_flush_log_at_trx_commit=0: autocommit 1件あたり 871.292µs (1148 tx/s)
+    facts_test.go:106: ※ 1 は「コミットのたびにディスク同期」。0/2 は同期を省くぶん速いが、落ちたときに直近のコミットを失う
+--- PASS: TestFact_flush設定ごとのコミット速度 (0.68s)
+=== RUN   TestFact_行エイリアス構文
+    facts_test.go:112: MySQL 8.0.46-0ubuntu0.24.04.4
+    facts_test.go:123: AS new（行エイリアス）が使える
+    facts_test.go:131: AS new を付けると UPDATE 部の裸の列名は曖昧になる → 表名で修飾が必須: Error 1052 (23000): Column 'v' in field list is ambiguous
+    facts_test.go:151: 旧構文の警告: [Warning 1287] 'VALUES function' is deprecated and will be removed in a future release. Please use an alias (INSERT INTO ... VALUES (...) AS alias) and replace VALUES(col) in the ON DUPLICATE KEY UPDATE clause with alias.col instead
+--- PASS: TestFact_行エイリアス構文 (0.02s)
+=== RUN   TestFact_同じ値のUPDATEは書き込みを省く
+    facts_test.go:182: 同じ値の UPDATE: affected_rows=0 / 違う値の UPDATE: affected_rows=1
+    facts_test.go:186: → 値が変わらない UPDATE は行を書き換えない。ただし ★往復とロックは発生する（§4.2）
+    facts_test.go:209: 値が変わらない UPDATE でも行ロックは取られる → 別トランザクションは待たされる: Error 1205 (HY000): Lock wait timeout exceeded; try restarting transaction
+--- PASS: TestFact_同じ値のUPDATEは書き込みを省く (1.10s)
+=== RUN   TestFact_パーティションの削除はDELETEより速い
+    facts_test.go:233: PARTITION BY RANGE COLUMNS(date) の構文が通る
+    facts_test.go:270: 50000 行の削除: DROP PARTITION 16.246139ms / DELETE 205.760042ms （12.7 倍）
+    facts_test.go:272: ※ DELETE はこのあと undo の purge も残る。DROP PARTITION は表領域ごと落とすので後始末が要らない
+--- PASS: TestFact_パーティションの削除はDELETEより速い (14.95s)
+=== RUN   TestFact_長いトランザクションはundoを伸ばす
+    facts_test.go:317: History list length: 開始 28 → 長いトランザクションを開いたまま2000回更新 2000 → コミット後 2002
+    facts_test.go:322: → 長いトランザクションを開いている間、古い版が undo に溜まり続ける（§4.6）
+--- PASS: TestFact_長いトランザクションはundoを伸ばす (6.52s)
+=== RUN   TestFact_DBへの1往復の実測
+    facts_test.go:360: SELECT 1（純粋な往復）              92.426µs
+    facts_test.go:360: 主キー1件 SELECT                 142.464µs
+    facts_test.go:360: 1件 UPDATE（autocommit）        1.131432ms
+    facts_test.go:392: ※ 同一ホスト・TCP。ネットワークを跨ぐ本番はこれより大きい。桁（メモリ比較の10万倍）が変わらないことが要点（§1）
+--- PASS: TestFact_DBへの1往復の実測 (0.77s)
+=== RUN   TestFact_MaxIdleConnsの既定値2が再接続を生む
+    facts_test.go:438: 300クエリ（10並列×30回）で新しく張られた接続数: MaxIdleConns=2 → 199 本 / MaxIdleConns=10 → 10 本
+    facts_test.go:443: → 既定値のままだと、上限まで開いた接続が毎回捨てられ、張り直しになる（§5.2）
+--- PASS: TestFact_MaxIdleConnsの既定値2が再接続を生む (0.09s)
+=== RUN   TestFact_wait_timeoutとConnMaxIdleTime
+[mysql] 2026/09/02 23:32:26 connection.go:803 closing bad idle connection: unexpected read from socket
+    facts_test.go:486: ① 単発クエリ（database/sql が再試行する）: err=<nil>
+[mysql] 2026/09/02 23:32:30 packets.go:68 [warn] unexpected sequence nr: expected 1, got 0
+    facts_test.go:500: ② sql.Conn を掴んだまま放置（再試行されない）: err=Error 4031 (HY000): The client was disconnected by the server because of inactivity. See wait_timeout and interactive_timeout for configuring this behavior.
+[mysql] 2026/09/02 23:32:34 packets.go:68 [warn] unexpected sequence nr: expected 1, got 0
+    facts_test.go:509: ③ トランザクションを開いたまま放置: err=Error 4031 (HY000): The client was disconnected by the server because of inactivity. See wait_timeout and interactive_timeout for configuring this behavior.
+    facts_test.go:526: ④ ConnMaxIdleTime(0.5s) < wait_timeout(2s) にすると、死んだ接続を掴むこと自体が起きない（§5.2）
+--- PASS: TestFact_wait_timeoutとConnMaxIdleTime (16.01s)
+PASS
+ok  	github.com/aq35/sample_manual/internal/mysqlfacts	(cached)
