@@ -1,5 +1,5 @@
 # ⑤ MySQL の挙動確認（§9 の未検証項目）
-# 実行: 2026-09-02T23:33:15+00:00
+# 実行: 2026-09-03T00:04:18+00:00
 # コマンド: go test ./internal/mysqlfacts/ -v -timeout 10m
 
 === RUN   TestFact_flush_log_at_trx_commit

@@ -38,15 +38,8 @@ PARTITION BY RANGE COLUMNS(observed_date) (
   PARTITION pmax      VALUES LESS THAN (MAXVALUE)
 );
 
--- ③ めったに変わらない情報は、状態と同じ行に置かない（§4.4）。
-CREATE TABLE IF NOT EXISTS robot_profile (
-  tenant_id VARCHAR(32) NOT NULL,
-  robot_id  VARCHAR(32) NOT NULL,
-  name      VARCHAR(64) NOT NULL,
-  model     VARCHAR(64) NOT NULL,
-  serial    VARCHAR(64) NOT NULL,
-  PRIMARY KEY (tenant_id, robot_id)
-) ENGINE=InnoDB;
+-- ③ めったに変わらない情報（名前・型番）は、状態と同じ行に置かない（§4.4）。
+-- その表（robot_profile）は internal/repo/schema.sql にある（リポジトリ層の例）。
 
 -- ④ リース: 1テナント1担当を保証する（§2.8）。これが無いと同じワーカーが
 -- 複数コンテナで同時に動き、接続も書き込みも二重になる（普段は動いてしまう）。

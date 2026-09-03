@@ -1,0 +1,19 @@
+# ⑥ 書き込み方法の比較（§4.3）
+# 実行: 2026-09-03T00:04:18+00:00
+# コマンド: go test ./internal/store/ -bench Write -benchtime 30x -run XXX -count=3
+
+goos: linux
+goarch: amd64
+pkg: github.com/aq35/sample_manual/internal/store
+cpu: Intel(R) Xeon(R) Processor @ 2.80GHz
+BenchmarkWrite_EachAutocommit-4   	      30	 118138415 ns/op	         1.181 ms/row
+BenchmarkWrite_EachAutocommit-4   	      30	 125543662 ns/op	         1.255 ms/row
+BenchmarkWrite_EachAutocommit-4   	      30	 127112328 ns/op	         1.271 ms/row
+BenchmarkWrite_EachInOneTx-4      	      30	  24483248 ns/op	         0.2448 ms/row
+BenchmarkWrite_EachInOneTx-4      	      30	  23607169 ns/op	         0.2361 ms/row
+BenchmarkWrite_EachInOneTx-4      	      30	  22227228 ns/op	         0.2223 ms/row
+BenchmarkWrite_BatchUpsert-4      	      30	   4536931 ns/op	         0.04537 ms/row
+BenchmarkWrite_BatchUpsert-4      	      30	   4579663 ns/op	         0.04580 ms/row
+BenchmarkWrite_BatchUpsert-4      	      30	   4641504 ns/op	         0.04642 ms/row
+PASS
+ok  	github.com/aq35/sample_manual/internal/store	13.765s
