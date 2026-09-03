@@ -1,0 +1,9 @@
+# ビルド生成物（cmd/ をそのままビルドすると cwd に実行ファイルが落ちる）
+/sizeprobe
+/worker
+/loadsim
+/proxylab
+/*lab
+# 実験の一時ファイル
+*.test
+*.out
