@@ -3,10 +3,11 @@
 | | |
 | --- | --- |
 | Experiment | EXP-8 / sql-guard-fuzz |
-| Starting SHA | `83598d6b4d1e` (作業ツリーに未コミットの変更あり) |
+| Starting SHA | `bdc8149784b5` (作業ツリーに未コミットの変更あり) |
+| Meter version | `expkit/2` |
 | Hypothesis (frozen before result) | 1) 現在の検査は文字列を見ているだけなので、抜け道がある。 2) 種（手で書いた形）だけでも、複数文・複数表の書き換えが通る。 3) fuzz を回すと、手では思いつかない形（引用符が閉じていない、    :tenant の大文字小文字が混ざる）でさらに通る。 4) 見つけたものは検査に足せるが、**この検査が security boundary になることはない**。 |
-| Environment | go1.24.7 linux/amd64 cpu=4 gomaxprocs=4 mysql= sha=83598d6b4d1e+dirty |
-| Started / Ended | 2026-09-03T15:11:42Z / 2026-09-03T15:11:42Z |
+| Environment | go1.24.7 linux/amd64 cpu=4 gomaxprocs=4 mysql= sha=bdc8149784b5+dirty |
+| Started / Ended | 2026-09-03T22:44:30Z / 2026-09-03T22:44:30Z |
 
 ## Workload
 

@@ -1,0 +1,10 @@
+{
+  "ended_at": "2026-09-03T22:44:57Z",
+  "git_dirty": true,
+  "git_sha": "bdc8149784b5c154ea3f19ef3c64ca99a657f1e6",
+  "json": "exp-11-backup-restore-corruption.json",
+  "md": "exp-11-backup-restore-corruption.md",
+  "meter_version": "expkit/2",
+  "name": "backup-restore-corruption",
+  "unit": "EXP-11"
+}

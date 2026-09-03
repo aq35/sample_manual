@@ -7,7 +7,7 @@ eval "$(./scripts/mysql-up.sh --export)"
 go test ./internal/planlab/ -run TestEXP7 -v -timeout 20m
 ```
 
-結果ファイル: [`docs/results/exp-7/20260903-151108-query-plan-skew.md`](results/exp-7/20260903-151108-query-plan-skew.md)
+結果ファイル: [`docs/results/exp-7/exp-7-query-plan-skew.md`](results/exp-7/exp-7-query-plan-skew.md)
 
 ---
 

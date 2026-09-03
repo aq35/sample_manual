@@ -3,10 +3,11 @@
 | | |
 | --- | --- |
 | Experiment | EXP-3 / graceful-shutdown |
-| Starting SHA | `83598d6b4d1e` (作業ツリーに未コミットの変更あり) |
+| Starting SHA | `bdc8149784b5` (作業ツリーに未コミットの変更あり) |
+| Meter version | `expkit/2` |
 | Hypothesis (frozen before result) | 1) 片付けてから終わる worker は、どの段階で SIGTERM を受けても ack 済み消失を出さず、    未処理をキューへ戻す。 2) 片付けずに落ちる worker は、消失は出さない（キューの可視性タイムアウトが救う）が、    取り出したものが宙に浮き、次に触れるまで遅延する。 3) commit の前に ack する実装は、そこで落ちると **本当に消失する**。 4) 片付けて終わった場合、goroutine は起動時の水準に戻る。 |
-| Environment | go1.24.7 linux/amd64 cpu=4 gomaxprocs=4 mysql=8.0.46-0ubuntu0.24.04.4 sha=83598d6b4d1e+dirty |
-| Started / Ended | 2026-09-03T15:12:00Z / 2026-09-03T15:12:02Z |
+| Environment | go1.24.7 linux/amd64 cpu=4 gomaxprocs=4 mysql=8.0.46-0ubuntu0.24.04.4 sha=bdc8149784b5+dirty |
+| Started / Ended | 2026-09-03T22:43:22Z / 2026-09-03T22:43:24Z |
 
 ## Workload
 
@@ -33,8 +34,8 @@
 | points | 10 |
 | runs_with_goroutine_leak | 0 |
 
-- idle           exit=0 commit=1 ack=1 戻した=3 消失=0 goroutine=2(起動時 2)
-- fetching       exit=0 commit=0 ack=0 戻した=4 消失=0 goroutine=2(起動時 2)
+- idle           exit=0 commit=0 ack=0 戻した=4 消失=0 goroutine=2(起動時 2)
+- fetching       exit=0 commit=1 ack=1 戻した=3 消失=0 goroutine=2(起動時 2)
 - decoding       exit=0 commit=0 ack=0 戻した=4 消失=0 goroutine=2(起動時 2)
 - enqueue        exit=0 commit=0 ack=0 戻した=4 消失=0 goroutine=2(起動時 2)
 - batching       exit=0 commit=21 ack=21 戻した=3 消失=0 goroutine=2(起動時 2)

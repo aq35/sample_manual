@@ -3,10 +3,11 @@
 | | |
 | --- | --- |
 | Experiment | EXP-9 / static-analysis |
-| Starting SHA | `83598d6b4d1e` (作業ツリーに未コミットの変更あり) |
+| Starting SHA | `bdc8149784b5` (作業ツリーに未コミットの変更あり) |
+| Meter version | `expkit/2` |
 | Hypothesis (frozen before result) | 1) 生の *sql.DB の受け渡し、トランザクション内の外部呼び出し、影響行数の捨て、    context 無しの DB 呼び出し、ループ内クエリ、業務ロジック内の time.Now() は、    構文だけで検出できる。 2) unmanaged goroutine と unbounded channel は、構文だけでは判定できない（検出しない）。 3) 逃げ道は塞がず、理由を必須にして使用回数を数える。 |
-| Environment | go1.24.7 linux/amd64 cpu=4 gomaxprocs=4 mysql= sha=83598d6b4d1e+dirty |
-| Started / Ended | 2026-09-03T15:10:10Z / 2026-09-03T15:10:12Z |
+| Environment | go1.24.7 linux/amd64 cpu=4 gomaxprocs=4 mysql= sha=bdc8149784b5+dirty |
+| Started / Ended | 2026-09-03T22:44:31Z / 2026-09-03T22:44:32Z |
 
 ## Results
 

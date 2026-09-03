@@ -2,18 +2,19 @@
   "unit": "EXP-2",
   "name": "lease-fencing-clock-skew",
   "title": "止まった worker・ずれた時計・同時 claim のもとで、古い担当の書き込みを止められるか",
+  "meter_version": "expkit/2",
   "hypothesis": "1) lease だけでは、停止していた worker が再開したときの書き込みを止められない。 2) fence（担当が変わるたびに増える番号）を書き込み条件に入れると止まる。 3) 期限の判定を各プロセスの時計で行うと、時計が進んだプロセスが生きた lease を奪える。    DB の時計で判定すれば奪えない。 4) 同時に claim したとき、勝者は1つになる（lease 方式のいずれでも）。",
-  "started_at": "2026-09-03T15:09:52.26999741Z",
-  "ended_at": "2026-09-03T15:10:03.807593245Z",
+  "started_at": "2026-09-03T22:43:10.035874011Z",
+  "ended_at": "2026-09-03T22:43:21.561050072Z",
   "env": {
-    "captured_at": "2026-09-03T15:09:52.270040122Z",
+    "captured_at": "2026-09-03T22:43:10.035986274Z",
     "go_version": "go1.24.7",
     "os": "linux",
     "arch": "amd64",
     "num_cpu": 4,
     "gomaxprocs": 4,
     "hostname": "vm",
-    "git_sha": "83598d6b4d1ec55173f92de4cc32db1c96e7d5f5",
+    "git_sha": "bdc8149784b5c154ea3f19ef3c64ca99a657f1e6",
     "git_dirty": true,
     "mysql_version": "8.0.46-0ubuntu0.24.04.4"
   },
@@ -46,7 +47,7 @@
       "notes": [
         "担当: A(fence=1) → B(fence=2)",
         "最後に書いたのは A（fence=1）",
-        "A の終了: exit=3 duration=104ms / B の終了: exit=0 duration=216ms",
+        "A の終了: exit=3 duration=105ms / B の終了: exit=0 duration=219ms",
         "★lease を失っていても書けてしまう。停止と再開の間に担当が変わったことを、書き込み側は知らない"
       ]
     },
@@ -64,7 +65,7 @@
       "notes": [
         "担当: A(fence=1) → B(fence=2)",
         "最後に書いたのは B（fence=2）",
-        "A の終了: exit=3 duration=104ms / B の終了: exit=0 duration=218ms",
+        "A の終了: exit=3 duration=103ms / B の終了: exit=0 duration=219ms",
         "古い fence の書き込みは DB 側で拒否された（WHERE fence \u003c= ?）"
       ]
     },
@@ -77,7 +78,7 @@
       },
       "accident": true,
       "notes": [
-        "A の終了: exit=3 duration=194ms / B の終了: exit=0 duration=112ms",
+        "A の終了: exit=3 duration=197ms / B の終了: exit=0 duration=110ms",
         "★期限を自分の時計で判定すると、時計がずれたプロセスが生きた lease を奪える"
       ]
     },
@@ -90,7 +91,7 @@
       },
       "accident": false,
       "notes": [
-        "A の終了: exit=0 duration=801ms / B の終了: exit=4 duration=1.032s",
+        "A の終了: exit=0 duration=806ms / B の終了: exit=4 duration=1.033s",
         "期限の判定を DB の時計に寄せると、プロセスの時計がずれても奪えない"
       ]
     },
@@ -101,7 +102,7 @@
       },
       "accident": true,
       "notes": [
-        "担当を取れたのは [W3 W7 W4 W1 W5 W6 W2 W0]",
+        "担当を取れたのは [W2 W1 W7 W3 W6 W0 W4 W5]",
         "★担当を決めなければ全員が書ける（二重稼働）"
       ]
     },
@@ -112,7 +113,7 @@
       },
       "accident": false,
       "notes": [
-        "担当を取れたのは [W5]"
+        "担当を取れたのは [W1]"
       ]
     },
     {
@@ -122,7 +123,7 @@
       },
       "accident": false,
       "notes": [
-        "担当を取れたのは [W0]"
+        "担当を取れたのは [W7]"
       ]
     }
   ],

@@ -110,16 +110,54 @@ func TestRecorder_結果を保存する(t *testing.T) {
 	if run.Hypothesis == "" || run.Env.GoVersion == "" || len(run.Variants) != 2 {
 		t.Fatalf("記録が欠けている: %+v", run)
 	}
+	if run.MeterVersion != expkit.MeterVersion {
+		t.Errorf("測定器のバージョンが receipt に無い: %q", run.MeterVersion)
+	}
+	// 固定名（タイムスタンプを含まない）で書かれていること
+	if base := filepath.Base(jsonPath); base != "exp-0-selftest.json" {
+		t.Errorf("receipt が固定名でない: %s", base)
+	}
 	md, err := os.ReadFile(mdPath)
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"Hypothesis (frozen before result)", "Failure injection", "適用範囲", "保証しない範囲"} {
+	for _, want := range []string{"Hypothesis (frozen before result)", "Failure injection", "適用範囲", "保証しない範囲", "Meter version"} {
 		if !strings.Contains(string(md), want) {
 			t.Errorf("報告に %q が無い", want)
 		}
 	}
 	t.Logf("結果を %s に保存した（JSON と Markdown）", filepath.Dir(jsonPath))
+}
+
+// TestRecorder_通常モードはrepoを汚さない は、EXP_RECORD が無いとき
+// receipt が repo（docs/results）ではなく一時ディレクトリに書かれることを確かめる。
+//
+// ★これが崩れると full suite のたびに result が上書きされ、作業ツリーが dirty になる
+// （この検査を入れたのは、実際にそれで doc のリンクが毎回ずれたから）。
+func TestRecorder_通常モードはrepoを汚さない(t *testing.T) {
+	t.Setenv("EXP_RESULTS_DIR", "")
+	t.Setenv("EXP_RECORD", "")
+
+	r := expkit.NewRecorder("EXP-0", "selftest-tmp", "通常モードの保存先")
+	r.Env(expkit.CaptureEnv(context.Background(), nil))
+	r.Freeze("通常モードでは repo に書かない")
+	r.Add(expkit.Variant{Name: "only", Counters: map[string]int64{"x": 1}})
+	files, err := r.Save("tmp に書いた")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, f := range files {
+		if strings.Contains(filepath.ToSlash(f), "docs/results") {
+			t.Errorf("通常モードなのに repo の docs/results に書いている: %s", f)
+		}
+		if _, err := os.Stat(f); err != nil {
+			t.Errorf("receipt が書かれていない: %s (%v)", f, err)
+		}
+	}
+	if expkit.Recording() {
+		t.Error("EXP_RECORD 未設定なのに Recording() が true")
+	}
+	t.Logf("通常モードは %s に書いた（repo は触っていない）", filepath.Dir(files[0]))
 }
 
 func TestSampler_goroutineとメモリを追う(t *testing.T) {

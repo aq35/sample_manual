@@ -3,10 +3,11 @@
 | | |
 | --- | --- |
 | Experiment | EXP-2 / lease-fencing-clock-skew |
-| Starting SHA | `83598d6b4d1e` (作業ツリーに未コミットの変更あり) |
+| Starting SHA | `bdc8149784b5` (作業ツリーに未コミットの変更あり) |
+| Meter version | `expkit/2` |
 | Hypothesis (frozen before result) | 1) lease だけでは、停止していた worker が再開したときの書き込みを止められない。 2) fence（担当が変わるたびに増える番号）を書き込み条件に入れると止まる。 3) 期限の判定を各プロセスの時計で行うと、時計が進んだプロセスが生きた lease を奪える。    DB の時計で判定すれば奪えない。 4) 同時に claim したとき、勝者は1つになる（lease 方式のいずれでも）。 |
-| Environment | go1.24.7 linux/amd64 cpu=4 gomaxprocs=4 mysql=8.0.46-0ubuntu0.24.04.4 sha=83598d6b4d1e+dirty |
-| Started / Ended | 2026-09-03T15:09:52Z / 2026-09-03T15:10:03Z |
+| Environment | go1.24.7 linux/amd64 cpu=4 gomaxprocs=4 mysql=8.0.46-0ubuntu0.24.04.4 sha=bdc8149784b5+dirty |
+| Started / Ended | 2026-09-03T22:43:10Z / 2026-09-03T22:43:21Z |
 
 ## Workload
 
@@ -35,7 +36,7 @@ A を書き込み直前で止め、lease 切れ後に B が担当。そのあと
 
 - 担当: A(fence=1) → B(fence=2)
 - 最後に書いたのは A（fence=1）
-- A の終了: exit=3 duration=104ms / B の終了: exit=0 duration=216ms
+- A の終了: exit=3 duration=105ms / B の終了: exit=0 duration=219ms
 - ★lease を失っていても書けてしまう。停止と再開の間に担当が変わったことを、書き込み側は知らない
 
 ### 停止していた worker の再開 / lease_db_clock_fencing — OK
@@ -52,7 +53,7 @@ A を書き込み直前で止め、lease 切れ後に B が担当。そのあと
 
 - 担当: A(fence=1) → B(fence=2)
 - 最後に書いたのは B（fence=2）
-- A の終了: exit=3 duration=104ms / B の終了: exit=0 duration=218ms
+- A の終了: exit=3 duration=103ms / B の終了: exit=0 duration=219ms
 - 古い fence の書き込みは DB 側で拒否された（WHERE fence <= ?）
 
 ### 時計が 60 秒進んだプロセスの割り込み / lease_local_clock — **事故あり**
@@ -64,7 +65,7 @@ A が正常に担当を保持している間に、時計がずれた B が担当
 | accepted_writes_by_skewed | 1 |
 | stolen | 1 |
 
-- A の終了: exit=3 duration=194ms / B の終了: exit=0 duration=112ms
+- A の終了: exit=3 duration=197ms / B の終了: exit=0 duration=110ms
 - ★期限を自分の時計で判定すると、時計がずれたプロセスが生きた lease を奪える
 
 ### 時計が 60 秒進んだプロセスの割り込み / lease_db_clock — OK
@@ -76,7 +77,7 @@ A が正常に担当を保持している間に、時計がずれた B が担当
 | accepted_writes_by_skewed | 0 |
 | stolen | 0 |
 
-- A の終了: exit=0 duration=801ms / B の終了: exit=4 duration=1.032s
+- A の終了: exit=0 duration=806ms / B の終了: exit=4 duration=1.033s
 - 期限の判定を DB の時計に寄せると、プロセスの時計がずれても奪えない
 
 ### 8 プロセス同時 claim / no_lease — **事故あり**
@@ -85,7 +86,7 @@ A が正常に担当を保持している間に、時計がずれた B が担当
 | --- | --- |
 | winners | 8 |
 
-- 担当を取れたのは [W3 W7 W4 W1 W5 W6 W2 W0]
+- 担当を取れたのは [W2 W1 W7 W3 W6 W0 W4 W5]
 - ★担当を決めなければ全員が書ける（二重稼働）
 
 ### 8 プロセス同時 claim / lease_db_clock — OK
@@ -94,7 +95,7 @@ A が正常に担当を保持している間に、時計がずれた B が担当
 | --- | --- |
 | winners | 1 |
 
-- 担当を取れたのは [W5]
+- 担当を取れたのは [W1]
 
 ### 8 プロセス同時 claim / lease_db_clock_fencing — OK
 
@@ -102,7 +103,7 @@ A が正常に担当を保持している間に、時計がずれた B が担当
 | --- | --- |
 | winners | 1 |
 
-- 担当を取れたのは [W0]
+- 担当を取れたのは [W7]
 
 ## Verdict
 

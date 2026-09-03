@@ -7,7 +7,7 @@ go build -o /tmp/sqllint ./cmd/sqllint && /tmp/sqllint ./...
 go test ./internal/lint/ -v          # 検査そのものの検査（analysistest）
 ```
 
-結果ファイル: [`docs/results/exp-9/20260903-151010-static-analysis.md`](results/exp-9/20260903-151010-static-analysis.md)
+結果ファイル: [`docs/results/exp-9/exp-9-static-analysis.md`](results/exp-9/exp-9-static-analysis.md)
 
 ---
 

@@ -1,0 +1,10 @@
+{
+  "ended_at": "2026-09-03T22:43:09Z",
+  "git_dirty": true,
+  "git_sha": "bdc8149784b5c154ea3f19ef3c64ca99a657f1e6",
+  "json": "exp-1-external-effect-crash.json",
+  "md": "exp-1-external-effect-crash.md",
+  "meter_version": "expkit/2",
+  "name": "external-effect-crash",
+  "unit": "EXP-1"
+}

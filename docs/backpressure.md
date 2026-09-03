@@ -7,7 +7,7 @@ eval "$(./scripts/mysql-up.sh --export)"
 go test ./internal/loadlab/ -run TestEXP4 -v -timeout 20m
 ```
 
-結果ファイル: [`docs/results/exp-4/20260903-151012-backpressure-overload.md`](results/exp-4/20260903-151012-backpressure-overload.md)
+結果ファイル: [`docs/results/exp-4/exp-4-backpressure-overload.md`](results/exp-4/exp-4-backpressure-overload.md)
 
 ---
 

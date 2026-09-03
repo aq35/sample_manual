@@ -1,7 +1,7 @@
 # バックアップ・復元・破損（EXP-11）
 
 - 実験: `internal/backuplab` / `MYSQL_DSN=... go test ./internal/backuplab/ -run TestEXP11 -v`
-- 結果: [docs/results/exp-11/20260903-150935-backup-restore-corruption.md](results/exp-11/20260903-150935-backup-restore-corruption.md)
+- 結果: [docs/results/exp-11/exp-11-backup-restore-corruption.md](results/exp-11/exp-11-backup-restore-corruption.md)
 - 実行 SHA は結果ファイルの先頭にある
 
 ## この文書の一行め

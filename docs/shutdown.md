@@ -7,7 +7,7 @@ eval "$(./scripts/mysql-up.sh --export)"
 go test ./internal/shutdownlab/ -run TestEXP3 -v -timeout 20m
 ```
 
-結果ファイル: [`docs/results/exp-3/20260903-151200-graceful-shutdown.md`](results/exp-3/20260903-151200-graceful-shutdown.md)
+結果ファイル: [`docs/results/exp-3/exp-3-graceful-shutdown.md`](results/exp-3/exp-3-graceful-shutdown.md)
 
 ---
 

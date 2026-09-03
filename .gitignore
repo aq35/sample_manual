@@ -7,3 +7,5 @@
 # 実験の一時ファイル
 *.test
 *.out
+/bin/
+/.run-logs/

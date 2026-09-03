@@ -2,18 +2,19 @@
   "unit": "EXP-10",
   "name": "sqlite-companion",
   "title": "MySQL で確かめた結論のうち、SQLite へ持ち込めるものと持ち込めないものを切り分ける",
+  "meter_version": "expkit/2",
   "hypothesis": "1) pure Go 版と cgo 版のドライバは、同じ SQL・同じ PRAGMA に対して同じ観測値を返す （違いは速度と配布のしやすさだけ）。 2) 書き込みはデータベース全体で1つずつしか進まない。MaxOpenConns を増やしても 書き込みスループットは上がらず、SQLITE_BUSY が増えるだけ。 3) 既定の journal_mode=delete では読み手と書き手が互いを止める。WAL にすると止めなくなる。 4) MySQL で確かめた結論のうち、影響行数・UPSERT の戻り値・型の厳格さ・ DDL のトランザクション性・外部キーの既定は、そのままでは持ち込めない。 5) GET_LOCK 相当は無い。マイグレーションの排他は BEGIN IMMEDIATE で作れて、 しかも DDL をロールバックできるぶん EXP-6 より単純になる。 6) WAL のまま .db だけをコピーしたバックアップは、コミット済みのデータを失う。 VACUUM INTO なら失わない。 7) PRAGMA を db.Exec で入れると、プールの中の一部の接続にしか効かない。 8) 別プロセス3本が同じファイルを書くと、busy_timeout=0 では SQLITE_BUSY が大量に出る。 WAL と busy_timeout を両方入れると 0 になる。 9) synchronous を下げると書き込みは速くなるが、失うのは電源断への耐性であって プロセス死への耐性ではない。synchronous=OFF でも、コミットが返った直後に SIGKILL された 程度ではコミット済みのデータは消えない。",
-  "started_at": "2026-09-03T15:12:03.540525759Z",
-  "ended_at": "2026-09-03T15:12:35.150697412Z",
+  "started_at": "2026-09-03T22:44:32.742923561Z",
+  "ended_at": "2026-09-03T22:44:55.55232608Z",
   "env": {
-    "captured_at": "2026-09-03T15:12:03.540556798Z",
+    "captured_at": "2026-09-03T22:44:32.742958993Z",
     "go_version": "go1.24.7",
     "os": "linux",
     "arch": "amd64",
     "num_cpu": 4,
     "gomaxprocs": 4,
     "hostname": "vm",
-    "git_sha": "83598d6b4d1ec55173f92de4cc32db1c96e7d5f5",
+    "git_sha": "bdc8149784b5c154ea3f19ef3c64ca99a657f1e6",
     "git_dirty": true,
     "mysql_version": "8.0.46-0ubuntu0.24.04.4",
     "notes": [
@@ -83,27 +84,27 @@
       "counters": {
         "read_busy": 0,
         "read_errs": 0,
-        "read_ops": 80873,
+        "read_ops": 116697,
         "write_busy": 0,
         "write_errs": 0,
-        "write_ops": 36176
+        "write_ops": 47566
       },
       "metrics": {
-        "read_p50_us": 10,
-        "read_p99_us": 33,
-        "read_per_sec": 80870.9910028415,
-        "write_p50_us": 17,
-        "write_p99_us": 52,
-        "write_per_sec": 36174.89565278551
+        "read_p50_us": 7,
+        "read_p99_us": 24,
+        "read_per_sec": 116694.51358999895,
+        "write_p50_us": 12,
+        "write_p99_us": 43,
+        "write_per_sec": 47564.59513211818
       },
       "latency": {
-        "count": 36176,
-        "min_ns": 16490,
-        "p50_ns": 17435,
-        "p95_ns": 30092,
-        "p99_ns": 52855,
-        "max_ns": 9298735,
-        "mean_ns": 27208
+        "count": 47566,
+        "min_ns": 10141,
+        "p50_ns": 12991,
+        "p95_ns": 20058,
+        "p99_ns": 43068,
+        "max_ns": 9489872,
+        "mean_ns": 20684
       },
       "accident": false,
       "notes": [
@@ -116,27 +117,27 @@
       "counters": {
         "read_busy": 0,
         "read_errs": 0,
-        "read_ops": 103406,
+        "read_ops": 150786,
         "write_busy": 0,
         "write_errs": 0,
-        "write_ops": 50650
+        "write_ops": 59965
       },
       "metrics": {
-        "read_p50_us": 8,
-        "read_p99_us": 29,
-        "read_per_sec": 103403.685205103,
-        "write_p50_us": 11,
-        "write_p99_us": 38,
-        "write_per_sec": 50648.60179469886
+        "read_p50_us": 5,
+        "read_p99_us": 20,
+        "read_per_sec": 150782.48918052192,
+        "write_p50_us": 8,
+        "write_p99_us": 35,
+        "write_per_sec": 59677.897215588746
       },
       "latency": {
-        "count": 50650,
-        "min_ns": 10606,
-        "p50_ns": 11373,
-        "p95_ns": 18115,
-        "p99_ns": 38679,
-        "max_ns": 9021283,
-        "mean_ns": 19349
+        "count": 59965,
+        "min_ns": 6731,
+        "p50_ns": 8484,
+        "p95_ns": 14577,
+        "p99_ns": 35599,
+        "max_ns": 14995279,
+        "mean_ns": 16443
       },
       "accident": false,
       "notes": [
@@ -168,12 +169,12 @@
       "counters": {
         "busy": 0,
         "errs": 0,
-        "ops": 37119
+        "ops": 47965
       },
       "metrics": {
-        "p50_us": 17,
-        "p99_us": 50,
-        "per_sec": 37117.608832020975
+        "p50_us": 12,
+        "p99_us": 45,
+        "per_sec": 47721.1917631852
       },
       "accident": false
     },
@@ -182,12 +183,12 @@
       "counters": {
         "busy": 0,
         "errs": 0,
-        "ops": 20968
+        "ops": 26928
       },
       "metrics": {
-        "p50_us": 113,
-        "p99_us": 527,
-        "per_sec": 15756.464182047255
+        "p50_us": 96,
+        "p99_us": 443,
+        "per_sec": 26926.258005738317
       },
       "accident": false
     },
@@ -196,12 +197,12 @@
       "counters": {
         "busy": 0,
         "errs": 0,
-        "ops": 38637
+        "ops": 53402
       },
       "metrics": {
-        "p50_us": 18,
-        "p99_us": 512,
-        "per_sec": 38134.13699516141
+        "p50_us": 13,
+        "p99_us": 619,
+        "per_sec": 53288.28190052349
       },
       "accident": false
     },
@@ -210,12 +211,12 @@
       "counters": {
         "busy": 0,
         "errs": 0,
-        "ops": 38567
+        "ops": 49481
       },
       "metrics": {
-        "p50_us": 18,
-        "p99_us": 1164,
-        "per_sec": 38006.076525867255
+        "p50_us": 13,
+        "p99_us": 1206,
+        "per_sec": 47898.72598730292
       },
       "accident": false
     },
@@ -223,17 +224,17 @@
       "name": "journal_mode=delete で読みながら書く",
       "desc": "書き手 1 本・読み手 3 本を同時に1秒",
       "counters": {
-        "read_busy": 3,
+        "read_busy": 2,
         "read_errs": 0,
-        "read_ops": 36,
+        "read_ops": 56,
         "write_busy": 0,
         "write_errs": 0,
-        "write_ops": 1505
+        "write_ops": 1519
       },
       "metrics": {
-        "read_p99_us": 501711,
-        "read_per_sec": 33.27340709531949,
-        "write_per_sec": 1504.5884273586382
+        "read_p99_us": 329321,
+        "read_per_sec": 53.94958334173205,
+        "write_per_sec": 1518.7785286773913
       },
       "accident": true
     },
@@ -243,15 +244,15 @@
       "counters": {
         "read_busy": 0,
         "read_errs": 0,
-        "read_ops": 67015,
+        "read_ops": 68397,
         "write_busy": 0,
         "write_errs": 0,
-        "write_ops": 12442
+        "write_ops": 13657
       },
       "metrics": {
-        "read_p99_us": 282,
-        "read_per_sec": 67012.1097006965,
-        "write_per_sec": 12441.910853708734
+        "read_p99_us": 265,
+        "read_per_sec": 68391.64431872504,
+        "write_per_sec": 13656.68485834021
       },
       "accident": false
     },
@@ -259,30 +260,30 @@
       "name": "別プロセス3本が同じファイルを書く / WAL 無し・待たない（busy_timeout=0）",
       "desc": "goroutine ではなく本物の別プロセス（OS のファイルロック越しに競合する）",
       "counters": {
-        "busy": 152851,
+        "busy": 203933,
         "errs": 0,
-        "ops": 1137
+        "ops": 1083
       },
       "accident": true,
       "notes": [
-        "プロセス1: {\"driver\":\"modernc(pure Go)\",\"ops\":380,\"busy\":51549,\"errs\":0,\"per_sec\":379.989692399604,\"p50_us\":690,\"p99_us\":4060,\"journal_mode\":\"delete\"}",
-        "プロセス2: {\"driver\":\"modernc(pure Go)\",\"ops\":353,\"busy\":50587,\"errs\":0,\"per_sec\":352.9899609655102,\"p50_us\":664,\"p99_us\":2616,\"journal_mode\":\"delete\"}",
-        "プロセス3: {\"driver\":\"modernc(pure Go)\",\"ops\":404,\"busy\":50715,\"errs\":0,\"per_sec\":403.8451298350047,\"p50_us\":683,\"p99_us\":3431,\"journal_mode\":\"delete\"}"
+        "プロセス1: {\"driver\":\"modernc(pure Go)\",\"ops\":372,\"busy\":70837,\"errs\":0,\"per_sec\":371.81403795254613,\"p50_us\":729,\"p99_us\":2776,\"journal_mode\":\"delete\"}",
+        "プロセス2: {\"driver\":\"modernc(pure Go)\",\"ops\":342,\"busy\":66964,\"errs\":0,\"per_sec\":341.9889882965658,\"p50_us\":732,\"p99_us\":4091,\"journal_mode\":\"delete\"}",
+        "プロセス3: {\"driver\":\"modernc(pure Go)\",\"ops\":369,\"busy\":66132,\"errs\":0,\"per_sec\":368.9922220129522,\"p50_us\":704,\"p99_us\":3459,\"journal_mode\":\"\"}"
       ]
     },
     {
       "name": "別プロセス3本が同じファイルを書く / WAL 有り・待たない（busy_timeout=0）",
       "desc": "goroutine ではなく本物の別プロセス（OS のファイルロック越しに競合する）",
       "counters": {
-        "busy": 46701,
+        "busy": 66464,
         "errs": 0,
-        "ops": 31324
+        "ops": 42483
       },
       "accident": true,
       "notes": [
-        "プロセス1: {\"driver\":\"modernc(pure Go)\",\"ops\":10300,\"busy\":14785,\"errs\":0,\"per_sec\":10299.556871865145,\"p50_us\":34,\"p99_us\":867,\"journal_mode\":\"wal\"}",
-        "プロセス2: {\"driver\":\"modernc(pure Go)\",\"ops\":10605,\"busy\":16278,\"errs\":0,\"per_sec\":10604.364300173298,\"p50_us\":33,\"p99_us\":837,\"journal_mode\":\"wal\"}",
-        "プロセス3: {\"driver\":\"modernc(pure Go)\",\"ops\":10419,\"busy\":15638,\"errs\":0,\"per_sec\":10414.751260564248,\"p50_us\":33,\"p99_us\":818,\"journal_mode\":\"wal\"}"
+        "プロセス1: {\"driver\":\"modernc(pure Go)\",\"ops\":13620,\"busy\":21162,\"errs\":0,\"per_sec\":13619.529472495786,\"p50_us\":25,\"p99_us\":973,\"journal_mode\":\"wal\"}",
+        "プロセス2: {\"driver\":\"modernc(pure Go)\",\"ops\":14529,\"busy\":23023,\"errs\":0,\"per_sec\":14528.23427488431,\"p50_us\":24,\"p99_us\":878,\"journal_mode\":\"wal\"}",
+        "プロセス3: {\"driver\":\"modernc(pure Go)\",\"ops\":14334,\"busy\":22279,\"errs\":0,\"per_sec\":14329.450499772474,\"p50_us\":25,\"p99_us\":914,\"journal_mode\":\"wal\"}"
       ]
     },
     {
@@ -291,13 +292,13 @@
       "counters": {
         "busy": 0,
         "errs": 0,
-        "ops": 36860
+        "ops": 51841
       },
       "accident": false,
       "notes": [
-        "プロセス1: {\"driver\":\"modernc(pure Go)\",\"ops\":4285,\"busy\":0,\"errs\":0,\"per_sec\":4000.260161610697,\"p50_us\":18,\"p99_us\":66,\"journal_mode\":\"wal\"}",
-        "プロセス2: {\"driver\":\"modernc(pure Go)\",\"ops\":23108,\"busy\":0,\"errs\":0,\"per_sec\":23107.40308956339,\"p50_us\":17,\"p99_us\":72,\"journal_mode\":\"wal\"}",
-        "プロセス3: {\"driver\":\"modernc(pure Go)\",\"ops\":9467,\"busy\":0,\"errs\":0,\"per_sec\":9388.296222870356,\"p50_us\":19,\"p99_us\":370,\"journal_mode\":\"wal\"}"
+        "プロセス1: {\"driver\":\"modernc(pure Go)\",\"ops\":22280,\"busy\":0,\"errs\":0,\"per_sec\":22261.592023125628,\"p50_us\":13,\"p99_us\":389,\"journal_mode\":\"wal\"}",
+        "プロセス2: {\"driver\":\"modernc(pure Go)\",\"ops\":23421,\"busy\":0,\"errs\":0,\"per_sec\":23305.393803784867,\"p50_us\":13,\"p99_us\":390,\"journal_mode\":\"wal\"}",
+        "プロセス3: {\"driver\":\"modernc(pure Go)\",\"ops\":6140,\"busy\":0,\"errs\":0,\"per_sec\":6139.805116445799,\"p50_us\":13,\"p99_us\":302,\"journal_mode\":\"wal\"}"
       ]
     },
     {
@@ -367,12 +368,12 @@
       "name": "journal_mode=delete / synchronous=FULL",
       "desc": "1行更新のトランザクションを1本で1秒（MaxOpenConns=1）",
       "counters": {
-        "ops": 1337
+        "ops": 1480
       },
       "metrics": {
-        "p50_us": 702,
-        "p99_us": 1421,
-        "per_sec": 1336.7251038191248
+        "p50_us": 659,
+        "p99_us": 1070,
+        "per_sec": 1479.531985565134
       },
       "accident": false,
       "notes": [
@@ -383,12 +384,12 @@
       "name": "journal_mode=delete / synchronous=OFF",
       "desc": "1行更新のトランザクションを1本で1秒（MaxOpenConns=1）",
       "counters": {
-        "ops": 18498
+        "ops": 28827
       },
       "metrics": {
-        "p50_us": 47,
-        "p99_us": 117,
-        "per_sec": 18497.45643374524
+        "p50_us": 30,
+        "p99_us": 88,
+        "per_sec": 28825.000409721575
       },
       "accident": false,
       "notes": [
@@ -399,12 +400,12 @@
       "name": "journal_mode=wal / synchronous=FULL",
       "desc": "1行更新のトランザクションを1本で1秒（MaxOpenConns=1）",
       "counters": {
-        "ops": 6415
+        "ops": 5730
       },
       "metrics": {
         "p50_us": 137,
-        "p99_us": 365,
-        "per_sec": 6414.071858145839
+        "p99_us": 446,
+        "per_sec": 5729.55956875595
       },
       "accident": false,
       "notes": [
@@ -415,12 +416,12 @@
       "name": "journal_mode=wal / synchronous=NORMAL",
       "desc": "1行更新のトランザクションを1本で1秒（MaxOpenConns=1）",
       "counters": {
-        "ops": 34965
+        "ops": 50965
       },
       "metrics": {
-        "p50_us": 17,
-        "p99_us": 49,
-        "per_sec": 34906.00358313796
+        "p50_us": 12,
+        "p99_us": 41,
+        "per_sec": 50760.79900093186
       },
       "accident": false,
       "notes": [
@@ -431,12 +432,12 @@
       "name": "journal_mode=wal / synchronous=OFF",
       "desc": "1行更新のトランザクションを1本で1秒（MaxOpenConns=1）",
       "counters": {
-        "ops": 50566
+        "ops": 70765
       },
       "metrics": {
-        "p50_us": 17,
-        "p99_us": 47,
-        "per_sec": 50564.937226149385
+        "p50_us": 12,
+        "p99_us": 37,
+        "per_sec": 70762.83451573814
       },
       "accident": false,
       "notes": [

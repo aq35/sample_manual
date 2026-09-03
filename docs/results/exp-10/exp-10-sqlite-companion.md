@@ -3,10 +3,11 @@
 | | |
 | --- | --- |
 | Experiment | EXP-10 / sqlite-companion |
-| Starting SHA | `83598d6b4d1e` (作業ツリーに未コミットの変更あり) |
+| Starting SHA | `bdc8149784b5` (作業ツリーに未コミットの変更あり) |
+| Meter version | `expkit/2` |
 | Hypothesis (frozen before result) | 1) pure Go 版と cgo 版のドライバは、同じ SQL・同じ PRAGMA に対して同じ観測値を返す （違いは速度と配布のしやすさだけ）。 2) 書き込みはデータベース全体で1つずつしか進まない。MaxOpenConns を増やしても 書き込みスループットは上がらず、SQLITE_BUSY が増えるだけ。 3) 既定の journal_mode=delete では読み手と書き手が互いを止める。WAL にすると止めなくなる。 4) MySQL で確かめた結論のうち、影響行数・UPSERT の戻り値・型の厳格さ・ DDL のトランザクション性・外部キーの既定は、そのままでは持ち込めない。 5) GET_LOCK 相当は無い。マイグレーションの排他は BEGIN IMMEDIATE で作れて、 しかも DDL をロールバックできるぶん EXP-6 より単純になる。 6) WAL のまま .db だけをコピーしたバックアップは、コミット済みのデータを失う。 VACUUM INTO なら失わない。 7) PRAGMA を db.Exec で入れると、プールの中の一部の接続にしか効かない。 8) 別プロセス3本が同じファイルを書くと、busy_timeout=0 では SQLITE_BUSY が大量に出る。 WAL と busy_timeout を両方入れると 0 になる。 9) synchronous を下げると書き込みは速くなるが、失うのは電源断への耐性であって プロセス死への耐性ではない。synchronous=OFF でも、コミットが返った直後に SIGKILL された 程度ではコミット済みのデータは消えない。 |
-| Environment | go1.24.7 linux/amd64 cpu=4 gomaxprocs=4 mysql=8.0.46-0ubuntu0.24.04.4 sha=83598d6b4d1e+dirty |
-| Started / Ended | 2026-09-03T15:12:03Z / 2026-09-03T15:12:35Z |
+| Environment | go1.24.7 linux/amd64 cpu=4 gomaxprocs=4 mysql=8.0.46-0ubuntu0.24.04.4 sha=bdc8149784b5+dirty |
+| Started / Ended | 2026-09-03T22:44:32Z / 2026-09-03T22:44:55Z |
 
 ## Workload
 
@@ -73,21 +74,21 @@ MaxOpenConns=1 / WAL / synchronous=NORMAL / 500 行
 | --- | --- |
 | read_busy | 0 |
 | read_errs | 0 |
-| read_ops | 80873 |
+| read_ops | 116697 |
 | write_busy | 0 |
 | write_errs | 0 |
-| write_ops | 36176 |
+| write_ops | 47566 |
 
 | 測ったもの | 値 |
 | --- | --- |
-| read_p50_us | 10.000 |
-| read_p99_us | 33.000 |
-| read_per_sec | 80870.991 |
-| write_p50_us | 17.000 |
-| write_p99_us | 52.000 |
-| write_per_sec | 36174.896 |
+| read_p50_us | 7.000 |
+| read_p99_us | 24.000 |
+| read_per_sec | 116694.514 |
+| write_p50_us | 12.000 |
+| write_p99_us | 43.000 |
+| write_per_sec | 47564.595 |
 
-遅延: n=36176 p50=17µs p95=30µs p99=53µs max=9.299ms
+遅延: n=47566 p50=13µs p95=20µs p99=43µs max=9.49ms
 
 - 同じホスト・同じ条件で測ったドライバ間の比較。**MySQL との比較には使わない**
 
@@ -99,21 +100,21 @@ MaxOpenConns=1 / WAL / synchronous=NORMAL / 500 行
 | --- | --- |
 | read_busy | 0 |
 | read_errs | 0 |
-| read_ops | 103406 |
+| read_ops | 150786 |
 | write_busy | 0 |
 | write_errs | 0 |
-| write_ops | 50650 |
+| write_ops | 59965 |
 
 | 測ったもの | 値 |
 | --- | --- |
-| read_p50_us | 8.000 |
-| read_p99_us | 29.000 |
-| read_per_sec | 103403.685 |
-| write_p50_us | 11.000 |
-| write_p99_us | 38.000 |
-| write_per_sec | 50648.602 |
+| read_p50_us | 5.000 |
+| read_p99_us | 20.000 |
+| read_per_sec | 150782.489 |
+| write_p50_us | 8.000 |
+| write_p99_us | 35.000 |
+| write_per_sec | 59677.897 |
 
-遅延: n=50650 p50=11µs p95=18µs p99=39µs max=9.021ms
+遅延: n=59965 p50=8µs p95=15µs p99=36µs max=14.995ms
 
 - 同じホスト・同じ条件で測ったドライバ間の比較。**MySQL との比較には使わない**
 
@@ -142,13 +143,13 @@ cmd/sizeprobe（開いて sqlite_version() を1回聞くだけの main）を各�
 | --- | --- |
 | busy | 0 |
 | errs | 0 |
-| ops | 37119 |
+| ops | 47965 |
 
 | 測ったもの | 値 |
 | --- | --- |
-| p50_us | 17.000 |
-| p99_us | 50.000 |
-| per_sec | 37117.609 |
+| p50_us | 12.000 |
+| p99_us | 45.000 |
+| per_sec | 47721.192 |
 
 ### 書き込み 4 並行 / MaxOpenConns=1 — OK
 
@@ -156,13 +157,13 @@ cmd/sizeprobe（開いて sqlite_version() を1回聞くだけの main）を各�
 | --- | --- |
 | busy | 0 |
 | errs | 0 |
-| ops | 20968 |
+| ops | 26928 |
 
 | 測ったもの | 値 |
 | --- | --- |
-| p50_us | 113.000 |
-| p99_us | 527.000 |
-| per_sec | 15756.464 |
+| p50_us | 96.000 |
+| p99_us | 443.000 |
+| per_sec | 26926.258 |
 
 ### 書き込み 4 並行 / MaxOpenConns=4 — OK
 
@@ -170,13 +171,13 @@ cmd/sizeprobe（開いて sqlite_version() を1回聞くだけの main）を各�
 | --- | --- |
 | busy | 0 |
 | errs | 0 |
-| ops | 38637 |
+| ops | 53402 |
 
 | 測ったもの | 値 |
 | --- | --- |
-| p50_us | 18.000 |
-| p99_us | 512.000 |
-| per_sec | 38134.137 |
+| p50_us | 13.000 |
+| p99_us | 619.000 |
+| per_sec | 53288.282 |
 
 ### 書き込み 8 並行 / MaxOpenConns=8 — OK
 
@@ -184,13 +185,13 @@ cmd/sizeprobe（開いて sqlite_version() を1回聞くだけの main）を各�
 | --- | --- |
 | busy | 0 |
 | errs | 0 |
-| ops | 38567 |
+| ops | 49481 |
 
 | 測ったもの | 値 |
 | --- | --- |
-| p50_us | 18.000 |
-| p99_us | 1164.000 |
-| per_sec | 38006.077 |
+| p50_us | 13.000 |
+| p99_us | 1206.000 |
+| per_sec | 47898.726 |
 
 ### journal_mode=delete で読みながら書く — **事故あり**
 
@@ -198,18 +199,18 @@ cmd/sizeprobe（開いて sqlite_version() を1回聞くだけの main）を各�
 
 | 数えたもの | 値 |
 | --- | --- |
-| read_busy | 3 |
+| read_busy | 2 |
 | read_errs | 0 |
-| read_ops | 36 |
+| read_ops | 56 |
 | write_busy | 0 |
 | write_errs | 0 |
-| write_ops | 1505 |
+| write_ops | 1519 |
 
 | 測ったもの | 値 |
 | --- | --- |
-| read_p99_us | 501711.000 |
-| read_per_sec | 33.273 |
-| write_per_sec | 1504.588 |
+| read_p99_us | 329321.000 |
+| read_per_sec | 53.950 |
+| write_per_sec | 1518.779 |
 
 ### journal_mode=wal で読みながら書く — OK
 
@@ -219,16 +220,16 @@ cmd/sizeprobe（開いて sqlite_version() を1回聞くだけの main）を各�
 | --- | --- |
 | read_busy | 0 |
 | read_errs | 0 |
-| read_ops | 67015 |
+| read_ops | 68397 |
 | write_busy | 0 |
 | write_errs | 0 |
-| write_ops | 12442 |
+| write_ops | 13657 |
 
 | 測ったもの | 値 |
 | --- | --- |
-| read_p99_us | 282.000 |
-| read_per_sec | 67012.110 |
-| write_per_sec | 12441.911 |
+| read_p99_us | 265.000 |
+| read_per_sec | 68391.644 |
+| write_per_sec | 13656.685 |
 
 ### 別プロセス3本が同じファイルを書く / WAL 無し・待たない（busy_timeout=0） — **事故あり**
 
@@ -236,13 +237,13 @@ goroutine ではなく本物の別プロセス（OS のファイルロック越�
 
 | 数えたもの | 値 |
 | --- | --- |
-| busy | 152851 |
+| busy | 203933 |
 | errs | 0 |
-| ops | 1137 |
+| ops | 1083 |
 
-- プロセス1: {"driver":"modernc(pure Go)","ops":380,"busy":51549,"errs":0,"per_sec":379.989692399604,"p50_us":690,"p99_us":4060,"journal_mode":"delete"}
-- プロセス2: {"driver":"modernc(pure Go)","ops":353,"busy":50587,"errs":0,"per_sec":352.9899609655102,"p50_us":664,"p99_us":2616,"journal_mode":"delete"}
-- プロセス3: {"driver":"modernc(pure Go)","ops":404,"busy":50715,"errs":0,"per_sec":403.8451298350047,"p50_us":683,"p99_us":3431,"journal_mode":"delete"}
+- プロセス1: {"driver":"modernc(pure Go)","ops":372,"busy":70837,"errs":0,"per_sec":371.81403795254613,"p50_us":729,"p99_us":2776,"journal_mode":"delete"}
+- プロセス2: {"driver":"modernc(pure Go)","ops":342,"busy":66964,"errs":0,"per_sec":341.9889882965658,"p50_us":732,"p99_us":4091,"journal_mode":"delete"}
+- プロセス3: {"driver":"modernc(pure Go)","ops":369,"busy":66132,"errs":0,"per_sec":368.9922220129522,"p50_us":704,"p99_us":3459,"journal_mode":""}
 
 ### 別プロセス3本が同じファイルを書く / WAL 有り・待たない（busy_timeout=0） — **事故あり**
 
@@ -250,13 +251,13 @@ goroutine ではなく本物の別プロセス（OS のファイルロック越�
 
 | 数えたもの | 値 |
 | --- | --- |
-| busy | 46701 |
+| busy | 66464 |
 | errs | 0 |
-| ops | 31324 |
+| ops | 42483 |
 
-- プロセス1: {"driver":"modernc(pure Go)","ops":10300,"busy":14785,"errs":0,"per_sec":10299.556871865145,"p50_us":34,"p99_us":867,"journal_mode":"wal"}
-- プロセス2: {"driver":"modernc(pure Go)","ops":10605,"busy":16278,"errs":0,"per_sec":10604.364300173298,"p50_us":33,"p99_us":837,"journal_mode":"wal"}
-- プロセス3: {"driver":"modernc(pure Go)","ops":10419,"busy":15638,"errs":0,"per_sec":10414.751260564248,"p50_us":33,"p99_us":818,"journal_mode":"wal"}
+- プロセス1: {"driver":"modernc(pure Go)","ops":13620,"busy":21162,"errs":0,"per_sec":13619.529472495786,"p50_us":25,"p99_us":973,"journal_mode":"wal"}
+- プロセス2: {"driver":"modernc(pure Go)","ops":14529,"busy":23023,"errs":0,"per_sec":14528.23427488431,"p50_us":24,"p99_us":878,"journal_mode":"wal"}
+- プロセス3: {"driver":"modernc(pure Go)","ops":14334,"busy":22279,"errs":0,"per_sec":14329.450499772474,"p50_us":25,"p99_us":914,"journal_mode":"wal"}
 
 ### 別プロセス3本が同じファイルを書く / WAL 有り・待つ（busy_timeout=5s） — OK
 
@@ -266,11 +267,11 @@ goroutine ではなく本物の別プロセス（OS のファイルロック越�
 | --- | --- |
 | busy | 0 |
 | errs | 0 |
-| ops | 36860 |
+| ops | 51841 |
 
-- プロセス1: {"driver":"modernc(pure Go)","ops":4285,"busy":0,"errs":0,"per_sec":4000.260161610697,"p50_us":18,"p99_us":66,"journal_mode":"wal"}
-- プロセス2: {"driver":"modernc(pure Go)","ops":23108,"busy":0,"errs":0,"per_sec":23107.40308956339,"p50_us":17,"p99_us":72,"journal_mode":"wal"}
-- プロセス3: {"driver":"modernc(pure Go)","ops":9467,"busy":0,"errs":0,"per_sec":9388.296222870356,"p50_us":19,"p99_us":370,"journal_mode":"wal"}
+- プロセス1: {"driver":"modernc(pure Go)","ops":22280,"busy":0,"errs":0,"per_sec":22261.592023125628,"p50_us":13,"p99_us":389,"journal_mode":"wal"}
+- プロセス2: {"driver":"modernc(pure Go)","ops":23421,"busy":0,"errs":0,"per_sec":23305.393803784867,"p50_us":13,"p99_us":390,"journal_mode":"wal"}
+- プロセス3: {"driver":"modernc(pure Go)","ops":6140,"busy":0,"errs":0,"per_sec":6139.805116445799,"p50_us":13,"p99_us":302,"journal_mode":"wal"}
 
 ### PRAGMA を db.Exec で1回だけ入れた（事故） — **事故あり**
 
@@ -337,13 +338,13 @@ MySQL では DDL が暗黙にコミットされるので、この形は作れな
 
 | 数えたもの | 値 |
 | --- | --- |
-| ops | 1337 |
+| ops | 1480 |
 
 | 測ったもの | 値 |
 | --- | --- |
-| p50_us | 702.000 |
-| p99_us | 1421.000 |
-| per_sec | 1336.725 |
+| p50_us | 659.000 |
+| p99_us | 1070.000 |
+| per_sec | 1479.532 |
 
 - この数字は fsync の有無で決まる。**engine 間の速度比較には使えない**
 
@@ -353,13 +354,13 @@ MySQL では DDL が暗黙にコミットされるので、この形は作れな
 
 | 数えたもの | 値 |
 | --- | --- |
-| ops | 18498 |
+| ops | 28827 |
 
 | 測ったもの | 値 |
 | --- | --- |
-| p50_us | 47.000 |
-| p99_us | 117.000 |
-| per_sec | 18497.456 |
+| p50_us | 30.000 |
+| p99_us | 88.000 |
+| per_sec | 28825.000 |
 
 - この数字は fsync の有無で決まる。**engine 間の速度比較には使えない**
 
@@ -369,13 +370,13 @@ MySQL では DDL が暗黙にコミットされるので、この形は作れな
 
 | 数えたもの | 値 |
 | --- | --- |
-| ops | 6415 |
+| ops | 5730 |
 
 | 測ったもの | 値 |
 | --- | --- |
 | p50_us | 137.000 |
-| p99_us | 365.000 |
-| per_sec | 6414.072 |
+| p99_us | 446.000 |
+| per_sec | 5729.560 |
 
 - この数字は fsync の有無で決まる。**engine 間の速度比較には使えない**
 
@@ -385,13 +386,13 @@ MySQL では DDL が暗黙にコミットされるので、この形は作れな
 
 | 数えたもの | 値 |
 | --- | --- |
-| ops | 34965 |
+| ops | 50965 |
 
 | 測ったもの | 値 |
 | --- | --- |
-| p50_us | 17.000 |
-| p99_us | 49.000 |
-| per_sec | 34906.004 |
+| p50_us | 12.000 |
+| p99_us | 41.000 |
+| per_sec | 50760.799 |
 
 - この数字は fsync の有無で決まる。**engine 間の速度比較には使えない**
 
@@ -401,13 +402,13 @@ MySQL では DDL が暗黙にコミットされるので、この形は作れな
 
 | 数えたもの | 値 |
 | --- | --- |
-| ops | 50566 |
+| ops | 70765 |
 
 | 測ったもの | 値 |
 | --- | --- |
-| p50_us | 17.000 |
-| p99_us | 47.000 |
-| per_sec | 50564.937 |
+| p50_us | 12.000 |
+| p99_us | 37.000 |
+| per_sec | 70762.835 |
 
 - この数字は fsync の有無で決まる。**engine 間の速度比較には使えない**
 

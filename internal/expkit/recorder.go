@@ -10,18 +10,28 @@ import (
 	"time"
 )
 
+// MeterVersion は測定器（expkit）のバージョン。receipt 本文に必ず入れる。
+//
+// ★数字だけを見て結論を出さないために、「どの測定器で測ったか」を残す。
+// 測定方法を変えたら上げる。上げ忘れを防ぐため、意味のある変更のたびに手で上げる。
+//
+//	v1 -> v2: receipt をタイムスタンプ名から固定名（<unit>-<name>）へ変え、
+//	          通常テストは receipt を repo に書かず tmp に出すようにした（EXP_RECORD ゲート追加）
+const MeterVersion = "expkit/2"
+
 // Run は1つの実験の記録全体。docs/results/<unit>/ に JSON と Markdown で残す。
 //
 // ★Hypothesis は結果を見る前に固定する（Freeze）。
 // 「出た数字に合わせて仮説を書く」ことを構造的に防ぐため、Freeze 後の変更を拒否する。
 type Run struct {
-	Unit       string    `json:"unit"`       // 例: "EXP-1"
-	Name       string    `json:"name"`       // 例: "external-effect-crash"
-	Title      string    `json:"title"`      // 人間向けの一行
-	Hypothesis string    `json:"hypothesis"` // 結果を見る前に書く
-	StartedAt  time.Time `json:"started_at"`
-	EndedAt    time.Time `json:"ended_at"`
-	Env        Env       `json:"env"`
+	Unit         string    `json:"unit"`          // 例: "EXP-1"
+	Name         string    `json:"name"`          // 例: "external-effect-crash"
+	Title        string    `json:"title"`         // 人間向けの一行
+	MeterVersion string    `json:"meter_version"` // どの測定器で測ったか
+	Hypothesis   string    `json:"hypothesis"`    // 結果を見る前に書く
+	StartedAt    time.Time `json:"started_at"`
+	EndedAt      time.Time `json:"ended_at"`
+	Env          Env       `json:"env"`
 
 	Workload  map[string]any `json:"workload"`  // 入力条件
 	Injection map[string]any `json:"injection"` // 故障注入の内容
@@ -60,12 +70,13 @@ type Recorder struct {
 func NewRecorder(unit, name, title string) *Recorder {
 	return &Recorder{
 		run: Run{
-			Unit:      unit,
-			Name:      name,
-			Title:     title,
-			StartedAt: time.Now().UTC(),
-			Workload:  map[string]any{},
-			Injection: map[string]any{},
+			Unit:         unit,
+			Name:         name,
+			Title:        title,
+			MeterVersion: MeterVersion,
+			StartedAt:    time.Now().UTC(),
+			Workload:     map[string]any{},
+			Injection:    map[string]any{},
 		},
 		dir: resultsDir(unit),
 	}
@@ -103,7 +114,29 @@ func (r *Recorder) Add(v Variant) *Recorder {
 	return r
 }
 
-// Save は結果を docs/results/<unit>/ に書く。戻り値は書いたファイル。
+// Recording は、この実行が receipt を repo に保存する（＝記録モード）かどうか。
+//
+// ★通常の `go test ./...` は receipt を repo に書かない。
+// 書くと作業ツリーが dirty になり、full suite のたびに result が上書きされて
+// 「証拠が実行のたびに変わる」構造になる（実際にそれで doc のリンクが毎回ずれた）。
+// receipt を repo に残すのは、明示的に `EXP_RECORD=1` を渡したときだけ。
+// それ以外は tmp に書き、戻り値のパスだけ返す（テストはログに出すだけ）。
+func Recording() bool {
+	switch strings.ToLower(os.Getenv("EXP_RECORD")) {
+	case "1", "true", "yes", "on":
+		return true
+	}
+	return false
+}
+
+// Save は結果を書く。
+//
+//   - 記録モード（EXP_RECORD=1）: docs/results/<unit>/<unit>-<name>.{json,md} に**固定名**で書き、
+//     latest.json（参照ポインタ）も更新する。固定名なので過去 receipt を削除して回る必要がない
+//     （履歴は git が持つ）。
+//   - 通常モード: 一時ディレクトリに書く。repo 内の receipt には触らない。
+//
+// EXP_RESULTS_DIR が設定されていれば、それが最優先（明示指定）。
 func (r *Recorder) Save(verdict string) ([]string, error) {
 	if !r.frozen {
 		return nil, fmt.Errorf("expkit: 仮説が固定されていない")
@@ -111,11 +144,14 @@ func (r *Recorder) Save(verdict string) ([]string, error) {
 	r.run.Verdict = verdict
 	r.run.EndedAt = time.Now().UTC()
 
-	if err := os.MkdirAll(r.dir, 0o755); err != nil {
+	dir, record, err := r.outDir()
+	if err != nil {
 		return nil, err
 	}
-	stamp := r.run.StartedAt.Format("20060102-150405")
-	base := filepath.Join(r.dir, fmt.Sprintf("%s-%s", stamp, r.run.Name))
+	// ★固定名（content-addressable ではないが、experiment ID で一意）。
+	// タイムスタンプを名前に入れない。同じ実験を録り直すと同じファイルを上書きし、
+	// 差分は git diff に出る（＝golden との意味比較は git が担う）。
+	base := filepath.Join(dir, fmt.Sprintf("%s-%s", strings.ToLower(r.run.Unit), r.run.Name))
 
 	jsonPath := base + ".json"
 	b, err := json.MarshalIndent(r.run, "", "  ")
@@ -125,12 +161,50 @@ func (r *Recorder) Save(verdict string) ([]string, error) {
 	if err := os.WriteFile(jsonPath, append(b, '\n'), 0o644); err != nil {
 		return nil, err
 	}
-
 	mdPath := base + ".md"
 	if err := os.WriteFile(mdPath, []byte(r.Markdown()), 0o644); err != nil {
 		return nil, err
 	}
+
+	if record {
+		if err := r.writeLatestPointer(dir, filepath.Base(jsonPath), filepath.Base(mdPath)); err != nil {
+			return nil, err
+		}
+	}
 	return []string{jsonPath, mdPath}, nil
+}
+
+// outDir は書き込み先と、それが記録モードかを返す。
+func (r *Recorder) outDir() (string, bool, error) {
+	if d := os.Getenv("EXP_RESULTS_DIR"); d != "" {
+		dir := filepath.Join(d, strings.ToLower(r.run.Unit))
+		return dir, Recording(), os.MkdirAll(dir, 0o755)
+	}
+	if Recording() {
+		return r.dir, true, os.MkdirAll(r.dir, 0o755)
+	}
+	// 通常モード: tmp へ。repo は触らない。
+	dir, err := os.MkdirTemp("", "exp-receipt-"+strings.ToLower(r.run.Unit)+"-")
+	return dir, false, err
+}
+
+// writeLatestPointer は latest.json（最新 receipt への参照）を書く。
+func (r *Recorder) writeLatestPointer(dir, jsonName, mdName string) error {
+	ptr := map[string]any{
+		"unit":          r.run.Unit,
+		"name":          r.run.Name,
+		"json":          jsonName,
+		"md":            mdName,
+		"git_sha":       r.run.Env.GitSHA,
+		"git_dirty":     r.run.Env.GitDirty,
+		"meter_version": r.run.MeterVersion,
+		"ended_at":      r.run.EndedAt.Format(time.RFC3339),
+	}
+	b, err := json.MarshalIndent(ptr, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(filepath.Join(dir, "latest.json"), append(b, '\n'), 0o644)
 }
 
 // Markdown は実験指示書の報告フォーマットに沿った本文を作る。
@@ -144,6 +218,7 @@ func (r *Recorder) Markdown() string {
 	w("| --- | --- |")
 	w("| Experiment | %s / %s |", r.run.Unit, r.run.Name)
 	w("| Starting SHA | `%.12s`%s |", r.run.Env.GitSHA, dirtyMark(r.run.Env.GitDirty))
+	w("| Meter version | `%s` |", r.run.MeterVersion)
 	w("| Hypothesis (frozen before result) | %s |", r.run.Hypothesis)
 	w("| Environment | %s |", r.run.Env.String())
 	w("| Started / Ended | %s / %s |",

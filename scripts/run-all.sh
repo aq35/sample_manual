@@ -1,15 +1,27 @@
 #!/usr/bin/env bash
-# 資料の主張を、ぜんぶ実行して確かめる。結果は docs/results/ に残す。
+# 資料の主張を、ぜんぶ実行して確かめる。
 #
-#   ./scripts/run-all.sh
+#   ./scripts/run-all.sh              # 実行ログは .run-logs/ へ（git 管理外）。receipt は書かない
+#   EXP_RECORD=1 ./scripts/run-all.sh # 実験の receipt を docs/results/ に固定名で保存する
+#
+# ★通常実行は repo を汚さない。生ログは .run-logs/（.gitignore 済）へ出す。
+# 実験の receipt（docs/results/<unit>/）を更新するのは EXP_RECORD=1 のときだけ。
+# これが無いと full suite のたびに result が書き換わり、作業ツリーが dirty になる
+# （実際にそれで doc のリンクが毎回ずれた。scripts/postflight.sh の worktree gate が捕まえる）。
 #
 # MYSQL_DSN が未設定なら、DB を使う項目は skip される（Go 単体の項目は動く）。
 set -uo pipefail
 cd "$(dirname "$0")/.."
 
-OUT=docs/results
+OUT=${RUN_LOG_DIR:-.run-logs}
 mkdir -p "$OUT"
 stamp=$(date +%Y%m%d-%H%M%S)
+
+# 実験の前に MySQL の baseline を取る（postflight で使う）。
+BASELINE=""
+if [[ -n "${MYSQL_DSN:-}" ]]; then
+  BASELINE=$(scripts/postflight.sh baseline 2>/dev/null || echo "")
+fi
 
 run() { # run <出力ファイル> <説明> <コマンド...>
   local file="$1" desc="$2"; shift 2
@@ -76,6 +88,40 @@ if [[ -n "${MYSQL_DSN:-}" ]]; then
       go test ./internal/backuplab/ -run TestEXP11 -v -timeout 20m
 fi
 
+# ---- postflight: 「テストが exit 0」だけを成功条件にしない ----
+# tests exit 0 AND MySQL alive AND read/write probe AND 接続が baseline へ戻る
+# AND プロセス残存なし AND 想定外スキーマなし AND 作業ツリー clean AND receipt manifest 妥当
+POSTFLIGHT_OK=1
+if [[ -n "${MYSQL_DSN:-}" && -n "$BASELINE" ]]; then
+  echo "==> postflight（健全性ゲート）"
+  if ! scripts/postflight.sh check "run-all" $BASELINE; then POSTFLIGHT_OK=0; fi
+  # 想定外のデータベースが増えていないか（実験が後始末を忘れていないか）
+  extra=$(mysql -uroot -N -e "SHOW DATABASES" 2>/dev/null \
+    | grep -vE '^(information_schema|mysql|performance_schema|sys|workerdb|workerdb2|postflight_probe)$' || true)
+  if [[ -n "$extra" ]]; then echo "POSTFLIGHT FAIL: 想定外のデータベース: $extra"; POSTFLIGHT_OK=0; fi
+fi
+# tracked に実行形式が紛れていないか
+if ! scripts/check-no-binaries.sh >/dev/null 2>&1; then
+  echo "POSTFLIGHT FAIL: tracked に実行形式が含まれている（scripts/check-no-binaries.sh）"; POSTFLIGHT_OK=0
+fi
+# 作業ツリーが clean か（EXP_RECORD 実行では receipt 更新を除いて判定）
+dirty=$(git status --porcelain | grep -vE '^\?\? \.run-logs/' || true)
+if [[ -z "${EXP_RECORD:-}" && -n "$dirty" ]]; then
+  echo "POSTFLIGHT FAIL: 作業ツリーが dirty（通常実行は repo を書き換えないはず）:"; echo "$dirty" | head
+  POSTFLIGHT_OK=0
+fi
+# receipt manifest（latest.json）が妥当か
+for lj in docs/results/exp-*/latest.json; do
+  [ -f "$lj" ] || continue
+  if ! grep -q '"meter_version"' "$lj"; then echo "POSTFLIGHT FAIL: $lj に meter_version が無い"; POSTFLIGHT_OK=0; fi
+done
+
+if [[ "$POSTFLIGHT_OK" -eq 1 ]]; then
+  echo "POSTFLIGHT OK: MySQL 生存・probe・接続 baseline・プロセス/スキーマ/tree・manifest すべて通過"
+else
+  echo "POSTFLIGHT FAILED: 上のいずれかが崩れている。exit 0 だけを見て VERIFIED とみなさないこと"
+fi
+
 # ---- MySQL が無くても走る実験 ----
 run "19-exp8-guard-fuzz-${stamp}.txt" "⑲ EXP-8 SQL 検査の fuzz（回帰入力ぶんのみ）" \
     go test ./internal/repo/ -run 'TestEXP8|TestGuardProperties' -v -timeout 10m
@@ -86,4 +132,5 @@ run "20-exp9-static-analysis-${stamp}.txt" "⑳ EXP-9 保守性の自動検査" 
 run "21-exp10-sqlite-${stamp}.txt" "㉑ EXP-10 SQLite companion" \
     go test ./internal/sqlitefacts/ -run TestEXP10 -v -timeout 20m
 
-echo "結果は ${OUT}/ に残した"
+echo "生ログは ${OUT}/ に残した（git 管理外）。receipt は EXP_RECORD=1 のときだけ docs/results/ に保存"
+exit $(( POSTFLIGHT_OK == 1 ? 0 : 1 ))
