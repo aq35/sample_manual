@@ -1,0 +1,96 @@
+{
+  "unit": "EXP-9",
+  "name": "static-analysis",
+  "title": "実験で分かった事故のうち、構文で見つかるものを go/analysis で検出する",
+  "hypothesis": "1) 生の *sql.DB の受け渡し、トランザクション内の外部呼び出し、影響行数の捨て、    context 無しの DB 呼び出し、ループ内クエリ、業務ロジック内の time.Now() は、    構文だけで検出できる。 2) unmanaged goroutine と unbounded channel は、構文だけでは判定できない（検出しない）。 3) 逃げ道は塞がず、理由を必須にして使用回数を数える。",
+  "started_at": "2026-09-03T15:10:10.743249648Z",
+  "ended_at": "2026-09-03T15:10:12.264671531Z",
+  "env": {
+    "captured_at": "2026-09-03T15:10:10.743274939Z",
+    "go_version": "go1.24.7",
+    "os": "linux",
+    "arch": "amd64",
+    "num_cpu": 4,
+    "gomaxprocs": 4,
+    "hostname": "vm",
+    "git_sha": "83598d6b4d1ec55173f92de4cc32db1c96e7d5f5",
+    "git_dirty": true
+  },
+  "workload": {},
+  "injection": {},
+  "variants": [
+    {
+      "name": "このリポジトリ全体に当てた結果（対応後）",
+      "desc": "go run ./cmd/sqllint ./...（_test.go は対象外）",
+      "counters": {
+        "escape_hatches": 55
+      },
+      "accident": false,
+      "notes": [
+        "このリポジトリでは指摘なし",
+        "理由つきの逃げ道 55 箇所（すべて grep で一覧できる）"
+      ]
+    },
+    {
+      "name": "対応前（測定の記録）",
+      "desc": "検査を作った直後に、このリポジトリへ当てたときの数字",
+      "counters": {
+        "after_loopquery_fix": 27,
+        "all_files": 191,
+        "non_test_files": 43,
+        "real_bug_found": 1
+      },
+      "accident": true,
+      "notes": [
+        "191 件のうち 148 件はテストコード。テストの後片付けなどで埋もれるため、_test.go は対象外にした",
+        "残る 43 件のうち 16 件は『ループ変数が SQL 文そのもの』という誤検出だった（for _, stmt := range statements { db.Exec(stmt) }）。ループ変数が束縛値として使われている場合だけ指摘するように直して 27 件へ",
+        "★27 件の中に本物が 1 件あった: repo.Migrate の完了記録が影響行数を見ていなかった。記録できていないのに『完了』と思い込むと、次の起動が黙って先へ進む。修正済み",
+        "残りは実験コードそのもの（測定対象）で、理由つきの逃げ道を入れた",
+        "★あとから分かった検査自身のバグ: 逃げ道の使用回数を数える map にロックが無く、EXP-10 のコードを足して逃げ道が増えたところで `fatal error: concurrent map writes` で落ちた。go/analysis はパッケージごとに並列で走る。**逃げ道が少ないうちは書き込みが稀で、たまたま落ちていなかった**"
+      ]
+    },
+    {
+      "name": "検出できるもの（実装した検査）",
+      "accident": false,
+      "notes": [
+        "rawdb: domain/service/handler へ生の *sql.DB を渡す（引数・構造体フィールド）",
+        "txhttp: Tx/WithTx/Transaction に渡した関数リテラルの中の HTTP 呼び出し",
+        "rowsaffected: UPDATE/DELETE の Exec の戻り値を捨てている（SQL が定数のとき）",
+        "nocontext: Exec/Query/QueryRow/Begin/Prepare（Context の付かない版）",
+        "loopquery: for / range の中の Query/QueryRow/Exec",
+        "domaintime: domain/service 層での time.Now()"
+      ]
+    },
+    {
+      "name": "検出しないと決めたもの（理由つき）",
+      "accident": false,
+      "notes": [
+        "unmanaged goroutine: 「管理されている」かどうかは構文で判定できない。WaitGroup/errgroup を使っていても、待っているとは限らない。誤検出が多すぎる",
+        "unbounded channel: バッファ無しチャネルは無制限ではない。本当の危険はスライスを溜め続けるコードだが、これは構文では見分けられない（EXP-4 の測定で見るべきもの）",
+        "migration file の変更: 静的解析ではなく checksum で検出している（EXP-6）。適用済みの .sql が書き換わったら起動時に止まる",
+        "scope 無し repository 呼び出し: 型で禁止できている（*repo.Scope しか受け取らない）。検査を足すより、型で表現できるならそちらが確実"
+      ]
+    }
+  ],
+  "verdict": "6つの検査を実装し、このリポジトリ全体で指摘は 0 件だった。unmanaged goroutine と unbounded channel は、構文だけでは判定できないので実装していない（できないものを「できる」と言わないことが、この検査を信用に足るものにする）。",
+  "scope": [
+    "Go の構文と型情報だけを見る（go/analysis）。実行時の振る舞いは見ていない",
+    "『domain 層』の判定はパッケージパスの文字列（/domain /service /usecase /handler /http /api）",
+    "逃げ道は //smlint:allow \u003crule\u003e 理由: ... の形。理由が無いと逃げ道として認めない"
+  ],
+  "uncertainty": [
+    "interface に包んで渡された *sql.DB は検出できない（rawdb）",
+    "別関数に切り出された HTTP 呼び出しは検出できない（txhttp）。関数をまたぐ追跡はしていない",
+    "動的に組み立てた SQL は判定できない（rowsaffected）",
+    "呼び出し先の中にあるクエリは検出できない（loopquery）",
+    "false positive の実測は、このリポジトリ（1件も出ない状態）でしか行っていない。他のプロジェクトに当てたときの誤検出率は未測定"
+  ],
+  "artifacts": [
+    "internal/lint: 6つの検査。Doc に「何を見て、何を見ていないか」を書いてある",
+    "cmd/sqllint: multichecker。go vet と同じ使い勝手で ./... に当てられる",
+    "逃げ道の監査: lint.Escapes() で理由つきの逃げ道が何回使われたかを数えられる"
+  ],
+  "next": [
+    "EXP-10 SQLite companion"
+  ]
+}

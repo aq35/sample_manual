@@ -68,6 +68,7 @@ func main() {
 
 	var results []result
 	for _, m := range splitCSV(*modes) {
+		//smlint:allow rowsaffected 理由: §4.1 の比較対象（素直に1件ずつ書く方式）
 		if _, err := s.DB().ExecContext(ctx, "DELETE FROM robot_state WHERE tenant_id = ?", *tenant); err != nil {
 			fail(err)
 		}

@@ -55,7 +55,9 @@ func Raw(t testing.TB) *sql.DB {
 		t.Fatalf("sql.Open: %v", err)
 	}
 	t.Cleanup(func() { _ = db.Close() })
-	if err := db.Ping(); err != nil {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := db.PingContext(ctx); err != nil {
 		t.Skipf("MySQL に接続できないため skip: %v", err)
 	}
 	return db
@@ -64,8 +66,11 @@ func Raw(t testing.TB) *sql.DB {
 // Truncate は指定テナントの行を消す。
 func Truncate(t testing.TB, db *sql.DB, tenant string) {
 	t.Helper()
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
 	for _, tbl := range []string{"robot_state", "robot_state_history", "worker_lease"} {
-		if _, err := db.Exec("DELETE FROM "+tbl+" WHERE tenant_id = ?", tenant); err != nil {
+		//smlint:allow rowsaffected 理由: 後片付け。消える行が 0 でも正しい
+		if _, err := db.ExecContext(ctx, "DELETE FROM "+tbl+" WHERE tenant_id = ?", tenant); err != nil {
 			t.Fatalf("cleanup %s: %v", tbl, err)
 		}
 	}

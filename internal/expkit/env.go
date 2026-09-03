@@ -75,6 +75,7 @@ func CaptureEnv(ctx context.Context, db *sql.DB) Env {
 	e.MySQLVars = map[string]string{}
 	for _, name := range mysqlVarsOfInterest {
 		var k, v string
+		//smlint:allow loopquery 理由: 測定条件の採取。起動時に一度だけ、固定の 8 変数
 		if err := db.QueryRowContext(ctx, "SHOW VARIABLES LIKE ?", name).Scan(&k, &v); err == nil {
 			e.MySQLVars[k] = v
 		}

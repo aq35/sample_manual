@@ -1,0 +1,99 @@
+{
+  "unit": "EXP-8",
+  "name": "sql-guard-fuzz",
+  "title": "SQL 検査（文字列ベース）の抜け道を fuzz で探す",
+  "hypothesis": "1) 現在の検査は文字列を見ているだけなので、抜け道がある。 2) 種（手で書いた形）だけでも、複数文・複数表の書き換えが通る。 3) fuzz を回すと、手では思いつかない形（引用符が閉じていない、    :tenant の大文字小文字が混ざる）でさらに通る。 4) 見つけたものは検査に足せるが、**この検査が security boundary になることはない**。",
+  "started_at": "2026-09-03T15:11:42.328206213Z",
+  "ended_at": "2026-09-03T15:11:42.334296704Z",
+  "env": {
+    "captured_at": "2026-09-03T15:11:42.328303392Z",
+    "go_version": "go1.24.7",
+    "os": "linux",
+    "arch": "amd64",
+    "num_cpu": 4,
+    "gomaxprocs": 4,
+    "hostname": "vm",
+    "git_sha": "83598d6b4d1ec55173f92de4cc32db1c96e7d5f5",
+    "git_dirty": true
+  },
+  "workload": {
+    "properties": [
+      "panic しない",
+      "テナント指定の無い UPDATE/DELETE を通さない",
+      "複数文を通さない",
+      "複数表の書き換えを通さない",
+      "通した文は束縛後に :tenant が残らない"
+    ],
+    "seeds": 34
+  },
+  "injection": {
+    "fuzzer": "go test -fuzz、30〜90秒 × 3回"
+  },
+  "variants": [
+    {
+      "name": "修正前（種だけで見つかった抜け道）",
+      "desc": "手で書いた種（34 個）を性質に掛けただけで見つかったもの",
+      "counters": {
+        "findings": 6
+      },
+      "accident": true,
+      "notes": [
+        "複数文を通した: `UPDATE ... WHERE tenant_id = :tenant AND id = ?; DROP TABLE u`",
+        "複数文を通した: `SELECT 1 WHERE tenant_id = :tenant LIMIT 1; SELECT 2`",
+        "複数表の書き換えを通した: `UPDATE a JOIN b ON a.id = b.id SET b.v = 1 WHERE a.tenant_id = :tenant`",
+        "複数表の書き換えを通した: `UPDATE a, b SET b.v = 1 WHERE a.tenant_id = :tenant AND a.id = b.id`",
+        "複数表の書き換えを通した: `DELETE a FROM a JOIN b ON ... WHERE a.tenant_id = :tenant`",
+        "複数表の書き換えを通した: `DELETE a, b FROM a JOIN b ON ... WHERE a.tenant_id = :tenant`"
+      ]
+    },
+    {
+      "name": "fuzz が追加で見つけたもの",
+      "desc": "手では思いつかなかった形",
+      "counters": {
+        "findings": 2
+      },
+      "accident": true,
+      "notes": [
+        "`:tenant\":tenant0` — 引用符が閉じていないため、2つめの :tenant が束縛されずに driver へ渡っていた（10秒で発見）",
+        "`:tenAnt':tenant'0` — 検査は小文字化して「トークンあり」と判定するが、置換は大文字小文字を区別するため置換されない。1分で発見",
+        "どちらも『検査は通ったのに、束縛後に :tenant が残る』という性質違反として出た"
+      ]
+    },
+    {
+      "name": "修正後",
+      "desc": "引用符・コメントの閉じ忘れを拒否／複数文を拒否／複数表の書き換えを拒否／トークン判定を大文字小文字の区別ありに統一",
+      "counters": {
+        "findings": 0,
+        "fuzz_execs_90s": 1226829,
+        "regression_inputs": 2,
+        "seed_inputs": 34
+      },
+      "accident": false,
+      "notes": [
+        "90秒 / 1,226,829 実行で新たな違反なし（10,000 exec/秒 前後）",
+        "見つかった入力は testdata/fuzz/FuzzCheckStatement/ に残り、以後は毎回のテストで回る",
+        "★修正の途中で、性質テスト自身が穴になっていたことも分かった。検査本体を『:tenant は大文字小文字を区別／キーワードは区別しない』に分けたとき、テスト側が小文字化を合わせていないと、大文字の SQL を素通りさせていた"
+      ]
+    }
+  ],
+  "verdict": "種だけで 6 件、fuzz でさらに 2 件の抜け道が見つかり、いずれも検査に反映した。90秒・122万実行で新たな違反は出なくなったが、パーサを使っていない以上これは『うっかり』を止める仕組みであって、security boundary ではない（INSERT ... SELECT の元表など、既知の穴も残っている）。",
+  "scope": [
+    "検査対象は internal/repo の checkStatement / bindTenant（文字列ベース）",
+    "fuzz は go test -fuzz。1入力 4096 バイトまで",
+    "見つかった入力はすべて回帰テストへ昇格させている"
+  ],
+  "uncertainty": [
+    "**この検査は security boundary ではない。** 悪意のある入力を止める仕組みとしては使えない",
+    "パーサを使っていないので、方言（MySQL 特有の構文）の網羅は保証できない",
+    "INSERT ... SELECT の元表がテナントで絞られているかは、この検査では判定できない（既知の穴）",
+    "動的に組み立てた SQL（文字列連結）の中身は、組み立て後の形しか見ていない",
+    "fuzz は 90 秒 × 数回。もっと長く回せば別の形が出る可能性がある"
+  ],
+  "artifacts": [
+    "internal/repo/guard_fuzz_test.go: 性質（panic しない・通してはいけない形）を書けば fuzz と通常テストの両方で回る形",
+    "testdata/fuzz/FuzzCheckStatement/: 見つかった入力の回帰コーパス"
+  ],
+  "next": [
+    "EXP-9 go/analysis による保守性の検査"
+  ]
+}

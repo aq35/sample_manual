@@ -56,8 +56,14 @@ func normalize(q string) string {
 			b.WriteRune(c)
 		}
 	}
-	return strings.Join(strings.Fields(strings.ToLower(b.String())), " ")
+	// ★小文字化しない。:tenant の判定は大文字小文字を区別する必要がある
+	// （fuzz が `:tenAnt':tenant'0` を見つけた。小文字化して判定すると
+	//   「トークンはある」と見なされるのに、置換は行われず driver まで届く）。
+	return strings.Join(strings.Fields(b.String()), " ")
 }
+
+// lower はキーワード判定用の小文字版。
+func lower(norm string) string { return strings.ToLower(norm) }
 
 type statementKind int
 
@@ -69,7 +75,8 @@ const (
 	kindOther
 )
 
-func kindOf(norm string) statementKind {
+func kindOf(normLower string) statementKind {
+	norm := normLower
 	switch {
 	case strings.HasPrefix(norm, "select"), strings.HasPrefix(norm, "with"):
 		return kindSelect
@@ -89,22 +96,42 @@ func checkStatement(q string, opt statementOptions) error {
 	if norm == "" {
 		return fmt.Errorf("%w: 空の SQL", ErrUnsafeStatement)
 	}
-	kind := kindOf(norm)
+	low := lower(norm)
+	kind := kindOf(low)
 
 	// ① テナントの目印が必ず要る（`WHERE tenant_id = :tenant` など）
 	if !opt.allowCrossTenant && !strings.Contains(norm, TenantToken) {
 		return fmt.Errorf("%w: %q を書くこと（テナントを跨ぐ操作は DB.Unscoped を使う）", ErrMissingTenant, TenantToken)
 	}
 
+	// ①'' 引用符やコメントが閉じていない SQL は通さない（EXP-8 の fuzz が見つけた）。
+	// 閉じていないと、その先の :tenant が束縛されずに driver まで届く。
+	// そもそも壊れた SQL なので、検査の段階で落とす。
+	if unbalancedQuote(q) {
+		return fmt.Errorf("%w: 引用符またはコメントが閉じていない", ErrUnsafeStatement)
+	}
+
+	// ①' 1回の呼び出しに複数の文を入れない（EXP-8 の fuzz で見つかった抜け道）。
+	// driver の既定では実行されないが、DSN に multiStatements=true が付いた瞬間に通る。
+	if hasMultipleStatements(low) {
+		return fmt.Errorf("%w: 1回の呼び出しに複数の文がある", ErrUnsafeStatement)
+	}
+
 	switch kind {
 	case kindUpdate, kindDelete:
+		// ②' 複数の表に触れる UPDATE / DELETE は通さない（EXP-8 の fuzz で発見）。
+		//     :tenant が片方の表にしか掛からず、もう一方が無条件に書き換わりうる。
+		if !opt.allowCrossTenant && looksMultiTableWrite(low) {
+			return fmt.Errorf("%w: 複数の表を書き換える文（:tenant が全ての表に掛かっている保証が無い）",
+				ErrUnsafeStatement)
+		}
 		// ② WHERE の無い UPDATE / DELETE は通さない
-		if !strings.Contains(norm, " where ") {
-			return fmt.Errorf("%w: WHERE の無い %s", ErrUnsafeStatement, strings.ToUpper(strings.Fields(norm)[0]))
+		if !strings.Contains(low, " where ") {
+			return fmt.Errorf("%w: WHERE の無い %s", ErrUnsafeStatement, strings.ToUpper(strings.Fields(low)[0]))
 		}
 		// ③ tenant_id が WHERE 側にあること（SET 側だけにあっても意味がない）
 		if !opt.allowCrossTenant {
-			where := norm[strings.Index(norm, " where "):]
+			where := norm[strings.Index(low, " where "):]
 			if !strings.Contains(where, TenantToken) {
 				return fmt.Errorf("%w: WHERE 句に %s が無い", ErrMissingTenant, TenantToken)
 			}
@@ -113,7 +140,7 @@ func checkStatement(q string, opt statementOptions) error {
 		// ④ 上限の無い読み出しは、明示的に許可したときだけ通す。
 		// 1行取得（QueryRow）と集計は対象外。件数は増えようがないため。
 		if !opt.singleRow && !opt.allowUnbounded &&
-			!strings.Contains(norm, " limit ") && !strings.Contains(norm, "count(") {
+			!strings.Contains(low, " limit ") && !strings.Contains(low, "count(") {
 			return fmt.Errorf("%w: LIMIT の無い SELECT（一覧は Keyset を使う。全件が要るなら AllowUnbounded）", ErrTooManyRows)
 		}
 	}
@@ -124,6 +151,99 @@ type statementOptions struct {
 	allowCrossTenant bool
 	allowUnbounded   bool
 	singleRow        bool // QueryRow（1行だけ取る）
+}
+
+// ---- fuzz（EXP-8）で見つかった抜け道の検出 ----
+
+// hasMultipleStatements は「1回の呼び出しに複数の文が入っているか」。
+//
+// go-sql-driver は既定で複数文を実行しないが、DSN に multiStatements=true が
+// 付いた瞬間に通る。検査側で落としておく。
+// normalize 済みの文字列を渡すこと（文字列リテラルとコメントは潰れている）。
+func hasMultipleStatements(norm string) bool {
+	i := strings.Index(norm, ";")
+	if i < 0 {
+		return false
+	}
+	// 末尾のセミコロンだけなら1文
+	return strings.TrimSpace(norm[i+1:]) != ""
+}
+
+// looksMultiTableWrite は UPDATE / DELETE が複数の表に触れる形か。
+//
+//	UPDATE a JOIN b ON ... SET b.v = 1 WHERE a.tenant_id = :tenant
+//
+// :tenant は a にしか掛かっておらず、b は無条件に書き換わる。
+// 「:tenant がある」だけでは、テナント境界の保証にならない形。
+func looksMultiTableWrite(norm string) bool {
+	head := norm
+	if i := strings.Index(norm, " where "); i > 0 {
+		head = norm[:i]
+	}
+	if strings.Contains(head, " join ") {
+		return true
+	}
+	// UPDATE a, b SET ... / DELETE a, b FROM ...
+	if strings.HasPrefix(head, "update ") {
+		if i := strings.Index(head, " set "); i > 0 {
+			return strings.Contains(head[:i], ",")
+		}
+	}
+	if strings.HasPrefix(head, "delete ") {
+		if i := strings.Index(head, " from "); i > 0 {
+			return strings.Contains(head[:i], ",")
+		}
+	}
+	return false
+}
+
+// unbalancedQuote は引用符・ブロックコメントが閉じていないか。
+//
+// fuzz が見つけた形: `:tenant":tenant0`
+// 2つめの `:tenant` が閉じていない文字列の中にあるため束縛されず、
+// そのまま driver へ渡っていた。壊れた SQL は検査で落とす。
+func unbalancedQuote(q string) bool {
+	runes := []rune(q)
+	for i := 0; i < len(runes); i++ {
+		c := runes[i]
+		switch {
+		case c == '\'' || c == '"' || c == '`':
+			quote := c
+			closed := false
+			for i++; i < len(runes); i++ {
+				if runes[i] == '\\' {
+					i++
+					continue
+				}
+				if runes[i] == quote {
+					closed = true
+					break
+				}
+			}
+			if !closed {
+				return true
+			}
+		case c == '/' && i+1 < len(runes) && runes[i+1] == '*':
+			closed := false
+			for i += 2; i+1 < len(runes); i++ {
+				if runes[i] == '*' && runes[i+1] == '/' {
+					i++
+					closed = true
+					break
+				}
+			}
+			if !closed {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// isInsertSelect は INSERT ... SELECT か。
+// 元になる SELECT がテナントで絞られているかは、この検査では分からない。
+func isInsertSelect(norm string) bool {
+	return strings.HasPrefix(norm, "insert") && strings.Contains(norm, " select ")
 }
 
 // compiled は1つの SQL 文について、検査結果と書き換え後の形を覚えておくもの。

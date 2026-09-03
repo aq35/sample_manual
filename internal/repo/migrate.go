@@ -190,6 +190,7 @@ func ensureSchemaMigrations(ctx context.Context, d *DB) error {
 		{"state", "ALTER TABLE schema_migrations ADD COLUMN state ENUM('started','done') NOT NULL DEFAULT 'done'"},
 	} {
 		var n int
+		//smlint:allow loopquery 理由: 列の有無を確認する固定回数のループ。行の N+1 ではない
 		err := d.sqldb.QueryRowContext(ctx, `SELECT COUNT(*) FROM information_schema.columns
 			WHERE table_schema = DATABASE() AND table_name = 'schema_migrations' AND column_name = ?`, col.name).Scan(&n)
 		if err != nil {
@@ -261,10 +262,18 @@ func applyMigration(ctx context.Context, d *DB, m Migration, hook func(string)) 
 	}
 	hook(StageAfterDDLBeforeDone)
 	// ③ 終わったことを記録する
-	if _, err := d.sqldb.ExecContext(ctx,
+	// ★影響行数を確かめる（EXP-9 の検査が見つけた。記録できていないのに
+	// 「完了」と思い込むと、次の起動が黙って先へ進む）
+	res, err := d.sqldb.ExecContext(ctx,
 		"UPDATE schema_migrations SET finished_at = CURRENT_TIMESTAMP(3), state = 'done' WHERE version = ?",
-		m.Version); err != nil {
+		m.Version)
+	if err != nil {
 		return fmt.Errorf("マイグレーション %04d の完了を記録できない: %w", m.Version, err)
+	}
+	if n, err := res.RowsAffected(); err != nil {
+		return err
+	} else if n != 1 {
+		return fmt.Errorf("マイグレーション %04d の完了記録が %d 行に当たった（1 行のはず）", m.Version, n)
 	}
 	hook(StageAfterDone)
 	return nil

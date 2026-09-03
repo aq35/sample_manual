@@ -97,6 +97,7 @@ UPDATE worker_lease
 // Release は自分の担当を明け渡す（正常終了時）。落ちた場合は期限切れで拾われる。
 func (m *Manager) Release(ctx context.Context, tenant model.TenantID, owner string) error {
 	const q = `UPDATE worker_lease SET expires_at = NOW(3) WHERE tenant_id = ? AND owner = ?`
+	//smlint:allow rowsaffected 理由: 明け渡しは 0 行でも正しい（すでに期限切れ／別の担当）
 	_, err := m.db.ExecContext(ctx, q, string(tenant), owner)
 	return err
 }

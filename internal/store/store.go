@@ -251,6 +251,8 @@ func (s *Store) UpdateEachAutocommit(ctx context.Context, tenant model.TenantID,
 	const q = `UPDATE robot_state SET status=?, online=?, battery=?, observed_at=?, source=?
 	           WHERE tenant_id=? AND robot_id=?`
 	for _, r := range rows {
+		//smlint:allow loopquery 理由: 比較用に置いてある「推奨しない書き方」そのもの（docs/measurements.md §6）
+		//smlint:allow rowsaffected 理由: 比較用に置いてある「推奨しない書き方」そのもの（docs/measurements.md §6）
 		if _, err := s.db.ExecContext(ctx, q,
 			uint8(r.State.Status), r.State.Online, r.State.Battery, r.ObservedAt.UTC(), uint8(r.Source),
 			string(tenant), string(r.ID)); err != nil {
@@ -276,6 +278,7 @@ func (s *Store) UpdateEachInTx(ctx context.Context, tenant model.TenantID, rows 
 	}
 	defer func() { _ = stmt.Close() }()
 	for _, r := range rows {
+		//smlint:allow loopquery 理由: 比較用に置いてある「推奨しない書き方」そのもの（docs/measurements.md §6）
 		if _, err := stmt.ExecContext(ctx,
 			uint8(r.State.Status), r.State.Online, r.State.Battery, r.ObservedAt.UTC(), uint8(r.Source),
 			string(tenant), string(r.ID)); err != nil {
