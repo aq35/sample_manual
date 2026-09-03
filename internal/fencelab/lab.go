@@ -17,6 +17,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"net/url"
 	"strings"
 	"time"
 
@@ -338,12 +339,56 @@ func AcceptedWritesBy(ctx context.Context, db *sql.DB, tenant, writer string) (i
 }
 
 // Open は DB を開く。
+//
+// ★clientFoundRows=true を必ず付ける。
+//
+// 実験中に踏んだ罠: lease の延長は
+//
+//	UPDATE fence_lease SET expires_at = ? WHERE tenant_id = ? AND owner = ?
+//
+// の影響行数で「まだ自分が担当か」を判定していた。ところが MySQL は
+// **値が変わらない UPDATE を 0 行と報告する**（docs/measurements.md の §9 参照）。
+// 取得と延長が同じミリ秒に起きると expires_at が同じ値になり、
+// 担当を持っているのに「担当を失った」と誤判定してプロセスが止まった。
+//
+// clientFoundRows=true にすると、影響行数が「変更された行」ではなく
+// 「条件に一致した行」になるので、所有権の判定に使える。
 func Open(dsn string) (*sql.DB, error) {
-	db, err := sql.Open("mysql", dsn)
+	full, err := withClientFoundRows(dsn)
+	if err != nil {
+		return nil, err
+	}
+	db, err := sql.Open("mysql", full)
 	if err != nil {
 		return nil, err
 	}
 	db.SetMaxOpenConns(8)
 	db.SetMaxIdleConns(8)
 	return db, nil
+}
+
+func withClientFoundRows(dsn string) (string, error) {
+	at := strings.LastIndex(dsn, "@")
+	base, query := dsn, ""
+	if i := strings.Index(dsn[max(at, 0):], "?"); i >= 0 {
+		i += max(at, 0)
+		base, query = dsn[:i], dsn[i+1:]
+	}
+	v, err := url.ParseQuery(query)
+	if err != nil {
+		return "", err
+	}
+	v.Set("clientFoundRows", "true")
+	v.Set("parseTime", "true")
+	if v.Get("loc") == "" {
+		v.Set("loc", "UTC")
+	}
+	return base + "?" + v.Encode(), nil
+}
+
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
 }
