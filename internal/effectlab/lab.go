@@ -244,6 +244,7 @@ func (l *Lab) naive(ctx context.Context, id string, injecting bool) error {
 	}
 	l.point(injecting, PointAfterReceiptBeforeState)
 
+	//smlint:allow rowsaffected 理由: EXP-1 の実験対象。要求ごとの処理を測っている
 	if _, err := l.db.ExecContext(ctx,
 		`UPDATE effect_request SET state = ? WHERE tenant_id = ? AND request_id = ?`,
 		StateCompleted, l.cfg.Tenant, id); err != nil {
@@ -285,6 +286,7 @@ func (l *Lab) saveRequest(ctx context.Context, id, key string) error {
 }
 
 func (l *Lab) reserve(ctx context.Context, id string) error {
+	//smlint:allow rowsaffected 理由: EXP-1 の実験対象。要求ごとの処理を測っている
 	if _, err := l.db.ExecContext(ctx,
 		`UPDATE effect_request SET state = ?, attempts = attempts + 1
 		  WHERE tenant_id = ? AND request_id = ?`,
@@ -292,6 +294,7 @@ func (l *Lab) reserve(ctx context.Context, id string) error {
 		return err
 	}
 	if l.cfg.Strategy == StrategyOutbox || l.cfg.Strategy == StrategyObserve {
+		//smlint:allow rowsaffected 理由: EXP-1 の実験対象。要求ごとの処理を測っている
 		if _, err := l.db.ExecContext(ctx,
 			`UPDATE effect_outbox SET state='RESERVED', reserved_at = CURRENT_TIMESTAMP(3)
 			  WHERE tenant_id = ? AND request_id = ?`, l.cfg.Tenant, id); err != nil {
@@ -319,6 +322,7 @@ func (l *Lab) dispatch(ctx context.Context, id, key string, injecting bool) erro
 	l.point(injecting, PointAfterResponseBeforeReceipt)
 
 	// ② 受領書を保存する（相手が発行した ID のみ）
+	//smlint:allow rowsaffected 理由: EXP-1 の実験対象。要求ごとの処理を測っている
 	if _, err := l.db.ExecContext(ctx,
 		`UPDATE effect_request SET state = ?, receipt_id = ?, receipt_source = 'response', last_error = NULL
 		  WHERE tenant_id = ? AND request_id = ?`,
@@ -355,6 +359,7 @@ func (l *Lab) complete(ctx context.Context, id string) error {
 		return fmt.Errorf("受領書が無いので完了にできない: %s", id)
 	}
 	if l.cfg.Strategy == StrategyOutbox || l.cfg.Strategy == StrategyObserve {
+		//smlint:allow rowsaffected 理由: EXP-1 の実験対象。要求ごとの処理を測っている
 		if _, err := tx.ExecContext(ctx,
 			`UPDATE effect_outbox SET state='DONE' WHERE tenant_id = ? AND request_id = ?`,
 			l.cfg.Tenant, id); err != nil {
@@ -369,6 +374,7 @@ func (l *Lab) markUnknown(ctx context.Context, id string, cause error) error {
 	if len(msg) > 250 {
 		msg = msg[:250]
 	}
+	//smlint:allow rowsaffected 理由: EXP-1 の実験対象。要求ごとの処理を測っている
 	_, err := l.db.ExecContext(ctx,
 		`UPDATE effect_request SET state = ?, last_error = ?
 		  WHERE tenant_id = ? AND request_id = ? AND state <> ?`,
@@ -485,6 +491,8 @@ func (l *Lab) Recover(ctx context.Context) error {
 				continue
 			}
 			if found {
+				//smlint:allow loopquery 理由: EXP-1 の実験対象。要求ごとの処理を測っている
+				//smlint:allow rowsaffected 理由: EXP-1 の実験対象。要求ごとの処理を測っている
 				if _, err := l.db.ExecContext(ctx,
 					`UPDATE effect_request SET state = ?, receipt_id = ?, receipt_source='observation'
 					  WHERE tenant_id = ? AND request_id = ?`,

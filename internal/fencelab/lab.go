@@ -179,6 +179,7 @@ func (w *Worker) acquireLocalClock(ctx context.Context) (bool, error) {
 	if owner != w.owner {
 		newFence++
 	}
+	//smlint:allow rowsaffected 理由: EXP-2 の実験対象。担当の書き込みを1件ずつ測っている
 	if _, err := w.db.ExecContext(ctx,
 		`UPDATE fence_lease SET owner = ?, expires_at = ?, fence = ? WHERE tenant_id = ?`,
 		w.owner, w.Now().UTC().Add(w.ttl), newFence, w.tenant); err != nil {
@@ -294,6 +295,7 @@ func (w *Worker) Release(ctx context.Context) error {
 	if w.mode == ModeNoLease {
 		return nil
 	}
+	//smlint:allow rowsaffected 理由: EXP-2 の実験対象。担当の書き込みを1件ずつ測っている
 	_, err := w.db.ExecContext(ctx,
 		`UPDATE fence_lease SET expires_at = NOW(3) WHERE tenant_id = ? AND owner = ?`, w.tenant, w.owner)
 	return err

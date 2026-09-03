@@ -105,6 +105,7 @@ func Setup(ctx context.Context, db *sql.DB) error {
 		}
 	}
 	for i := 0; i < 64; i++ {
+		//smlint:allow loopquery 理由: EXP-5 の実験対象。1件ずつの往復を測っている
 		if _, err := db.ExecContext(ctx,
 			`INSERT INTO pool_item (id, v) VALUES (?, 0) ON DUPLICATE KEY UPDATE v = v`, i); err != nil {
 			return err
@@ -230,6 +231,7 @@ func doOp(ctx context.Context, db *sql.DB, cfg Config, worker int) error {
 			return err
 		}
 		defer func() { _ = tx.Rollback() }()
+		//smlint:allow rowsaffected 理由: EXP-5 の実験対象。1件ずつの往復を測っている
 		if _, err := tx.ExecContext(ctx, "UPDATE pool_item SET v = v + 1 WHERE id = ?", id); err != nil {
 			return err
 		}
@@ -244,6 +246,7 @@ func doOp(ctx context.Context, db *sql.DB, cfg Config, worker int) error {
 		if _, err := tx.ExecContext(ctx, "SELECT SLEEP(?)", cfg.SlowFor.Seconds()); err != nil {
 			return err
 		}
+		//smlint:allow rowsaffected 理由: EXP-5 の実験対象。1件ずつの往復を測っている
 		if _, err := tx.ExecContext(ctx, "UPDATE pool_item SET v = v + 1 WHERE id = ?", id); err != nil {
 			return err
 		}

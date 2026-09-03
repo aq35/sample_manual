@@ -117,7 +117,7 @@ files, _ := r.Save("...")
 | EXP-5 | connection pool 飽和・RDS Proxy | 済（[docs/pool-saturation.md](pool-saturation.md)）／ Proxy は [rds-proxy.md](rds-proxy.md)（**LIVE_ENV_REQUIRED**） |
 | EXP-6 | migration crash matrix | 済（[docs/migration-crash.md](migration-crash.md)） |
 | EXP-7 | query plan・データ偏り | 済（[docs/query-plan-skew.md](query-plan-skew.md)） |
-| EXP-8 | SQL guard の fuzz | — |
-| EXP-9 | `go/analysis` による保守性検査 | — |
+| EXP-8 | SQL guard の fuzz | 済（[docs/sql-guard-fuzz.md](sql-guard-fuzz.md)） |
+| EXP-9 | `go/analysis` による保守性検査 | 済（[docs/static-analysis.md](static-analysis.md)） |
 | EXP-10 | SQLite companion | — |
 | EXP-11 | backup / restore / corruption | — |

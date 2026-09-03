@@ -314,6 +314,7 @@ func NPlusOne(ctx context.Context, db *sql.DB, tenant string, ids []int) (time.D
 	for _, id := range ids {
 		var status int
 		var payload string
+		//smlint:allow loopquery 理由: EXP-7 の実験対象。N+1 の遅さを測るための実装
 		err := conn.QueryRowContext(ctx,
 			"SELECT status, payload FROM plan_item WHERE tenant_id = ? AND id = ?", tenant, id).
 			Scan(&status, &payload)

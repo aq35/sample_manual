@@ -120,6 +120,7 @@ func main() {
 			select {
 			case <-t.C:
 				w.point("lease_renew")
+				//smlint:allow loopquery 理由: EXP-3 の worker 本体。1件ずつ処理する形を測っている
 				_, _ = db.ExecContext(ctx,
 					`INSERT INTO shutdown_lease (tenant_id, owner, renewals) VALUES (?,?,1)
 					 ON DUPLICATE KEY UPDATE owner = VALUES(owner), renewals = renewals + 1,
@@ -294,6 +295,7 @@ func (w *worker) commit(ctx context.Context, ids []int) error {
 
 	w.point("in_tx")
 	for _, id := range ids {
+		//smlint:allow loopquery 理由: EXP-3 の worker 本体。1件ずつ処理する形を測っている
 		if _, err := tx.ExecContext(ctx,
 			`INSERT IGNORE INTO shutdown_item (tenant_id, item_id, worker, run) VALUES (?,?,?,?)`,
 			w.tenant, id, w.name, w.run); err != nil {

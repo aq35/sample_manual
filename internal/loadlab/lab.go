@@ -168,6 +168,8 @@ func Migrate(ctx context.Context, db *sql.DB) error {
 
 func Reset(ctx context.Context, db *sql.DB, tenants []TenantMix) error {
 	for _, t := range tenants {
+		//smlint:allow loopquery 理由: EXP-4 の実験対象。書き込み方式そのものを測っている
+		//smlint:allow rowsaffected 理由: EXP-4 の実験対象。書き込み方式そのものを測っている
 		if _, err := db.ExecContext(ctx, "DELETE FROM load_item WHERE tenant_id = ?", t.ID); err != nil {
 			return err
 		}
