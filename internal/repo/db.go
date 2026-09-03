@@ -38,6 +38,11 @@ type Options struct {
 	MigrateLockWait time.Duration
 
 	Logger *slog.Logger
+
+	// MigrationHook は、マイグレーションの各段階で呼ばれる（既定は nil）。
+	// 実験（EXP-6）で「この段階でプロセスを落とす」ために使う。
+	// 本番のコードは何も渡さないので、実行時の挙動は変わらない。
+	MigrationHook func(stage string)
 }
 
 func (o *Options) setDefaults() {

@@ -84,11 +84,34 @@ func LoadMigrations() ([]Migration, error) {
 //   - **複数コンテナが同時に起動する** → GET_LOCK で1つだけが当てる（他は待って、何もしない）
 //   - **適用済みファイルの書き換え** → チェックサムで検出して止める
 //   - **途中で失敗** → そこで止める。以降は当てない（半端な状態で先へ進まない）
+//
+// マイグレーションの段階。EXP-6 でこの各点にプロセスの死を注入する。
+const (
+	StageBeforeLock         = "before_lock"
+	StageAfterLock          = "after_lock"
+	StageAfterStarted       = "after_started"
+	StageDuringDDL          = "during_ddl"
+	StageAfterDDLBeforeDone = "after_ddl_before_done"
+	StageAfterDone          = "after_done"
+	StageAfterAll           = "after_all"
+)
+
+// MigrationStages は全段階（実験が総当たりするための一覧）。
+var MigrationStages = []string{
+	StageBeforeLock, StageAfterLock, StageAfterStarted, StageDuringDDL,
+	StageAfterDDLBeforeDone, StageAfterDone, StageAfterAll,
+}
+
 func Migrate(ctx context.Context, d *DB) error {
 	migrations, err := LoadMigrations()
 	if err != nil {
 		return err
 	}
+	hook := d.opt.MigrationHook
+	if hook == nil {
+		hook = func(string) {}
+	}
+	hook(StageBeforeLock)
 
 	wait := d.opt.MigrateLockWait
 	if wait <= 0 {
@@ -103,6 +126,7 @@ func Migrate(ctx context.Context, d *DB) error {
 	//   - 接続が切れれば即座に解放されるので、途中でプロセスが落ちても残らない
 	// WithLock が接続の固定を引き受ける（*sql.DB のまま使うと解放できない）。
 	return d.WithLock(ctx, "migrate", wait, func(ctx context.Context) error {
+		hook(StageAfterLock)
 		if err := ensureSchemaMigrations(ctx, d); err != nil {
 			return err
 		}
@@ -129,12 +153,13 @@ func Migrate(ctx context.Context, d *DB) error {
 				continue
 			}
 			start := time.Now()
-			if err := applyMigration(ctx, d, m); err != nil {
+			if err := applyMigration(ctx, d, m, hook); err != nil {
 				return err
 			}
 			d.opt.Logger.Info("マイグレーションを適用した",
 				"version", m.Version, "name", m.Name, "所要", time.Since(start).Round(time.Millisecond))
 		}
+		hook(StageAfterAll)
 		return nil
 	})
 }
@@ -215,25 +240,33 @@ func appliedMigrations(ctx context.Context, d *DB) (map[int]string, []string, er
 //
 // ★MySQL の DDL は暗黙にコミットされるので、「複数の DDL をまとめてロールバック」はできない。
 // だから **1ファイル1つの変更**にしておく。失敗したときに、どこまで進んだかが分かる。
-func applyMigration(ctx context.Context, d *DB, m Migration) error {
+func applyMigration(ctx context.Context, d *DB, m Migration, hook func(string)) error {
 	// ① 始めることを記録する（finished_at は NULL のまま）
 	if _, err := d.sqldb.ExecContext(ctx,
 		"INSERT INTO schema_migrations (version, name, checksum, state) VALUES (?,?,?,'started')",
 		m.Version, m.Name, m.Checksum); err != nil {
 		return fmt.Errorf("マイグレーション %04d の開始を記録できない: %w", m.Version, err)
 	}
+	hook(StageAfterStarted)
+
 	// ② 当てる
-	for _, stmt := range splitSQL(m.SQL) {
+	for i, stmt := range splitSQL(m.SQL) {
+		if i > 0 {
+			// 複数の文を持つマイグレーションの途中（＝中途半端な形が存在しうる点）
+			hook(StageDuringDDL)
+		}
 		if _, err := d.sqldb.ExecContext(ctx, stmt); err != nil {
 			return fmt.Errorf("マイグレーション %04d_%s に失敗: %w\nSQL: %s", m.Version, m.Name, err, stmt)
 		}
 	}
+	hook(StageAfterDDLBeforeDone)
 	// ③ 終わったことを記録する
 	if _, err := d.sqldb.ExecContext(ctx,
 		"UPDATE schema_migrations SET finished_at = CURRENT_TIMESTAMP(3), state = 'done' WHERE version = ?",
 		m.Version); err != nil {
 		return fmt.Errorf("マイグレーション %04d の完了を記録できない: %w", m.Version, err)
 	}
+	hook(StageAfterDone)
 	return nil
 }
 
