@@ -72,6 +72,8 @@ if [[ -n "${MYSQL_DSN:-}" ]]; then
       go test ./internal/poollab/ -run TestEXP5 -v -timeout 20m
   run "18-exp7-plan-${stamp}.txt" "⑱ EXP-7 実行計画とデータの偏り" \
       go test ./internal/planlab/ -run TestEXP7 -v -timeout 20m
+  run "22-exp11-backup-${stamp}.txt" "㉒ EXP-11 バックアップ・復元・破損" \
+      go test ./internal/backuplab/ -run TestEXP11 -v -timeout 20m
 fi
 
 # ---- MySQL が無くても走る実験 ----

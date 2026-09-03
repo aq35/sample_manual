@@ -124,9 +124,13 @@ func MySQLDump(ctx context.Context, t Target, path string, opt DumpOptions) (Dum
 
 // Restore はバックアップを復元先へ流し込む。
 //
-// 復元先は**空のデータベース**にしてから流す（上書きではなく作り直し）。
-func Restore(ctx context.Context, t Target, path string) error {
-	if err := Recreate(ctx, t); err != nil {
+// 復元先の該当表を**先に落としてから**流す（上書きではなく作り直し）。
+// mysqldump は表ごとに `DROP TABLE IF EXISTS` を吐くので流すだけでも上書きされるが、
+// 「バックアップに含まれない表が復元先に残っている」状態を消すために、
+// 対象表を明示的に落としておく（復元は『その環境をこの断面にする』ことなので、
+// 余分な表が残ると別環境として扱えない）。
+func Restore(ctx context.Context, t Target, path string, tables []string) error {
+	if err := DropTables(ctx, t, tables); err != nil {
 		return err
 	}
 	f, err := os.Open(path)
@@ -146,14 +150,23 @@ func Restore(ctx context.Context, t Target, path string) error {
 	return nil
 }
 
-// Recreate は復元先を作り直す（前の中身を残さない）。
-func Recreate(ctx context.Context, t Target) error {
-	cmd := exec.CommandContext(ctx, "mysql", append(t.args(),
-		"-e", fmt.Sprintf("DROP DATABASE IF EXISTS `%s`; CREATE DATABASE `%s`", t.Schema, t.Schema))...)
+// DropTables は復元先の該当表を落とす（前の中身を残さない）。
+//
+// DROP DATABASE を使わないのは、テーブル単位の権限しか無い利用者
+// （本番でよくある構成）でも復元できるようにするため。
+// 外部キーの順序を気にせず落とせるよう、一時的に foreign_key_checks を切る。
+func DropTables(ctx context.Context, t Target, tables []string) error {
+	var b strings.Builder
+	b.WriteString("SET FOREIGN_KEY_CHECKS=0;")
+	for _, tbl := range tables {
+		fmt.Fprintf(&b, "DROP TABLE IF EXISTS `%s`;", tbl)
+	}
+	b.WriteString("SET FOREIGN_KEY_CHECKS=1;")
+	cmd := exec.CommandContext(ctx, "mysql", append(t.args(), t.Schema, "-e", b.String())...)
 	cmd.Env = t.env()
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("復元先を作り直せない: %w\n%s", err, out)
+		return fmt.Errorf("復元先の表を落とせない: %w\n%s", err, out)
 	}
 	return nil
 }

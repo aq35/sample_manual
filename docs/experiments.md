@@ -120,4 +120,4 @@ files, _ := r.Save("...")
 | EXP-8 | SQL guard の fuzz | 済（[docs/sql-guard-fuzz.md](sql-guard-fuzz.md)） |
 | EXP-9 | `go/analysis` による保守性検査 | 済（[docs/static-analysis.md](static-analysis.md)） |
 | EXP-10 | SQLite companion | 済（[docs/sqlite.md](sqlite.md)） |
-| EXP-11 | backup / restore / corruption | — |
+| EXP-11 | backup / restore / corruption | 済（[docs/backup-restore.md](backup-restore.md)） |
