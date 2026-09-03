@@ -113,10 +113,10 @@ files, _ := r.Save("...")
 | EXP-1 | 外部 effect・crash・`OUTCOME_UNKNOWN` | 済（[docs/crash-effects.md](crash-effects.md)） |
 | EXP-2 | lease / fencing / clock skew | 済（[docs/fencing.md](fencing.md)） |
 | EXP-3 | graceful shutdown | 済（[docs/shutdown.md](shutdown.md)） |
-| EXP-4 | backpressure・過負荷 | — |
-| EXP-5 | connection pool 飽和・RDS Proxy | — |
+| EXP-4 | backpressure・過負荷 | 済（[docs/backpressure.md](backpressure.md)） |
+| EXP-5 | connection pool 飽和・RDS Proxy | 済（[docs/pool-saturation.md](pool-saturation.md)）／ Proxy は [rds-proxy.md](rds-proxy.md)（**LIVE_ENV_REQUIRED**） |
 | EXP-6 | migration crash matrix | 済（[docs/migration-crash.md](migration-crash.md)） |
-| EXP-7 | query plan・データ偏り | — |
+| EXP-7 | query plan・データ偏り | 済（[docs/query-plan-skew.md](query-plan-skew.md)） |
 | EXP-8 | SQL guard の fuzz | — |
 | EXP-9 | `go/analysis` による保守性検査 | — |
 | EXP-10 | SQLite companion | — |
