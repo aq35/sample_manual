@@ -4,17 +4,17 @@
   "title": "バックアップを別環境へ復元し、中身のハッシュとアプリの起動まで確かめる",
   "meter_version": "expkit/2",
   "hypothesis": "1) mysqldump は書いている途中でも終了コード 0 を返すので、『コマンドが成功した』は復元できることを意味しない。2) 切れたバックアップ・バイト破損は、復元が失敗するか、復元後の指紋が違うことで拒否できる。3) 古いバックアップは行数が完全に同じでも、中身のハッシュが違うことで見分けられる。4) schema_migrations が『済』と言っていても、実際の表が足りないこと（スキーマ違い）は起こる。記録ではなく実物の表を指紋で見ないと分からない。5) 正常系は、別環境へ復元してアプリ（store + repo + lease）が起動し、lease・robot_state・マイグレーション状態を読み戻せる。",
-  "started_at": "2026-09-03T22:44:55.881596499Z",
-  "ended_at": "2026-09-03T22:44:57.305490678Z",
+  "started_at": "2026-09-03T22:54:50.982150312Z",
+  "ended_at": "2026-09-03T22:54:52.479962769Z",
   "env": {
-    "captured_at": "2026-09-03T22:44:55.881646815Z",
+    "captured_at": "2026-09-03T22:54:50.982177999Z",
     "go_version": "go1.24.7",
     "os": "linux",
     "arch": "amd64",
     "num_cpu": 4,
     "gomaxprocs": 4,
     "hostname": "vm",
-    "git_sha": "bdc8149784b5c154ea3f19ef3c64ca99a657f1e6",
+    "git_sha": "672b58c39c1157d4a6dce86b4cdbf1d1e37c3e4a",
     "git_dirty": true,
     "mysql_version": "8.0.46-0ubuntu0.24.04.4"
   },
@@ -37,7 +37,7 @@
   "variants": [
     {
       "name": "正常系（--single-transaction / 別環境へ復元 / 起動）",
-      "desc": "バックアップ 106781 バイト・86ms",
+      "desc": "バックアップ 106781 バイト・62ms",
       "counters": {
         "アプリ起動": 1,
         "復元できた": 1
@@ -45,7 +45,7 @@
       "accident": false,
       "notes": [
         "コマンド: mysqldump -h 127.0.0.1 -P 3306 -u worker --protocol=TCP --single-transaction --skip-lock-tables --no-tablespaces --set-gtid-purged=OFF workerdb robot_state robot_state_history worker_lease robot_profile schema_migrations",
-        "スキーマ指紋: 元 e5ba2d2701af / 復元後 e5ba2d2701af",
+        "スキーマ指紋: 元 4e82e2857c6f / 復元後 4e82e2857c6f",
         "robot_state 200 件 / lease owner=exp11-owner-A fence=1",
         "指紋は完全に一致した"
       ]
@@ -86,7 +86,7 @@
       "notes": [
         "★アプリは起動できてしまう（起動を成功条件にすると見逃す）。robot_state 200 件 / lease owner=exp11-owner-A fence=1",
         "schema_migrations の記録（0003 まで済）を信じると『当たっている』と誤認する。実物の表を指紋で見て初めて robot_profile の欠落が分かる",
-        "差: スキーマが違う（e5ba2d2701af → 211e72a5ea58）",
+        "差: スキーマが違う（4e82e2857c6f → b7629aa3bedf）",
         "差: 表 robot_profile が復元後に無い"
       ]
     },

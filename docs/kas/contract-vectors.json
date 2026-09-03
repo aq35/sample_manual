@@ -1,0 +1,247 @@
+{
+  "contract": "kas-sql-semantics",
+  "live_only": {
+    "WAL checkpoint": "SQLite 固有。EXP-10 のバックアップ（.db だけコピーで WAL 上のコミットを失う）で実測。MySQL には概念が無い",
+    "append-only trigger": "EXP-10（append-only-trigger）で実測。MySQL は SIGNAL、SQLite は RAISE(ABORT)。DIFFERENT_MECHANISM",
+    "busy/lock": "EXP-10（別プロセス競合・DEFERRED 昇格）で実測。SQLITE_BUSY と MySQL の lock wait は文言が違うため classifyBusy で正規化する",
+    "crash/restart": "EXP-1（外部 effect 途中の SIGKILL）・EXP-6（マイグレーション crash）・EXP-11（バックアップ復元）で実測。fence の revision は本ベクタの lease-lifecycle で担保",
+    "transaction rollback": "EXP-10（ddl-rollback）と各実験の tx テストで実証済み。DDL のトランザクション性は engine 差あり（DIFFERENT_MECHANISM）"
+  },
+  "meter": "kascontract/1",
+  "note": "ドライバの戻り値ではなく domain の結果型を期待値にしている。MySQL/SQLite の両方が同じ結果を返す。",
+  "vectors": [
+    {
+      "id": "put-insert-then-update-then-unchanged",
+      "ask": "PUT の insert / update / unchanged を区別できるか",
+      "ops": [
+        {
+          "kind": "put",
+          "key": "a",
+          "payload": "v1",
+          "want_upsert": "INSERTED"
+        },
+        {
+          "kind": "put",
+          "key": "a",
+          "payload": "v2",
+          "want_upsert": "UPDATED"
+        },
+        {
+          "kind": "put",
+          "key": "a",
+          "payload": "v2",
+          "want_upsert": "UNCHANGED"
+        }
+      ],
+      "note": "MySQL の影響行数は 1/2/0、SQLite は 1/1/1。存在確認で正規化するので domain 結果は一致する。"
+    },
+    {
+      "id": "cas-success-and-conflict",
+      "ask": "CAS が成功・競合を正しく返すか",
+      "ops": [
+        {
+          "kind": "put",
+          "key": "c",
+          "payload": "p0",
+          "want_upsert": "INSERTED"
+        },
+        {
+          "kind": "cas",
+          "key": "c",
+          "payload": "p1",
+          "want_cas": "SWAPPED"
+        },
+        {
+          "kind": "cas",
+          "key": "c",
+          "payload": "p2",
+          "want_cas": "STALE"
+        },
+        {
+          "kind": "cas",
+          "key": "c",
+          "payload": "p1",
+          "version": 1,
+          "want_cas": "SWAPPED"
+        }
+      ],
+      "note": "同値更新でも version は進む。影響行数（MySQL=0/SQLite=1）ではなく読み戻した version で判定。"
+    },
+    {
+      "id": "cas-missing-row",
+      "ask": "存在しない行への CAS は NOT_FOUND か",
+      "ops": [
+        {
+          "kind": "cas",
+          "key": "nope",
+          "payload": "x",
+          "want_cas": "NOT_FOUND"
+        }
+      ]
+    },
+    {
+      "id": "get-missing-row",
+      "ask": "存在しない行の GET は「無い」か",
+      "ops": [
+        {
+          "kind": "get",
+          "key": "ghost",
+          "want_exists": false
+        }
+      ]
+    },
+    {
+      "id": "null-vs-empty-string",
+      "ask": "NULL と空文字を区別して往復できるか",
+      "ops": [
+        {
+          "kind": "put",
+          "key": "n1",
+          "payload": "x",
+          "want_upsert": "INSERTED"
+        },
+        {
+          "kind": "put",
+          "key": "n2",
+          "payload": "x",
+          "note": "",
+          "want_upsert": "INSERTED"
+        },
+        {
+          "kind": "get",
+          "key": "n1",
+          "want_exists": true,
+          "want_record": {
+            "Key": "n1",
+            "Version": 0,
+            "Payload": "x",
+            "Note": null,
+            "Count": 0,
+            "UpdatedA": ""
+          }
+        },
+        {
+          "kind": "get",
+          "key": "n2",
+          "want_exists": true,
+          "want_record": {
+            "Key": "n2",
+            "Version": 0,
+            "Payload": "x",
+            "Note": "",
+            "Count": 0,
+            "UpdatedA": ""
+          }
+        }
+      ],
+      "note": "SQLite は型が緩いが、note を *string 相当で扱えば NULL と \"\" は別物として往復する。"
+    },
+    {
+      "id": "integer-boundary",
+      "ask": "int64 の上限・下限を往復できるか",
+      "ops": [
+        {
+          "kind": "put",
+          "key": "imax",
+          "payload": "x",
+          "count": 9223372036854775807,
+          "want_upsert": "INSERTED"
+        },
+        {
+          "kind": "put",
+          "key": "imin",
+          "payload": "x",
+          "count": -9223372036854775808,
+          "want_upsert": "INSERTED"
+        },
+        {
+          "kind": "get",
+          "key": "imax",
+          "want_exists": true,
+          "want_record": {
+            "Key": "imax",
+            "Version": 0,
+            "Payload": "x",
+            "Note": null,
+            "Count": 9223372036854775807,
+            "UpdatedA": ""
+          }
+        },
+        {
+          "kind": "get",
+          "key": "imin",
+          "want_exists": true,
+          "want_record": {
+            "Key": "imin",
+            "Version": 0,
+            "Payload": "x",
+            "Note": null,
+            "Count": -9223372036854775808,
+            "UpdatedA": ""
+          }
+        }
+      ]
+    },
+    {
+      "id": "datetime-canonical",
+      "ask": "日時を canonical 形式で往復できるか",
+      "ops": [
+        {
+          "kind": "put",
+          "key": "t1",
+          "payload": "x",
+          "updated": "2026-01-02T03:04:05.678Z",
+          "want_upsert": "INSERTED"
+        },
+        {
+          "kind": "get",
+          "key": "t1",
+          "want_exists": true,
+          "want_record": {
+            "Key": "t1",
+            "Version": 0,
+            "Payload": "x",
+            "Note": null,
+            "Count": 0,
+            "UpdatedA": "2026-01-02T03:04:05.678Z"
+          }
+        }
+      ],
+      "note": "SQLite に日時型は無いので、必ず RFC3339 UTC millis の文字列で入れる（EXP-10 の教訓）。"
+    },
+    {
+      "id": "lease-lifecycle",
+      "ask": "リースの ACQUIRED / HELD_BY_OTHER / STALE_FENCE / NOT_FOUND",
+      "ops": [
+        {
+          "kind": "lease",
+          "tenant": "t",
+          "owner": "A",
+          "now_ms": 1000,
+          "ttl_ms": 100,
+          "want_lease": "ACQUIRED",
+          "want_fence": 1
+        },
+        {
+          "kind": "lease",
+          "tenant": "t",
+          "owner": "B",
+          "now_ms": 1050,
+          "ttl_ms": 100,
+          "want_lease": "HELD_BY_OTHER",
+          "want_fence": 1
+        },
+        {
+          "kind": "lease",
+          "tenant": "t",
+          "owner": "B",
+          "now_ms": 2000,
+          "ttl_ms": 100,
+          "want_lease": "ACQUIRED",
+          "want_fence": 2
+        }
+      ],
+      "note": "RowsAffected ではなく担当・期限・fence を読んで正規化する。"
+    }
+  ]
+}

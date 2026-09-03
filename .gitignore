@@ -3,6 +3,7 @@
 /worker
 /loadsim
 /proxylab
+/fphash
 /*lab
 # 実験の一時ファイル
 *.test

@@ -121,3 +121,12 @@ files, _ := r.Save("...")
 | EXP-9 | `go/analysis` による保守性検査 | 済（[docs/static-analysis.md](static-analysis.md)） |
 | EXP-10 | SQLite companion | 済（[docs/sqlite.md](sqlite.md)） |
 | EXP-11 | backup / restore / corruption | 済（[docs/backup-restore.md](backup-restore.md)） |
+
+## 健全性・移植
+
+| 文書 | 内容 |
+| --- | --- |
+| [docs/mysql-stop-forensics.md](mysql-stop-forensics.md) | MySQL 停止の原因調査（コンテナ再取得）と suite の完了条件（postflight） |
+| [docs/binary-in-history.md](binary-in-history.md) | 誤コミットした binary の記録と再発防止 |
+| [docs/kas-adoption.md](kas-adoption.md) | KAS への採用方針（各結果の分類） |
+| `internal/kascontract` | EXP-10 の結果を domain 契約 + 言語非依存ベクタにしたもの |

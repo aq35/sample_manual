@@ -3,11 +3,11 @@
 | | |
 | --- | --- |
 | Experiment | EXP-11 / backup-restore-corruption |
-| Starting SHA | `bdc8149784b5` (作業ツリーに未コミットの変更あり) |
+| Starting SHA | `672b58c39c11` (作業ツリーに未コミットの変更あり) |
 | Meter version | `expkit/2` |
 | Hypothesis (frozen before result) | 1) mysqldump は書いている途中でも終了コード 0 を返すので、『コマンドが成功した』は復元できることを意味しない。2) 切れたバックアップ・バイト破損は、復元が失敗するか、復元後の指紋が違うことで拒否できる。3) 古いバックアップは行数が完全に同じでも、中身のハッシュが違うことで見分けられる。4) schema_migrations が『済』と言っていても、実際の表が足りないこと（スキーマ違い）は起こる。記録ではなく実物の表を指紋で見ないと分からない。5) 正常系は、別環境へ復元してアプリ（store + repo + lease）が起動し、lease・robot_state・マイグレーション状態を読み戻せる。 |
-| Environment | go1.24.7 linux/amd64 cpu=4 gomaxprocs=4 mysql=8.0.46-0ubuntu0.24.04.4 sha=bdc8149784b5+dirty |
-| Started / Ended | 2026-09-03T22:44:55Z / 2026-09-03T22:44:57Z |
+| Environment | go1.24.7 linux/amd64 cpu=4 gomaxprocs=4 mysql=8.0.46-0ubuntu0.24.04.4 sha=672b58c39c11+dirty |
+| Started / Ended | 2026-09-03T22:54:50Z / 2026-09-03T22:54:52Z |
 
 ## Workload
 
@@ -25,7 +25,7 @@
 
 ### 正常系（--single-transaction / 別環境へ復元 / 起動） — OK
 
-バックアップ 106781 バイト・86ms
+バックアップ 106781 バイト・62ms
 
 | 数えたもの | 値 |
 | --- | --- |
@@ -33,7 +33,7 @@
 | 復元できた | 1 |
 
 - コマンド: mysqldump -h 127.0.0.1 -P 3306 -u worker --protocol=TCP --single-transaction --skip-lock-tables --no-tablespaces --set-gtid-purged=OFF workerdb robot_state robot_state_history worker_lease robot_profile schema_migrations
-- スキーマ指紋: 元 e5ba2d2701af / 復元後 e5ba2d2701af
+- スキーマ指紋: 元 4e82e2857c6f / 復元後 4e82e2857c6f
 - robot_state 200 件 / lease owner=exp11-owner-A fence=1
 - 指紋は完全に一致した
 
@@ -72,7 +72,7 @@ schema_migrations は『0003 まで済』と言うのに、実際の表が足り
 
 - ★アプリは起動できてしまう（起動を成功条件にすると見逃す）。robot_state 200 件 / lease owner=exp11-owner-A fence=1
 - schema_migrations の記録（0003 まで済）を信じると『当たっている』と誤認する。実物の表を指紋で見て初めて robot_profile の欠落が分かる
-- 差: スキーマが違う（e5ba2d2701af → 211e72a5ea58）
+- 差: スキーマが違う（4e82e2857c6f → b7629aa3bedf）
 - 差: 表 robot_profile が復元後に無い
 
 ### バイト破損（中ほどを1バイト反転） — OK

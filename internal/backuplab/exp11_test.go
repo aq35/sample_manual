@@ -17,9 +17,12 @@ package backuplab_test
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -572,6 +575,73 @@ func diffNotes(diff []string) []string {
 func shortHash(s string) string {
 	if len(s) > 12 {
 		return s[:12]
+	}
+	return s
+}
+
+// TestEXP11_指紋規則がプロセスをまたいで安定 は、content hash の生成規則が
+// **同じデータなら同じ hash を返す**ことを、別プロセスでも確かめる。
+//
+// ★「行数一致・hash 不一致」で古いバックアップを見分ける仕組みは、
+// hash 規則そのものがプロセスや version で揺れないことに依っている。
+// そこが揺れたら、検出は信用できない。だから hash 規則自体をテストする。
+func TestEXP11_指紋規則がプロセスをまたいで安定(t *testing.T) {
+	mysqltest.Serialize(t)
+	ctx := context.Background()
+	dsn := mysqltest.DSN(t)
+
+	// 元の環境を用意（EXP-11 本体と同じ道具）
+	_ = setupSource(t, ctx, dsn)
+
+	db, err := sql.Open("mysql", dsn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = db.Close() }()
+
+	// ① 同一プロセスで2回取る → 完全一致（決定性）
+	fp1, err := backuplab.Take(ctx, db, appTables)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fp2, err := backuplab.Take(ctx, db, appTables)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if eq, diff := fp1.Equal(fp2); !eq {
+		t.Fatalf("同一プロセスで2回取って一致しない（非決定的）: %v", diff)
+	}
+
+	// ② 別プロセス（cmd/fphash）で取る → 同じ hash
+	bin := expkit.Build(t, "github.com/aq35/sample_manual/cmd/fphash")
+	out, err := exec.Command(bin, "-dsn", dsn, "-tables", strings.Join(appTables, ",")).CombinedOutput()
+	if err != nil {
+		t.Fatalf("fphash: %v\n%s", err, out)
+	}
+	var child backuplab.Fingerprint
+	if err := json.Unmarshal([]byte(firstJSONLine(string(out))), &child); err != nil {
+		t.Fatalf("子プロセスの出力を読めない: %v\n%s", err, out)
+	}
+	if eq, diff := fp1.Equal(child); !eq {
+		t.Errorf("別プロセスで hash が変わった（規則がプロセス依存）: %v", diff)
+	} else {
+		t.Logf("hash 規則はプロセスをまたいで安定: schema=%.12s", fp1.Schema)
+	}
+
+	// ③ cross-version は LIVE。ここでは版差を跨いだ検証はしていないことを明示する。
+	for _, sc := range backuplab.EvidenceMatrix() {
+		if !sc.Verified {
+			t.Logf("未実証の水準: %s — %s", sc.Scope, sc.Note)
+		}
+	}
+}
+
+func firstJSONLine(s string) string {
+	for _, ln := range strings.Split(s, "\n") {
+		ln = strings.TrimSpace(ln)
+		if strings.HasPrefix(ln, "{") {
+			return ln
+		}
 	}
 	return s
 }

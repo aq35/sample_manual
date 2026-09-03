@@ -286,8 +286,12 @@ func Take(ctx context.Context, db *sql.DB, tables []string) (Fingerprint, error)
 // 実際の表の形が違うことはある（誰かが手で直した／復元が中途半端だった）。
 // **記録ではなく実物を見る。**
 func schemaHash(ctx context.Context, db *sql.DB, tables []string) (string, error) {
+	// ★schema hash に含める列: 型だけでなく、照合順序・文字コード・生成式まで。
+	// これらが違えば「別スキーマ」として扱う（HashRules() 参照）。
 	rows, err := db.QueryContext(ctx, `SELECT table_name, column_name, column_type,
-			is_nullable, COALESCE(column_default, ''), COALESCE(column_key, ''), COALESCE(extra, '')
+			is_nullable, COALESCE(column_default, ''), COALESCE(column_key, ''), COALESCE(extra, ''),
+			COALESCE(character_set_name, ''), COALESCE(collation_name, ''),
+			COALESCE(generation_expression, '')
 		FROM information_schema.columns
 		WHERE table_schema = DATABASE() AND table_name IN (`+placeholders(len(tables))+`)
 		ORDER BY table_name, column_name`, toAny(tables)...)
@@ -298,8 +302,9 @@ func schemaHash(ctx context.Context, db *sql.DB, tables []string) (string, error
 
 	h := sha256.New()
 	for rows.Next() {
-		var vals [7]string
-		if err := rows.Scan(&vals[0], &vals[1], &vals[2], &vals[3], &vals[4], &vals[5], &vals[6]); err != nil {
+		var vals [10]string
+		if err := rows.Scan(&vals[0], &vals[1], &vals[2], &vals[3], &vals[4], &vals[5], &vals[6],
+			&vals[7], &vals[8], &vals[9]); err != nil {
 			return "", err
 		}
 		fmt.Fprintf(h, "%s\x00", strings.Join(vals[:], "\x01"))
