@@ -1,0 +1,72 @@
+# ⑧ リポジトリ層の実験（表設計・読み方・事故）
+# 実行: 2026-09-03T00:05:08+00:00
+# コマンド: go test ./internal/repo/ -run TestExperiment_ -v -timeout 20m
+
+=== RUN   TestExperiment_主キー設計
+    experiment_design_test.go:92: 投入: 複合主キー 2.207s / 単独主キー+索引 2.255s （100000 行）
+    experiment_design_test.go:130: テナント1件ぶん(5000行)の読み出し: 複合主キー 3.811ms / 単独主キー+索引 8.672ms （2.3 倍）
+    experiment_design_test.go:137: 複合主キー   : type=ref key=PRIMARY rows=8570 filtered=100 extra=-
+    experiment_design_test.go:138: 単独主キー+索引: type=ref key=idx_tenant rows=5000 filtered=100 extra=-
+    experiment_design_test.go:139: ※ 単独主キー側は、二次索引で行を特定してから1行ずつ主キーを引き直す（ランダムアクセス）。
+    experiment_design_test.go:140:   索引だけで足りる問い合わせ（covering index）なら差は出ない。差が出るのは列を取りに行くとき。
+    experiment_design_test.go:145: 表のサイズ: 複合主キー 16.5 MB / 単独主キー+索引 16.0 MB
+--- PASS: TestExperiment_主キー設計 (4.73s)
+=== RUN   TestExperiment_ランダムな主キー
+    experiment_design_test.go:197: 100000 行の投入: 連番 1.734s / ランダム(UUIDv4相当) 2.527s （1.5 倍）
+    experiment_design_test.go:201: 表のサイズ: 連番 13.5 MB / ランダム 26.6 MB
+--- PASS: TestExperiment_ランダムな主キー (4.37s)
+=== RUN   TestExperiment_ページ送り
+    experiment_read_test.go:69: OFFSET              0 件目から 50 件: 462µs (取得 50 件)
+    experiment_read_test.go:69: OFFSET           1000 件目から 50 件: 809µs (取得 50 件)
+    experiment_read_test.go:69: OFFSET           4000 件目から 50 件: 2.096ms (取得 50 件)
+    experiment_read_test.go:69: キーセット               0 件目から 50 件: 541µs (取得 50 件)
+    experiment_read_test.go:69: キーセット            1000 件目から 50 件: 485µs (取得 50 件)
+    experiment_read_test.go:69: キーセット            4000 件目から 50 件: 405µs (取得 50 件)
+    experiment_read_test.go:95: OFFSET の計画     : type=ref key=PRIMARY rows=8570 filtered=100 extra=Using index
+    experiment_read_test.go:97: キーセットの計画  : type=range key=PRIMARY rows=999 filtered=100 extra=Using where; Using index
+    experiment_read_test.go:99: ※ OFFSET は捨てる行も読む。深くなるほど比例して遅くなる。キーセットは深さに依らない
+--- PASS: TestExperiment_ページ送り (2.32s)
+=== RUN   TestExperiment_N1問題
+    experiment_read_test.go:149: 500 件を取る: 1件ずつ 127.885ms / IN でまとめて 1.96ms / 範囲で 881µs
+    experiment_read_test.go:151: → 1件ずつは 65 倍遅い（取得 500 件）
+    experiment_read_test.go:152: ※ 往復1回あたり 0.1ms 前後（§1）。N+1 は「遅いクエリ」ではなく「速いクエリを N 回」なので、
+    experiment_read_test.go:153:   スロークエリログには出ない。テストで問い合わせ回数を数えるのが確実
+--- PASS: TestExperiment_N1問題 (0.14s)
+=== RUN   TestExperiment_必要な列だけ取る
+    experiment_read_test.go:181: 全列 (SELECT *)            3.621ms
+    experiment_read_test.go:181: 主キーの列だけ                  2.469ms
+    experiment_read_test.go:187: → 1.5 倍の差。type=ref key=PRIMARY rows=8570 filtered=100 extra=Using index
+    experiment_read_test.go:189: ※ 一覧画面が payload まで持ってくる必要がないなら、取らない。転送量とバッファプールの両方に効く
+--- PASS: TestExperiment_必要な列だけ取る (0.09s)
+=== RUN   TestExperiment_更新が消える
+    experiment_safety_test.go:74: ① 読んで書く: 期待 300 / 実際 126 （174 回ぶんの更新が消えた）
+    experiment_safety_test.go:116: ② version で守る: 期待 300 / 実際 300 （衝突して やり直した回数 1172）
+    experiment_safety_test.go:140: ③ 読まずに書く (balance=balance+1): 期待 300 / 実際 300 / 所要 171ms
+    experiment_safety_test.go:145: → 「読んで書く」しかない場合だけ version を使う。DB 側で計算できるなら読まないほうが速くて安全
+--- PASS: TestExperiment_更新が消える (0.65s)
+=== RUN   TestExperiment_WHEREの書き間違い
+    experiment_safety_test.go:160: 1行のつもりの UPDATE が 5 行に当たった（エラーは出ない）
+    experiment_safety_test.go:164: → 影響行数を検査していなければ、そのままコミットされる。
+    experiment_safety_test.go:165:   リポジトリ層では『1行のはず』を宣言させ、違ったらロールバックする（repo.ExpectOne）
+--- PASS: TestExperiment_WHEREの書き間違い (0.03s)
+=== RUN   TestExperiment_テナント指定を忘れる
+    experiment_safety_test.go:185: tenant_id を書き忘れた UPDATE: 2 行に当たり、他テナント(t-b)の status が 9 になった
+    experiment_safety_test.go:189: → SQL 文を書く人が毎回 tenant_id を書く設計だと、いつか誰かが忘れる。
+    experiment_safety_test.go:190:   リポジトリ層では『テナントに束縛したハンドル』からしか SQL を出せないようにする
+--- PASS: TestExperiment_テナント指定を忘れる (0.03s)
+=== RUN   TestExperiment_safe_updatesは何を止めるか
+    experiment_safety_test.go:210: DSN に sql_safe_updates=1 と書くだけで有効にできる（go-sql-driver は未知のパラメータをシステム変数として送る）: 1
+    experiment_safety_test.go:227:   拒否  WHERE なしの UPDATE               Error 1175 (HY000): You are using safe update mode and you tried to update a table without a WHERE that uses a...
+    experiment_safety_test.go:227:   拒否  キーを使わない WHERE                  Error 1175 (HY000): You are using safe update mode and you tried to update a table without a WHERE that uses a...
+    experiment_safety_test.go:231:   通過  キーを使わない WHERE + LIMIT          影響 10 行
+    experiment_safety_test.go:231:   通過  主キーの先頭列だけ (tenant_id)          影響 0 行
+    experiment_safety_test.go:231:   通過  主キー完全一致                        影響 0 行
+    experiment_safety_test.go:227:   拒否  tenant_id 忘れ (id=1)            Error 1175 (HY000): You are using safe update mode and you tried to update a table without a WHERE that uses a...
+    experiment_safety_test.go:227:   拒否  WHERE なしの DELETE               Error 1175 (HY000): You are using safe update mode and you tried to update a table without a WHERE that uses a...
+    experiment_safety_test.go:233: → 止まるのは「キー列を使わない UPDATE/DELETE」。ただし LIMIT を付けると通る。
+    experiment_safety_test.go:234:   『tenant_id 忘れ』は主キーの先頭列を欠くので拒否されるが、これは表の主キー次第で変わる。
+    experiment_safety_test.go:235:   安全装置としては有効だが、テナント分離をこれに頼ってはいけない（アプリ側の保証が要る）
+--- PASS: TestExperiment_safe_updatesは何を止めるか (0.03s)
+PASS
+
+ok  	github.com/aq35/sample_manual/internal/repo	12.407s

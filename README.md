@@ -7,7 +7,11 @@
   すべて **動くコードとテスト** になっている
 - 数値はすべて **この環境で測り直した**。条件は [`docs/measurements.md`](docs/measurements.md)
 - 資料 §9 の「未検証の項目」は、**実際の MySQL 8.0 に聞いて確認した**（`internal/mysqlfacts/`）
-- 他プロジェクトのレビューに使う入口は [`.claude/skills/go-mysql-worker-review/SKILL.md`](.claude/skills/go-mysql-worker-review/SKILL.md)
+- **リポジトリ層（DB アクセス層）の設計**は [`docs/repository-layer.md`](docs/repository-layer.md)。
+  マルチテナントのテナント分離、誤更新の防止、性能を崩さない書き方を、実験して決めたもの
+- 他プロジェクトのレビューに使う入口は 2つ
+  - [`.claude/skills/go-mysql-worker-review/`](.claude/skills/go-mysql-worker-review/SKILL.md) — 常時稼働ワーカー
+  - [`.claude/skills/go-mysql-repository-review/`](.claude/skills/go-mysql-repository-review/SKILL.md) — リポジトリ層
 
 ## 試す
 
@@ -24,6 +28,10 @@ go run ./cmd/worker -tenants 2 -robots 100 -duration 50s
 
 # §4.1 の表（1000 → 10 → 5 tx/秒）を実際に出す
 go run ./cmd/loadsim -rate 1000 -duration 10s -robots 1000 -change-rate 0.01
+
+# リポジトリ層: 事故を実際に起こす実験 → 層が止めることの確認
+go test ./internal/repo/ -run TestExperiment_ -v
+go test ./internal/repo/... -v
 ```
 
 `MYSQL_DSN` が未設定のときは、DB を使うテストは skip される（CI で壊れない）。
@@ -40,6 +48,8 @@ go run ./cmd/loadsim -rate 1000 -duration 10s -robots 1000 -change-rate 0.01
 | `internal/app/` | 3本のループ（A 全件同期 / B 鮮度チェック / C 受信）と起動順序 | §2 |
 | `internal/fakesvc/` | 外部サービスの代役。沈黙・API 停止・Pong 無応答を意図的に起こせる | §2.4 / §2.5 / §2.6 |
 | `internal/mysqlfacts/` | MySQL の挙動確認（§9 の未検証項目） | §9 |
+| `internal/repo/` | **リポジトリ層**。テナント束縛・誤更新の防止・キーセットページ送り・実行計画の検査 | [repository-layer.md](docs/repository-layer.md) |
+| `internal/repo/repotest/` | 実行計画と問い合わせ回数をテストで縛る道具（他プロジェクトへ移植可） | 同上 |
 | `cmd/worker/` | 全部を動かすデモ。途中で事故を起こす | — |
 | `cmd/loadsim/` | 書き方3種のトランザクション数を比較 | §4.1 |
 
@@ -62,12 +72,30 @@ go run ./cmd/loadsim -rate 1000 -duration 10s -robots 1000 -change-rate 0.01
 | 長いトランザクションは undo を伸ばす（§4.6） | History list length **179 → 2000**、コミット後 **0** |
 | 1往復 ≒ 1ms（§1） | 同一ホストで `SELECT 1` **85µs** / 主キー1件 **146µs** / 1件 UPDATE **1.11ms** |
 
+## リポジトリ層で確かめたこと（要点）
+
+詳細と再現手順は [`docs/repository-layer.md`](docs/repository-layer.md)。
+
+| 主張 | 実測 |
+| --- | --- |
+| 読んで書くと更新が消える | 8並列×25回の read-modify-write で **200回中 175回が消えた**（エラーは出ない） |
+| WHERE の書き間違いは静かに通る | 1行のつもりの UPDATE が **5行**に当たり、そのままコミットされる |
+| tenant_id 忘れは他テナントを壊す | 他テナントの行まで書き換わった。MySQL はエラーを返さない |
+| 主キーは `(tenant_id, id)` | テナント単位の読み出しが **2.6倍** 速い |
+| ランダム UUID を主キーにしない | 表サイズ **2.0倍**、投入 **1.5倍** 遅い |
+| OFFSET を使わない | 4,000件目で **2.19ms vs 0.36ms**（キーセット法は深さに依らない） |
+| N+1 | 500件で **40〜64倍** 遅い。スロークエリログには出ない |
+| 実行計画は件数で変わる | 同じ SQL が 50行では filesort、5,000行では PRIMARY の range |
+| 層の検査の代金 | **147ns**（往復の 0.06%）。SQL ごとに結果を覚えると **33倍** 速くなる |
+
 ## 他のプロジェクトで使う
 
-1. **レビュー観点として** — `.claude/skills/go-mysql-worker-review/SKILL.md`。
+1. **レビュー観点として** — `.claude/skills/` の2つのスキル（ワーカー / リポジトリ層）。
    grep で当たる項目と、設計として読む項目に分けてある
 2. **持って行けるテスト** — `internal/worker/tracker_test.go` の
    `TestStateに時刻やポインタを入れていない` は reflect だけで書いてあり、
    どのプロジェクトにもそのまま移植できる（一番踏まれる罠を機械的に止める）
 3. **設定の検査** — `store.PoolConfig.Validate()` は §5.2 のチェックを実行時に行う。
    起動時に呼べば、`MaxIdleConns` の設定漏れを本番前に見つけられる
+4. **リポジトリ層ごと** — `internal/repo/` は他プロジェクトへ移植できる形にしてある。
+   最小構成は `guard.go`（SQL の検査）＋ `scope.go`（テナント束縛）＋ `repotest/`（テストの道具）

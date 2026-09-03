@@ -1,0 +1,74 @@
+# ⑨ リポジトリ層が事故を止めることの確認
+# 実行: 2026-09-03T00:06:33+00:00
+
+=== RUN   TestCheckStatement
+--- PASS: TestCheckStatement (0.00s)
+=== RUN   TestBindTenant
+--- PASS: TestBindTenant (0.00s)
+=== RUN   TestExpect
+--- PASS: TestExpect (0.00s)
+=== RUN   TestHardenDSN
+--- PASS: TestHardenDSN (0.00s)
+=== RUN   TestMigrate_同時に起動しても壊れない
+    migrate_test.go:50: 8並列で Migrate を呼んでも、適用済みは 2 件のまま（GET_LOCK で直列化）
+--- PASS: TestMigrate_同時に起動しても壊れない (0.01s)
+=== RUN   TestMigrate_適用済みの書き換えを検出する
+    migrate_test.go:68: 検出した: 適用済みのマイグレーションが書き換えられている: 0001_robot_profile（適用済みのファイルは書き換えず、新しい番号を足すこと）
+--- PASS: TestMigrate_適用済みの書き換えを検出する (0.01s)
+=== RUN   TestMigrate_ファイルの並びが正しい
+    migrate_test.go:97: 0001_robot_profile (checksum 0f4b7523...)
+    migrate_test.go:97: 0002_robot_profile_index (checksum 79390c40...)
+--- PASS: TestMigrate_ファイルの並びが正しい (0.00s)
+=== RUN   TestScope_テナント指定の無いSQLは実行しない
+    repo_test.go:151: 止めた: tenant_id を書き忘れた UPDATE            → SQL に :tenant が無い: ":tenant" を書くこと（テナントを跨ぐ操作は DB.Unscoped を使う）
+    repo_test.go:151: 止めた: tenant_id を書き忘れた SELECT            → SQL に :tenant が無い: ":tenant" を書くこと（テナントを跨ぐ操作は DB.Unscoped を使う）
+    repo_test.go:151: 止めた: SET 側にだけ :tenant がある UPDATE        → SQL に :tenant が無い: WHERE 句に :tenant が無い
+    repo_test.go:151: 止めた: WHERE の無い UPDATE                   → 危険な SQL: WHERE の無い UPDATE
+    repo_test.go:151: 止めた: WHERE の無い DELETE                   → SQL に :tenant が無い: ":tenant" を書くこと（テナントを跨ぐ操作は DB.Unscoped を使う）
+    repo_test.go:151: 止めた: LIMIT の無い SELECT                   → 一度に取りすぎ: LIMIT の無い SELECT（一覧は Keyset を使う。全件が要るなら AllowUnbounded）
+    repo_test.go:166: AllowUnbounded を明示すれば LIMIT 無しでも通る（全件同期などの逃げ道）
+--- PASS: TestScope_テナント指定の無いSQLは実行しない (0.01s)
+=== RUN   TestScope_他テナントの行は見えない
+    repo_test.go:199: 同じ robot_id が別テナントにあっても、互いに見えない・消せない
+--- PASS: TestScope_他テナントの行は見えない (0.01s)
+=== RUN   TestScope_影響行数が想定と違えばロールバックする
+    repo_test.go:215: 止めた: 1行のはずが 5 行に当たったのでロールバック
+    repo_test.go:227: トランザクションの外から呼んでも、暗黙のトランザクションで包んで巻き戻す
+--- PASS: TestScope_影響行数が想定と違えばロールバックする (0.01s)
+=== RUN   TestRepo_楽観ロック
+    repo_test.go:250: 止めた: 古い version での更新 → 他の処理が先に更新した
+    repo_test.go:262: 呼び出し側は Retryable(err) を見て、読み直してやり直せばよい
+--- PASS: TestRepo_楽観ロック (0.01s)
+=== RUN   TestRepo_エラーが型で分かる
+    repo_test.go:282: ErrNotFound / ErrConflict / ErrOptimisticLock で分岐できる（driver のエラー番号を業務コードに漏らさない）
+--- PASS: TestRepo_エラーが型で分かる (0.01s)
+=== RUN   TestPage_キーセットで全件たどれる
+    repo_test.go:319: 25 件を 3 ページで、重複も欠けもなくたどれた
+--- PASS: TestPage_キーセットで全件たどれる (0.04s)
+=== RUN   TestRepo_実行計画を固定する
+    repo_test.go:341: 計画: table=robot_profile type=range key=PRIMARY rows=2500 filtered=100 extra=Using where
+    repo_test.go:345: 計画: table=robot_profile type=const key=PRIMARY rows=1 filtered=100 extra=-
+    repo_test.go:354: 索引の無い列で絞った場合の計画: table=robot_profile type=ref key=PRIMARY rows=2500 filtered=10 extra=Using where
+    repo_test.go:355: → テナント内 2500 行を舐める。RequireRowsScanned(t, sc, 100, ...) ならここで落ちる
+--- PASS: TestRepo_実行計画を固定する (0.14s)
+=== RUN   TestRepo_N1を回数で検出する
+    repo_test.go:381: GetMany は 1 回の問い合わせで済む
+    repo_test.go:391: 1件ずつ引くと 20 回（テストで回数を縛れば、N+1 はレビュー前に落ちる）
+--- PASS: TestRepo_N1を回数で検出する (0.10s)
+=== RUN   TestTx_デッドロックは自動でやり直す
+    repo_test.go:436: すれ違う順序で更新 → デッドロックを 1 回やり直して、どちらも成功した
+    repo_test.go:441: ※ やり直しても安全なのは、トランザクションの中で外部 API を呼んでいないから
+--- PASS: TestTx_デッドロックは自動でやり直す (0.33s)
+=== RUN   TestTx_入れ子は同じトランザクションになる
+    repo_test.go:478: 入れ子の Tx は同じトランザクションに参加し、内側の失敗で全体が巻き戻る
+--- PASS: TestTx_入れ子は同じトランザクションになる (0.01s)
+=== RUN   TestScope_テナントを跨ぐには明示が要る
+    repo_test.go:501: Unscoped は理由つきで記録される（5 件を横断して数えた）
+--- PASS: TestScope_テナントを跨ぐには明示が要る (0.02s)
+=== RUN   TestScope_安全装置が有効になっている
+    repo_test.go:514: Open が DSN に sql_safe_updates=1 を強制する（アプリ側の検査をすり抜けた分の最後の網）
+--- PASS: TestScope_安全装置が有効になっている (0.01s)
+PASS
+
+ok  	github.com/aq35/sample_manual/internal/repo	0.752s
+?   	github.com/aq35/sample_manual/internal/repo/repotest	[no test files]

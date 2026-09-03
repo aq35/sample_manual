@@ -48,6 +48,12 @@ if [[ -n "${MYSQL_DSN:-}" ]]; then
       go test ./internal/store/ -bench Write -benchtime 30x -run XXX -count=3
   run "07-loadsim-${stamp}.txt"     "⑦ 負荷シミュレーション（§4.1 の表）" \
       go run ./cmd/loadsim -rate 1000 -duration 10s -robots 1000 -change-rate 0.01
+  run "08-repo-experiments-${stamp}.txt" "⑧ リポジトリ層の実験（表設計・読み方・事故）" \
+      go test ./internal/repo/ -run TestExperiment_ -v -timeout 20m
+  run "09-repo-guards-${stamp}.txt" "⑨ リポジトリ層が事故を止めることの確認" \
+      go test ./internal/repo/... -run 'TestScope|TestRepo|TestTx|TestPage|TestMigrate|TestCheck|TestBind|TestExpect|TestHarden' -v -timeout 10m
+  run "10-repo-bench-${stamp}.txt" "⑩ リポジトリ層の代金" \
+      go test ./internal/repo/ -bench 'PointRead|CheckAndBind' -benchmem -run XXX -count=3
 fi
 
 echo "結果は ${OUT}/ に残した"
