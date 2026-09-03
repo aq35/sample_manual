@@ -26,7 +26,9 @@ AI に設計をレビューさせるときは、**§7 のチェックリスト�
 | §2〜§6 の実装 | `internal/`（`worker` `store` `app` `jsonx` `lease`） |
 | チェックリストのテスト化 | `go test ./... -v` |
 | §4.1 の表の再現 | `go run ./cmd/loadsim` |
-| 他プロジェクトのレビュー | `.claude/skills/go-mysql-worker-review/SKILL.md` |
+| 事故を再現して止まることを確かめる実験（EXP-1〜11） | [`docs/experiments.md`](docs/experiments.md) |
+| リポジトリ層・排他制御・SQLite 移植・バックアップ | [`docs/repository-layer.md`](docs/repository-layer.md) / [`docs/locking.md`](docs/locking.md) / [`docs/sqlite.md`](docs/sqlite.md) / [`docs/backup-restore.md`](docs/backup-restore.md) |
+| 他プロジェクトのレビュー | `.claude/skills/go-mysql-worker-review/SKILL.md`（+ `go-mysql-repository-review`） |
 
 ---
 

@@ -3,10 +3,10 @@
 | | |
 | --- | --- |
 | Experiment | EXP-6 / migration-crash-matrix |
-| Starting SHA | `29c844e064c2` (作業ツリーに未コミットの変更あり) |
+| Starting SHA | `83598d6b4d1e` (作業ツリーに未コミットの変更あり) |
 | Hypothesis (frozen before result) | 1) どの段階で落ちても、実際には当たっていないマイグレーションが done として記録されることはない。 2) DDL を当てたのに done を記録する前に落ちた場合、次の起動は黙って進まず、    『途中で終わっている』と言って止まる。 3) 8プロセス同時起動でも、同じ DDL が2回走ることはない。 4) 適用済みファイルの改変は checksum で拒否される。 |
-| Environment | go1.24.7 linux/amd64 cpu=4 gomaxprocs=4 mysql=8.0.46-0ubuntu0.24.04.4 sha=29c844e064c2+dirty |
-| Started / Ended | 2026-09-03T13:21:46Z / 2026-09-03T13:21:47Z |
+| Environment | go1.24.7 linux/amd64 cpu=4 gomaxprocs=4 mysql=8.0.46-0ubuntu0.24.04.4 sha=83598d6b4d1e+dirty |
+| Started / Ended | 2026-09-03T15:11:42Z / 2026-09-03T15:11:43Z |
 
 ## Workload
 

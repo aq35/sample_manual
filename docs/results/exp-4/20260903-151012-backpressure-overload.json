@@ -3,17 +3,17 @@
   "name": "backpressure-overload",
   "title": "入力が処理能力を超えたときのメモリ・遅延・公平性",
   "hypothesis": "1) 無制限キューは、入力が処理能力を超えるとメモリと遅延が増え続ける。 2) 有界キューはメモリを抑えるが、代わりに『待たせる』か『捨てる』のどちらかを選ぶことになる。 3) キーごとに最新だけ残す方式は、同じ対象への連続更新が多いほど書き込みを減らし、    遅延も小さくなる。 4) テナントごとに枠を分けないと、1テナントの氾濫が他テナントの処理を奪う。",
-  "started_at": "2026-09-03T13:20:11.766916691Z",
-  "ended_at": "2026-09-03T13:20:39.380747741Z",
+  "started_at": "2026-09-03T15:10:12.576124592Z",
+  "ended_at": "2026-09-03T15:10:35.66005988Z",
   "env": {
-    "captured_at": "2026-09-03T13:20:11.766961469Z",
+    "captured_at": "2026-09-03T15:10:12.576173202Z",
     "go_version": "go1.24.7",
     "os": "linux",
     "arch": "amd64",
     "num_cpu": 4,
     "gomaxprocs": 4,
     "hostname": "vm",
-    "git_sha": "29c844e064c20702f4c8a87c8516b6e0b7d3d028",
+    "git_sha": "83598d6b4d1ec55173f92de4cc32db1c96e7d5f5",
     "git_dirty": true,
     "mysql_version": "8.0.46-0ubuntu0.24.04.4"
   },
@@ -35,43 +35,43 @@
       "name": "unbounded_queue",
       "desc": "入ってきたぶんだけ溜める",
       "counters": {
-        "accepted": 19960,
+        "accepted": 19760,
         "coalesced": 0,
         "committed": 1000,
         "dropped": 0,
-        "leftover_at_stop": 18951,
-        "max_queue": 19080,
-        "produced": 19960,
+        "leftover_at_stop": 18751,
+        "max_queue": 18880,
+        "produced": 19760,
         "txs": 100
       },
       "metrics": {
         "blocked_seconds": 0,
-        "heap_max_mb": 14.880966186523438,
-        "rss_max_mb": 23.05078125,
-        "tx_per_sec": 49.97517533140588
+        "heap_max_mb": 14.771408081054688,
+        "rss_max_mb": 23.30078125,
+        "tx_per_sec": 49.99648304739651
       },
       "latency": {
         "count": 1000,
-        "min_ns": 22565451,
-        "p50_ns": 1116382799,
-        "p95_ns": 2087136166,
-        "p99_ns": 2175070350,
-        "max_ns": 2198323054,
-        "mean_ns": 1106178677
+        "min_ns": 22871397,
+        "p50_ns": 1120555001,
+        "p95_ns": 2074442931,
+        "p99_ns": 2162484572,
+        "max_ns": 2185048601,
+        "mean_ns": 1105838730
       },
       "samples": {
         "count": 48,
         "max_goroutines": 9,
         "final_goroutines": 7,
-        "max_heap_alloc_bytes": 15603824,
-        "final_heap_alloc_bytes": 15603824,
-        "max_rss_bytes": 24170496,
+        "max_heap_alloc_bytes": 15488944,
+        "final_heap_alloc_bytes": 15488944,
+        "max_rss_bytes": 24432640,
         "max_db_open_conns": 1,
         "max_db_in_use": 1,
         "db_wait_count": 0,
         "db_wait_duration_ns": 0,
         "max_custom": {
-          "queue_depth": 19073
+          "queue_depth": 18880
         }
       },
       "accident": true,
@@ -83,37 +83,37 @@
       "name": "bounded_block",
       "desc": "有界。いっぱいなら生産側を待たせる（入口へ背圧をかける）",
       "counters": {
-        "accepted": 1900,
+        "accepted": 1920,
         "coalesced": 0,
-        "committed": 1000,
+        "committed": 1020,
         "dropped": 0,
         "leftover_at_stop": 891,
         "max_queue": 1024,
-        "produced": 1900,
-        "txs": 100
+        "produced": 1920,
+        "txs": 102
       },
       "metrics": {
-        "blocked_seconds": 1.9100580219999999,
-        "heap_max_mb": 17.062667846679688,
-        "rss_max_mb": 25.08984375,
-        "tx_per_sec": 49.48683329188604
+        "blocked_seconds": 1.9118450120000001,
+        "heap_max_mb": 16.978240966796875,
+        "rss_max_mb": 25.27734375,
+        "tx_per_sec": 50.44624777987486
       },
       "latency": {
-        "count": 1000,
-        "min_ns": 23248588,
-        "p50_ns": 1137663178,
-        "p95_ns": 2106664039,
-        "p99_ns": 2193210814,
-        "max_ns": 2215933961,
-        "mean_ns": 1123609793
+        "count": 1020,
+        "min_ns": 23293309,
+        "p50_ns": 1133908687,
+        "p95_ns": 2103609933,
+        "p99_ns": 2189081180,
+        "max_ns": 2212205785,
+        "mean_ns": 1119401169
       },
       "samples": {
         "count": 48,
         "max_goroutines": 9,
-        "final_goroutines": 7,
-        "max_heap_alloc_bytes": 17891504,
-        "final_heap_alloc_bytes": 17891504,
-        "max_rss_bytes": 26308608,
+        "final_goroutines": 8,
+        "max_heap_alloc_bytes": 17802976,
+        "final_heap_alloc_bytes": 17802976,
+        "max_rss_bytes": 26505216,
         "max_db_open_conns": 1,
         "max_db_in_use": 1,
         "db_wait_count": 0,
@@ -124,44 +124,44 @@
       },
       "accident": false,
       "notes": [
-        "生産側が待たされた合計 1.91s（これが背圧の量）"
+        "生産側が待たされた合計 1.912s（これが背圧の量）"
       ]
     },
     {
       "name": "bounded_drop",
       "desc": "有界。いっぱいなら捨てる",
       "counters": {
-        "accepted": 1904,
+        "accepted": 1914,
         "coalesced": 0,
-        "committed": 1000,
-        "dropped": 18056,
+        "committed": 1010,
+        "dropped": 18086,
         "leftover_at_stop": 895,
         "max_queue": 1024,
-        "produced": 19960,
-        "txs": 100
+        "produced": 20000,
+        "txs": 101
       },
       "metrics": {
         "blocked_seconds": 0,
-        "heap_max_mb": 19.337860107421875,
-        "rss_max_mb": 27.53515625,
-        "tx_per_sec": 49.991798720440414
+        "heap_max_mb": 19.535140991210938,
+        "rss_max_mb": 28.16015625,
+        "tx_per_sec": 50.48773324789143
       },
       "latency": {
-        "count": 1000,
-        "min_ns": 22721889,
-        "p50_ns": 1114014224,
-        "p95_ns": 2073055101,
-        "p99_ns": 2158744102,
-        "max_ns": 2181228290,
-        "mean_ns": 1100507100
+        "count": 1010,
+        "min_ns": 22728970,
+        "p50_ns": 1101316234,
+        "p95_ns": 2075202107,
+        "p99_ns": 2160764406,
+        "max_ns": 2181034867,
+        "mean_ns": 1101014430
       },
       "samples": {
         "count": 48,
         "max_goroutines": 9,
-        "final_goroutines": 6,
-        "max_heap_alloc_bytes": 20277216,
-        "final_heap_alloc_bytes": 1103224,
-        "max_rss_bytes": 28872704,
+        "final_goroutines": 7,
+        "max_heap_alloc_bytes": 20484080,
+        "final_heap_alloc_bytes": 1062416,
+        "max_rss_bytes": 29528064,
         "max_db_open_conns": 1,
         "max_db_in_use": 1,
         "db_wait_count": 0,
@@ -172,44 +172,44 @@
       },
       "accident": false,
       "notes": [
-        "捨てた 18056 件（数えているので、あとから説明できる）"
+        "捨てた 18086 件（数えているので、あとから説明できる）"
       ]
     },
     {
       "name": "coalesce_latest",
       "desc": "キーごとに最新だけ残す（1件ずつ書く）",
       "counters": {
-        "accepted": 19980,
-        "coalesced": 19580,
-        "committed": 293,
+        "accepted": 19700,
+        "coalesced": 19300,
+        "committed": 92,
         "dropped": 0,
         "leftover_at_stop": 200,
         "max_queue": 200,
-        "produced": 19980,
-        "txs": 293
+        "produced": 19700,
+        "txs": 92
       },
       "metrics": {
         "blocked_seconds": 0,
-        "heap_max_mb": 3.515838623046875,
-        "rss_max_mb": 14.8515625,
-        "tx_per_sec": 146.4196648010316
+        "heap_max_mb": 3.5018463134765625,
+        "rss_max_mb": 14.75390625,
+        "tx_per_sec": 45.99494490258301
       },
       "latency": {
-        "count": 293,
-        "min_ns": 44239968,
-        "p50_ns": 1838251781,
-        "p95_ns": 4509988472,
-        "p99_ns": 4777675359,
-        "max_ns": 4838400150,
-        "mean_ns": 2129447497
+        "count": 92,
+        "min_ns": 43526672,
+        "p50_ns": 1108477423,
+        "p95_ns": 1998158597,
+        "p99_ns": 2058672991,
+        "max_ns": 2118383299,
+        "mean_ns": 1074050326
       },
       "samples": {
-        "count": 138,
+        "count": 48,
         "max_goroutines": 9,
-        "final_goroutines": 7,
-        "max_heap_alloc_bytes": 3686624,
-        "final_heap_alloc_bytes": 519760,
-        "max_rss_bytes": 15572992,
+        "final_goroutines": 6,
+        "max_heap_alloc_bytes": 3671952,
+        "final_heap_alloc_bytes": 2372864,
+        "max_rss_bytes": 15470592,
         "max_db_open_conns": 1,
         "max_db_in_use": 1,
         "db_wait_count": 0,
@@ -220,44 +220,44 @@
       },
       "accident": false,
       "notes": [
-        "まとめた 19580 件"
+        "まとめた 19300 件"
       ]
     },
     {
       "name": "coalesce_batch",
       "desc": "キーごとに最新だけ残し、1トランザクションでまとめて書く",
       "counters": {
-        "accepted": 19720,
-        "coalesced": 17700,
-        "committed": 2020,
+        "accepted": 19580,
+        "coalesced": 17561,
+        "committed": 2019,
         "dropped": 0,
-        "leftover_at_stop": 20,
+        "leftover_at_stop": 19,
         "max_queue": 200,
-        "produced": 19720,
+        "produced": 19580,
         "txs": 11
       },
       "metrics": {
         "blocked_seconds": 0,
-        "heap_max_mb": 3.5818252563476562,
-        "rss_max_mb": 14.72265625,
-        "tx_per_sec": 5.49679906823739
+        "heap_max_mb": 3.7287139892578125,
+        "rss_max_mb": 14.98828125,
+        "tx_per_sec": 5.496771441061849
       },
       "latency": {
-        "count": 2020,
-        "min_ns": 25901288,
-        "p50_ns": 43677999,
-        "p95_ns": 93071656,
-        "p99_ns": 198439172,
-        "max_ns": 224052344,
-        "mean_ns": 50305498
+        "count": 2019,
+        "min_ns": 26617797,
+        "p50_ns": 41156533,
+        "p95_ns": 91250687,
+        "p99_ns": 180341598,
+        "max_ns": 222621129,
+        "mean_ns": 49198598
       },
       "samples": {
         "count": 48,
-        "max_goroutines": 8,
+        "max_goroutines": 9,
         "final_goroutines": 7,
-        "max_heap_alloc_bytes": 3755816,
-        "final_heap_alloc_bytes": 2433128,
-        "max_rss_bytes": 15437824,
+        "max_heap_alloc_bytes": 3909840,
+        "final_heap_alloc_bytes": 902160,
+        "max_rss_bytes": 15716352,
         "max_db_open_conns": 1,
         "max_db_in_use": 1,
         "db_wait_count": 0,
@@ -268,59 +268,59 @@
       },
       "accident": false,
       "notes": [
-        "まとめた 17700 件 / トランザクション 11 回"
+        "まとめた 17561 件 / トランザクション 11 回"
       ]
     },
     {
       "name": "まとめて書く / DB 遅延 0s",
       "counters": {
-        "committed": 2020,
+        "committed": 2000,
         "max_queue": 200,
-        "produced": 19900,
-        "txs": 11
+        "produced": 19540,
+        "txs": 10
       },
       "metrics": {
-        "heap_max_mb": 3.6631546020507812,
-        "tx_per_sec": 5.498028621359496
+        "heap_max_mb": 3.6673660278320312,
+        "tx_per_sec": 4.998414168132119
       },
       "latency": {
-        "count": 2020,
-        "min_ns": 4778126,
-        "p50_ns": 21400082,
-        "p95_ns": 74452079,
-        "p99_ns": 178416784,
-        "max_ns": 203375622,
-        "mean_ns": 29170811
+        "count": 2000,
+        "min_ns": 4859826,
+        "p50_ns": 21114967,
+        "p95_ns": 72673521,
+        "p99_ns": 107237357,
+        "max_ns": 179413510,
+        "mean_ns": 28429774
       },
       "accident": false,
       "notes": [
-        "キュー最大 200 件 / 反映の遅れ p99 178ms"
+        "キュー最大 200 件 / 反映の遅れ p99 107ms"
       ]
     },
     {
       "name": "まとめて書く / DB 遅延 10ms",
       "counters": {
-        "committed": 2000,
+        "committed": 2020,
         "max_queue": 200,
-        "produced": 19960,
-        "txs": 10
+        "produced": 20000,
+        "txs": 11
       },
       "metrics": {
-        "heap_max_mb": 3.6532363891601562,
-        "tx_per_sec": 4.99955288248639
+        "heap_max_mb": 3.6335525512695312,
+        "tx_per_sec": 5.498800730806414
       },
       "latency": {
-        "count": 2000,
-        "min_ns": 16436153,
-        "p50_ns": 30840140,
-        "p95_ns": 77315862,
-        "p99_ns": 112384129,
-        "max_ns": 188302709,
-        "mean_ns": 37263213
+        "count": 2020,
+        "min_ns": 16677050,
+        "p50_ns": 31146111,
+        "p95_ns": 80794402,
+        "p99_ns": 190194009,
+        "max_ns": 215087894,
+        "mean_ns": 39225059
       },
       "accident": false,
       "notes": [
-        "キュー最大 200 件 / 反映の遅れ p99 112ms"
+        "キュー最大 200 件 / 反映の遅れ p99 190ms"
       ]
     },
     {
@@ -328,75 +328,75 @@
       "counters": {
         "committed": 2000,
         "max_queue": 200,
-        "produced": 19940,
+        "produced": 20000,
         "txs": 10
       },
       "metrics": {
-        "heap_max_mb": 3.5852127075195312,
-        "tx_per_sec": 4.998419267401152
+        "heap_max_mb": 3.5945663452148438,
+        "tx_per_sec": 4.996578600298313
       },
       "latency": {
         "count": 2000,
-        "min_ns": 105433300,
-        "p50_ns": 120255789,
-        "p95_ns": 166718906,
-        "p99_ns": 200158418,
-        "max_ns": 278862177,
-        "mean_ns": 126546125
+        "min_ns": 106275967,
+        "p50_ns": 122112601,
+        "p95_ns": 169296473,
+        "p99_ns": 204079558,
+        "max_ns": 279627008,
+        "mean_ns": 128379607
       },
       "accident": false,
       "notes": [
-        "キュー最大 200 件 / 反映の遅れ p99 200ms"
+        "キュー最大 200 件 / 反映の遅れ p99 204ms"
       ]
     },
     {
       "name": "1テナントが入力の90%を占める / bounded_drop",
       "counters": {
-        "committed_big": 902,
-        "committed_small": 98,
-        "dropped": 18844,
+        "committed_big": 898,
+        "committed_small": 112,
+        "dropped": 18864,
         "max_queue": 256
       },
       "metrics": {
-        "small_tenant_share": 0.098
+        "small_tenant_share": 0.11089108910891089
       },
       "latency": {
-        "count": 1000,
-        "min_ns": 22786701,
-        "p50_ns": 601109719,
-        "p95_ns": 625069685,
-        "p99_ns": 625667326,
-        "max_ns": 626568096,
-        "mean_ns": 525931393
+        "count": 1010,
+        "min_ns": 23428956,
+        "p50_ns": 591763111,
+        "p95_ns": 614772558,
+        "p99_ns": 616787504,
+        "max_ns": 617625294,
+        "mean_ns": 525177680
       },
       "accident": false,
       "notes": [
-        "少数派テナントの取り分 9.8%（入力比では 10%）"
+        "少数派テナントの取り分 11.1%（入力比では 10%）"
       ]
     },
     {
       "name": "1テナントが入力の90%を占める / per_tenant_quota",
       "counters": {
-        "committed_big": 1000,
-        "committed_small": 990,
-        "dropped": 17959,
+        "committed_big": 1010,
+        "committed_small": 1010,
+        "dropped": 17971,
         "max_queue": 256
       },
       "metrics": {
-        "small_tenant_share": 0.49748743718592964
+        "small_tenant_share": 0.5
       },
       "latency": {
-        "count": 1990,
-        "min_ns": 23712395,
-        "p50_ns": 313191585,
-        "p95_ns": 329403786,
-        "p99_ns": 334289903,
-        "max_ns": 335256332,
-        "mean_ns": 286890482
+        "count": 2020,
+        "min_ns": 22611350,
+        "p50_ns": 310455448,
+        "p95_ns": 318630522,
+        "p99_ns": 319578607,
+        "max_ns": 320010372,
+        "mean_ns": 284261574
       },
       "accident": false,
       "notes": [
-        "少数派テナントの取り分 49.7%（入力比では 10%）"
+        "少数派テナントの取り分 50.0%（入力比では 10%）"
       ]
     }
   ],

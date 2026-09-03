@@ -3,10 +3,10 @@
 | | |
 | --- | --- |
 | Experiment | EXP-5 / connection-pool-saturation |
-| Starting SHA | `29c844e064c2` (作業ツリーに未コミットの変更あり) |
+| Starting SHA | `83598d6b4d1e` (作業ツリーに未コミットの変更あり) |
 | Hypothesis (frozen before result) | 1) 同時実行数を上げていくと、ある点から先はスループットが伸びず、遅延だけが線形に伸びる。 2) その点は MaxOpenConns 付近にあり、超えた分は database/sql の待ち行列（WaitCount）に現れる。 3) MaxOpenConns を増やしても、CPU やディスクが先に頭打ちになれば伸びない。 4) 遅い処理（DB 側で待つトランザクション）は、その時間ぶん接続を占有し、    同時実行数に関係なく MaxOpenConns / 処理時間 で上限が決まる。 |
-| Environment | go1.24.7 linux/amd64 cpu=4 gomaxprocs=4 mysql=8.0.46-0ubuntu0.24.04.4 sha=29c844e064c2+dirty |
-| Started / Ended | 2026-09-03T13:21:19Z / 2026-09-03T13:21:45Z |
+| Environment | go1.24.7 linux/amd64 cpu=4 gomaxprocs=4 mysql=8.0.46-0ubuntu0.24.04.4 sha=83598d6b4d1e+dirty |
+| Started / Ended | 2026-09-03T15:11:16Z / 2026-09-03T15:11:41Z |
 
 ## Workload
 
@@ -24,119 +24,119 @@
 | 数えたもの | 値 |
 | --- | --- |
 | new_connections | 0 |
-| ops | 7228 |
+| ops | 7156 |
 | server_threads_connected_max | 0 |
 | server_threads_running_max | 0 |
 | wait_count | 0 |
 
 | 測ったもの | 値 |
 | --- | --- |
-| ops_per_sec | 4818.202 |
+| ops_per_sec | 4770.339 |
 | wait_duration_ms | 0.000 |
 
-遅延: n=7228 p50=194µs p95=327µs p99=400µs max=3.531ms
+遅延: n=7156 p50=196µs p95=313µs p99=382µs max=20.304ms
 
 ### 主キー読み / 並列 2 / MaxOpen 8 — OK
 
 | 数えたもの | 値 |
 | --- | --- |
 | new_connections | 0 |
-| ops | 14386 |
+| ops | 14672 |
 | server_threads_connected_max | 0 |
 | server_threads_running_max | 0 |
 | wait_count | 0 |
 
 | 測ったもの | 値 |
 | --- | --- |
-| ops_per_sec | 9589.953 |
+| ops_per_sec | 9780.491 |
 | wait_duration_ms | 0.000 |
 
-遅延: n=14386 p50=199µs p95=318µs p99=396µs max=2.788ms
+遅延: n=14672 p50=194µs p95=313µs p99=399µs max=987µs
 
 ### 主キー読み / 並列 4 / MaxOpen 8 — OK
 
 | 数えたもの | 値 |
 | --- | --- |
 | new_connections | 0 |
-| ops | 24622 |
+| ops | 23766 |
 | server_threads_connected_max | 0 |
 | server_threads_running_max | 0 |
 | wait_count | 0 |
 
 | 測ったもの | 値 |
 | --- | --- |
-| ops_per_sec | 16412.070 |
+| ops_per_sec | 15842.242 |
 | wait_duration_ms | 0.000 |
 
-遅延: n=24622 p50=224µs p95=427µs p99=594µs max=3.623ms
+遅延: n=23766 p50=231µs p95=436µs p99=602µs max=4.551ms
 
 ### 主キー読み / 並列 8 / MaxOpen 8 — OK
 
 | 数えたもの | 値 |
 | --- | --- |
 | new_connections | 0 |
-| ops | 34904 |
+| ops | 35119 |
 | server_threads_connected_max | 0 |
 | server_threads_running_max | 0 |
 | wait_count | 0 |
 
 | 測ったもの | 値 |
 | --- | --- |
-| ops_per_sec | 23264.463 |
+| ops_per_sec | 23408.245 |
 | wait_duration_ms | 0.000 |
 
-遅延: n=34904 p50=299µs p95=691µs p99=1.034ms max=5.344ms
+遅延: n=35119 p50=296µs p95=670µs p99=1.046ms max=6.766ms
 
 ### 主キー読み / 並列 16 / MaxOpen 8 — OK
 
 | 数えたもの | 値 |
 | --- | --- |
 | new_connections | 0 |
-| ops | 32467 |
+| ops | 33873 |
 | server_threads_connected_max | 0 |
 | server_threads_running_max | 0 |
-| wait_count | 32474 |
+| wait_count | 33880 |
 
 | 測ったもの | 値 |
 | --- | --- |
-| ops_per_sec | 21637.329 |
-| wait_duration_ms | 12059.000 |
+| ops_per_sec | 22578.823 |
+| wait_duration_ms | 12060.000 |
 
-遅延: n=32467 p50=637µs p95=1.568ms p99=2.223ms max=6.677ms
+遅延: n=33873 p50=612µs p95=1.474ms p99=2.101ms max=5.506ms
 
 ### 主キー読み / 並列 32 / MaxOpen 8 — OK
 
 | 数えたもの | 値 |
 | --- | --- |
 | new_connections | 0 |
-| ops | 28154 |
+| ops | 34214 |
 | server_threads_connected_max | 0 |
 | server_threads_running_max | 0 |
-| wait_count | 28178 |
+| wait_count | 34238 |
 
 | 測ったもの | 値 |
 | --- | --- |
-| ops_per_sec | 18766.522 |
-| wait_duration_ms | 36045.000 |
+| ops_per_sec | 22803.768 |
+| wait_duration_ms | 36050.000 |
 
-遅延: n=28154 p50=1.299ms p95=4.364ms p99=6.613ms max=19.89ms
+遅延: n=34214 p50=1.084ms p95=3.542ms p99=5.283ms max=16.046ms
 
 ### 主キー読み / 並列 64 / MaxOpen 8 — OK
 
 | 数えたもの | 値 |
 | --- | --- |
 | new_connections | 0 |
-| ops | 32235 |
+| ops | 37292 |
 | server_threads_connected_max | 0 |
 | server_threads_running_max | 0 |
-| wait_count | 32291 |
+| wait_count | 37348 |
 
 | 測ったもの | 値 |
 | --- | --- |
-| ops_per_sec | 21488.691 |
-| wait_duration_ms | 84047.000 |
+| ops_per_sec | 24857.900 |
+| wait_duration_ms | 84041.000 |
 
-遅延: n=32235 p50=2.13ms p95=8.41ms p99=13.15ms max=34.043ms
+遅延: n=37292 p50=1.851ms p95=7.157ms p99=11.016ms max=39.45ms
 
 ### MaxOpenConns を振る（並列 32 固定） — OK
 
@@ -146,12 +146,12 @@
 | --- | --- |
 | knee_max_open | 32 |
 
-- MaxOpen  1:     4135 ops/s（前段からの伸び  +0.0%）p99=34.38ms   待ち  6235 回
-- MaxOpen  2:     8088 ops/s（前段からの伸び +95.6%）p99=17.443ms  待ち 12163 回
-- MaxOpen  4:    15117 ops/s（前段からの伸び +86.9%）p99=8.876ms   待ち 22708 回
-- MaxOpen  8:    21392 ops/s（前段からの伸び +41.5%）p99=5.814ms   待ち 32116 回
-- MaxOpen 16:    25726 ops/s（前段からの伸び +20.3%）p99=4.008ms   待ち 38616 回
-- MaxOpen 32:    26262 ops/s（前段からの伸び  +2.1%）p99=4.449ms   待ち     0 回
+- MaxOpen  1:     4728 ops/s（前段からの伸び  +0.0%）p99=31.041ms  待ち  7124 回
+- MaxOpen  2:     8983 ops/s（前段からの伸び +90.0%）p99=15.209ms  待ち 13507 回
+- MaxOpen  4:    16896 ops/s（前段からの伸び +88.1%）p99=7.892ms   待ち 25374 回
+- MaxOpen  8:    22460 ops/s（前段からの伸び +32.9%）p99=5.454ms   待ち 33719 回
+- MaxOpen 16:    29336 ops/s（前段からの伸び +30.6%）p99=3.775ms   待ち 44038 回
+- MaxOpen 32:    29231 ops/s（前段からの伸び  -0.4%）p99=3.657ms   待ち     0 回
 
 ### 同時実行数を振る（MaxOpen 8 固定） — OK
 
@@ -159,26 +159,26 @@
 
 | 数えたもの | 値 |
 | --- | --- |
-| peak_concurrency | 8 |
+| peak_concurrency | 64 |
 
 | 測ったもの | 値 |
 | --- | --- |
-| peak_ops_per_sec | 23264.463 |
+| peak_ops_per_sec | 24857.900 |
 
-- 並列   1:     4818 ops/s p50=194µs    p99=400µs     待ち     0 回 / 合計 0s・サーバ接続 最大 0
-- 並列   2:     9590 ops/s p50=199µs    p99=396µs     待ち     0 回 / 合計 0s・サーバ接続 最大 0
-- 並列   4:    16412 ops/s p50=224µs    p99=594µs     待ち     0 回 / 合計 0s・サーバ接続 最大 0
-- 並列   8:    23264 ops/s p50=299µs    p99=1.034ms   待ち     0 回 / 合計 0s・サーバ接続 最大 0
-- 並列  16:    21637 ops/s p50=637µs    p99=2.223ms   待ち 32474 回 / 合計 12.06s・サーバ接続 最大 0
-- 並列  32:    18767 ops/s p50=1.299ms  p99=6.613ms   待ち 28178 回 / 合計 36.045s・サーバ接続 最大 0
-- 並列  64:    21489 ops/s p50=2.13ms   p99=13.15ms   待ち 32291 回 / 合計 1m24.048s・サーバ接続 最大 0
+- 並列   1:     4770 ops/s p50=196µs    p99=382µs     待ち     0 回 / 合計 0s・サーバ接続 最大 0
+- 並列   2:     9780 ops/s p50=194µs    p99=399µs     待ち     0 回 / 合計 0s・サーバ接続 最大 0
+- 並列   4:    15842 ops/s p50=231µs    p99=602µs     待ち     0 回 / 合計 0s・サーバ接続 最大 0
+- 並列   8:    23408 ops/s p50=296µs    p99=1.046ms   待ち     0 回 / 合計 0s・サーバ接続 最大 0
+- 並列  16:    22579 ops/s p50=612µs    p99=2.101ms   待ち 33880 回 / 合計 12.06s・サーバ接続 最大 0
+- 並列  32:    22804 ops/s p50=1.084ms  p99=5.283ms   待ち 34238 回 / 合計 36.05s・サーバ接続 最大 0
+- 並列  64:    24858 ops/s p50=1.851ms  p99=11.016ms  待ち 37348 回 / 合計 1m24.042s・サーバ接続 最大 0
 
 ### MaxIdleConns の既定値（2）の影響 — OK
 
 接続の張り直しがスループットに出るか
 
-- MaxIdle  2:    26759 ops/s / 新規接続     0 本 / アイドル超過で閉じた    35 本 / p99 2.056ms
-- MaxIdle 16:    28968 ops/s / 新規接続     0 本 / アイドル超過で閉じた     0 本 / p99 1.794ms
+- MaxIdle  2:    31778 ops/s / 新規接続     0 本 / アイドル超過で閉じた    88 本 / p99 2.078ms
+- MaxIdle 16:    30909 ops/s / 新規接続     0 本 / アイドル超過で閉じた     0 本 / p99 1.803ms
 
 ### DB 側で 100ms 待つトランザクション / MaxOpen 4 / 並列 32 — OK
 
@@ -192,19 +192,19 @@
 
 | 測ったもの | 値 |
 | --- | --- |
-| ops_per_sec | 38.652 |
+| ops_per_sec | 38.658 |
 | theoretical_max | 40.000 |
-| wait_duration_ms | 84026.000 |
+| wait_duration_ms | 84013.000 |
 
-遅延: n=116 p50=513.938ms p95=1.439098s p99=2.056769s max=2.158016s
+遅延: n=116 p50=514.529ms p95=1.441109s p99=2.468231s max=2.569798s
 
 - 実測 38.7 ops/s（理論上限 MaxOpen/処理時間 = 40 ops/s）
-- 待ち 144 回・合計 1m24.027s。並列を増やしても、この上限は動かない
+- 待ち 144 回・合計 1m24.013s。並列を増やしても、この上限は動かない
 - ★上限を決めるのは同時実行数ではなく『接続数 ÷ 1件あたりの占有時間』
 
 ## Verdict
 
-この環境（4 CPU・同一ホスト）では、主キー読みの頂点は並列 8 付近で 23264 ops/s だった。それを超えると database/sql の待ち行列に積まれ、スループットは伸びずに遅延だけが伸びる。遅いトランザクションでは上限が『接続数 ÷ 占有時間』で決まり、並列を増やしても動かない。
+この環境（4 CPU・同一ホスト）では、主キー読みの頂点は並列 64 付近で 24858 ops/s だった。それを超えると database/sql の待ち行列に積まれ、スループットは伸びずに遅延だけが伸びる。遅いトランザクションでは上限が『接続数 ÷ 占有時間』で決まり、並列を増やしても動かない。
 
 ## 適用範囲
 

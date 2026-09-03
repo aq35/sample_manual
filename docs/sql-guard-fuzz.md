@@ -10,7 +10,7 @@ go test ./internal/repo/ -run 'TestGuardProperties|TestEXP8'
 go test ./internal/repo/ -run FuzzCheckStatement -fuzz FuzzCheckStatement -fuzztime 90s
 ```
 
-結果ファイル: [`docs/results/exp-8/20260903-132145-sql-guard-fuzz.md`](results/exp-8/20260903-132145-sql-guard-fuzz.md)
+結果ファイル: [`docs/results/exp-8/20260903-151142-sql-guard-fuzz.md`](results/exp-8/20260903-151142-sql-guard-fuzz.md)
 
 ---
 

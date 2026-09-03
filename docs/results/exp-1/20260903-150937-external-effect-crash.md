@@ -3,10 +3,10 @@
 | | |
 | --- | --- |
 | Experiment | EXP-1 / external-effect-crash |
-| Starting SHA | `29c844e064c2` (作業ツリーに未コミットの変更あり) |
+| Starting SHA | `83598d6b4d1e` (作業ツリーに未コミットの変更あり) |
 | Hypothesis (frozen before result) | 1) naive（呼んでから記録する・冪等キー無し）は、effect 成立後の SIGKILL で二重 effect を出す。 2) 冪等キーを付け、送る前に意図を記録すれば、二重 effect は 0 になる。 3) ただし 2 は相手が冪等キーを守ることに依存する。守らない相手では二重に戻る。 4) 応答が得られなかった要求は、送り直す前に相手へ問い合わせれば、    『二重送信』も『不明のまま放置』も避けられる。 |
-| Environment | go1.24.7 linux/amd64 cpu=4 gomaxprocs=4 mysql=8.0.46-0ubuntu0.24.04.4 sha=29c844e064c2+dirty |
-| Started / Ended | 2026-09-03T13:19:39Z / 2026-09-03T13:19:52Z |
+| Environment | go1.24.7 linux/amd64 cpu=4 gomaxprocs=4 mysql=8.0.46-0ubuntu0.24.04.4 sha=83598d6b4d1e+dirty |
+| Started / Ended | 2026-09-03T15:09:37Z / 2026-09-03T15:09:51Z |
 
 ## Workload
 
@@ -36,7 +36,7 @@
 | re_dispatched | 0 |
 | resolved_by_observation | 0 |
 
-遅延: n=7 p50=14.331ms p95=21.174ms p99=21.174ms max=21.174ms
+遅延: n=7 p50=15.318ms p95=64.495ms p99=64.495ms max=64.495ms
 
 - after_effect_before_response で事故: 二重 3 / 記録なし effect 0 / 実体の無い完了 0
 - after_response_before_receipt で事故: 二重 1 / 記録なし effect 0 / 実体の無い完了 0
@@ -57,7 +57,7 @@
 | re_dispatched | 0 |
 | resolved_by_observation | 0 |
 
-遅延: n=7 p50=20.255ms p95=26.647ms p99=26.647ms max=26.647ms
+遅延: n=7 p50=17.872ms p95=24.314ms p99=24.314ms max=24.314ms
 
 - 全 7 地点で、二重 effect も記録漏れも実体の無い完了も 0
 
@@ -76,7 +76,7 @@
 | re_dispatched | 0 |
 | resolved_by_observation | 0 |
 
-遅延: n=7 p50=23.118ms p95=30.95ms p99=30.95ms max=30.95ms
+遅延: n=7 p50=24.658ms p95=47.673ms p99=47.673ms max=47.673ms
 
 - 全 7 地点で、二重 effect も記録漏れも実体の無い完了も 0
 
@@ -95,7 +95,7 @@ outbox に加え、結果不明のものは **送り直す前に相手へ問い�
 | re_dispatched | 0 |
 | resolved_by_observation | 5 |
 
-遅延: n=7 p50=23.119ms p95=26.837ms p99=26.837ms max=26.837ms
+遅延: n=7 p50=25.253ms p95=32.676ms p99=32.676ms max=32.676ms
 
 - 全 7 地点で、二重 effect も記録漏れも実体の無い完了も 0
 

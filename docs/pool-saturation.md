@@ -7,7 +7,7 @@ eval "$(./scripts/mysql-up.sh --export)"
 go test ./internal/poollab/ -run TestEXP5 -v -timeout 20m
 ```
 
-結果ファイル: [`docs/results/exp-5/20260903-132119-connection-pool-saturation.md`](results/exp-5/20260903-132119-connection-pool-saturation.md)
+結果ファイル: [`docs/results/exp-5/20260903-151116-connection-pool-saturation.md`](results/exp-5/20260903-151116-connection-pool-saturation.md)
 RDS Proxy は [`docs/rds-proxy.md`](rds-proxy.md)（**LIVE_ENV_REQUIRED**）。
 
 ---

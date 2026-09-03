@@ -3,10 +3,10 @@
 | | |
 | --- | --- |
 | Experiment | EXP-11 / backup-restore-corruption |
-| Starting SHA | `de9027e3d924` (作業ツリーに未コミットの変更あり) |
+| Starting SHA | `83598d6b4d1e` |
 | Hypothesis (frozen before result) | 1) mysqldump は書いている途中でも終了コード 0 を返すので、『コマンドが成功した』は復元できることを意味しない。2) 切れたバックアップ・バイト破損は、復元が失敗するか、復元後の指紋が違うことで拒否できる。3) 古いバックアップは行数が完全に同じでも、中身のハッシュが違うことで見分けられる。4) schema_migrations が『済』と言っていても、実際の表が足りないこと（スキーマ違い）は起こる。記録ではなく実物の表を指紋で見ないと分からない。5) 正常系は、別環境へ復元してアプリ（store + repo + lease）が起動し、lease・robot_state・マイグレーション状態を読み戻せる。 |
-| Environment | go1.24.7 linux/amd64 cpu=4 gomaxprocs=4 mysql=8.0.46-0ubuntu0.24.04.4 sha=de9027e3d924+dirty |
-| Started / Ended | 2026-09-03T15:07:21Z / 2026-09-03T15:07:22Z |
+| Environment | go1.24.7 linux/amd64 cpu=4 gomaxprocs=4 mysql=8.0.46-0ubuntu0.24.04.4 sha=83598d6b4d1e |
+| Started / Ended | 2026-09-03T15:09:35Z / 2026-09-03T15:09:36Z |
 
 ## Workload
 
@@ -24,7 +24,7 @@
 
 ### 正常系（--single-transaction / 別環境へ復元 / 起動） — OK
 
-バックアップ 106781 バイト・80ms
+バックアップ 106781 バイト・71ms
 
 | 数えたもの | 値 |
 | --- | --- |

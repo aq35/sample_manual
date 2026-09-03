@@ -7,7 +7,7 @@ eval "$(./scripts/mysql-up.sh --export)"
 go test ./internal/effectlab/ -run TestEXP1 -v -timeout 20m
 ```
 
-結果ファイル: [`docs/results/exp-1/20260903-131939-external-effect-crash.md`](results/exp-1/20260903-131939-external-effect-crash.md)
+結果ファイル: [`docs/results/exp-1/20260903-150937-external-effect-crash.md`](results/exp-1/20260903-150937-external-effect-crash.md)
 （実行 SHA・MySQL の設定・全カウンタはこちらに入っている）
 
 ---

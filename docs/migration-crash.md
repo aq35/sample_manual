@@ -7,7 +7,7 @@ eval "$(./scripts/mysql-up.sh --export)"
 go test ./internal/repo/ -run TestEXP6 -v -timeout 20m
 ```
 
-結果ファイル: [`docs/results/exp-6/20260903-132146-migration-crash-matrix.md`](results/exp-6/20260903-132146-migration-crash-matrix.md)
+結果ファイル: [`docs/results/exp-6/20260903-151142-migration-crash-matrix.md`](results/exp-6/20260903-151142-migration-crash-matrix.md)
 （実験は本番用とは別のデータベース `workerdb2` に対して行う）
 
 ---

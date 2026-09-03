@@ -3,17 +3,17 @@
   "name": "sql-guard-fuzz",
   "title": "SQL 検査（文字列ベース）の抜け道を fuzz で探す",
   "hypothesis": "1) 現在の検査は文字列を見ているだけなので、抜け道がある。 2) 種（手で書いた形）だけでも、複数文・複数表の書き換えが通る。 3) fuzz を回すと、手では思いつかない形（引用符が閉じていない、    :tenant の大文字小文字が混ざる）でさらに通る。 4) 見つけたものは検査に足せるが、**この検査が security boundary になることはない**。",
-  "started_at": "2026-09-03T13:21:45.907555684Z",
-  "ended_at": "2026-09-03T13:21:45.913696479Z",
+  "started_at": "2026-09-03T15:11:42.328206213Z",
+  "ended_at": "2026-09-03T15:11:42.334296704Z",
   "env": {
-    "captured_at": "2026-09-03T13:21:45.90760821Z",
+    "captured_at": "2026-09-03T15:11:42.328303392Z",
     "go_version": "go1.24.7",
     "os": "linux",
     "arch": "amd64",
     "num_cpu": 4,
     "gomaxprocs": 4,
     "hostname": "vm",
-    "git_sha": "29c844e064c20702f4c8a87c8516b6e0b7d3d028",
+    "git_sha": "83598d6b4d1ec55173f92de4cc32db1c96e7d5f5",
     "git_dirty": true
   },
   "workload": {

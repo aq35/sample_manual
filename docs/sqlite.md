@@ -1,7 +1,7 @@
 # SQLite へ持ち込めるもの・持ち込めないもの（EXP-10）
 
 - 実験: `internal/sqlitefacts` / `go test ./internal/sqlitefacts/ -run TestEXP10 -v`
-- 結果: [docs/results/exp-10/20260903-140926-sqlite-companion.md](results/exp-10/20260903-140926-sqlite-companion.md)（JSON も同じ場所）
+- 結果: [docs/results/exp-10/20260903-151203-sqlite-companion.md](results/exp-10/20260903-151203-sqlite-companion.md)（JSON も同じ場所）
 - 実行 SHA は結果ファイルの先頭にある
 
 ## この文書がやらないこと

@@ -3,10 +3,10 @@
 | | |
 | --- | --- |
 | Experiment | EXP-10 / sqlite-companion |
-| Starting SHA | `29c844e064c2` (作業ツリーに未コミットの変更あり) |
+| Starting SHA | `83598d6b4d1e` (作業ツリーに未コミットの変更あり) |
 | Hypothesis (frozen before result) | 1) pure Go 版と cgo 版のドライバは、同じ SQL・同じ PRAGMA に対して同じ観測値を返す （違いは速度と配布のしやすさだけ）。 2) 書き込みはデータベース全体で1つずつしか進まない。MaxOpenConns を増やしても 書き込みスループットは上がらず、SQLITE_BUSY が増えるだけ。 3) 既定の journal_mode=delete では読み手と書き手が互いを止める。WAL にすると止めなくなる。 4) MySQL で確かめた結論のうち、影響行数・UPSERT の戻り値・型の厳格さ・ DDL のトランザクション性・外部キーの既定は、そのままでは持ち込めない。 5) GET_LOCK 相当は無い。マイグレーションの排他は BEGIN IMMEDIATE で作れて、 しかも DDL をロールバックできるぶん EXP-6 より単純になる。 6) WAL のまま .db だけをコピーしたバックアップは、コミット済みのデータを失う。 VACUUM INTO なら失わない。 7) PRAGMA を db.Exec で入れると、プールの中の一部の接続にしか効かない。 8) 別プロセス3本が同じファイルを書くと、busy_timeout=0 では SQLITE_BUSY が大量に出る。 WAL と busy_timeout を両方入れると 0 になる。 9) synchronous を下げると書き込みは速くなるが、失うのは電源断への耐性であって プロセス死への耐性ではない。synchronous=OFF でも、コミットが返った直後に SIGKILL された 程度ではコミット済みのデータは消えない。 |
-| Environment | go1.24.7 linux/amd64 cpu=4 gomaxprocs=4 mysql= sha=29c844e064c2+dirty |
-| Started / Ended | 2026-09-03T14:09:26Z / 2026-09-03T14:10:00Z |
+| Environment | go1.24.7 linux/amd64 cpu=4 gomaxprocs=4 mysql=8.0.46-0ubuntu0.24.04.4 sha=83598d6b4d1e+dirty |
+| Started / Ended | 2026-09-03T15:12:03Z / 2026-09-03T15:12:35Z |
 
 ## Workload
 
@@ -21,85 +21,37 @@
 
 ## Results
 
-### 同じ問いを両エンジンへ投げた結果 — OK
+### 同じ問いを両エンジンへ投げた結果 — **事故あり**
 
 分類は観測値の一致・不一致で機械的に決めている（知識で決めていない）
 
 | 数えたもの | 値 |
 | --- | --- |
-| UNVERIFIED | 24 |
+| DIFFERENT_MECHANISM | 4 |
+| DIFFERENT_RESULT | 6 |
+| SAME_SEMANTICS | 2 |
 
-- [UNVERIFIED] affected-rows-noop | MySQL: (未測定) | SQLite: 1 行
--     MySQL 側: MYSQL_DSN 未設定
+- [DIFFERENT_RESULT] affected-rows-noop | MySQL: 0 行 | SQLite: 1 行
 -     → repo.Expect（EXP-2 の fencing、楽観ロック）は影響行数で持ち主を判定している。MySQL は既定で『実際に変わった行数』を返すので 0 になり、『自分が持ち主でない』と誤判定する（EXP-2 で踏んだ罠。clientFoundRows=true で回避した）。
-- [UNVERIFIED] upsert-affected-rows | MySQL: (未測定) | SQLite: 挿入=1 更新=1 変化なし=1
--     MySQL 側: MYSQL_DSN 未設定
+- [DIFFERENT_RESULT] upsert-affected-rows | MySQL: 挿入=1 更新=2 変化なし=0 | SQLite: 挿入=1 更新=1 変化なし=1
 -     → MySQL の ON DUPLICATE KEY UPDATE は 挿入=1 / 更新=2 / 変化なし=0 を返す。『2 なら更新だった』という判定を書いていると、SQLite ではすべて 1 で常に『挿入』に見える。
-- [UNVERIFIED] type-affinity | MySQL: (未測定) | SQLite: 入る（読み戻すと "abc"）
--     MySQL 側: MYSQL_DSN 未設定
+- [DIFFERENT_RESULT] type-affinity | MySQL: 拒否される: Error 1366 (HY000): Incorrect integer value: 'abc' for column 'v' at row 1 | SQLite: 入る（読み戻すと "abc"）
 -     → SQLite は型宣言を**助言**として扱う（型親和性）。文字列がそのまま入る。MySQL は厳格モードで拒否する。『列の型で守られている』という前提が SQLite では成り立たない。
-- [UNVERIFIED] ddl-rollback | MySQL: (未測定) | SQLite: ROLLBACK で消えた（DDL はトランザクションに入る）
--     MySQL 側: MYSQL_DSN 未設定
+- [DIFFERENT_MECHANISM] ddl-rollback | MySQL: ROLLBACK しても残る（DDL は暗黙にコミットされる） | SQLite: ROLLBACK で消えた（DDL はトランザクションに入る）
 -     → MySQL の DDL は暗黙にコミットされる（EXP-6 のマイグレーション事故の原因）。SQLite の DDL はトランザクションに入るので、『マイグレーション全体を1つのトランザクション』にできる。つまり EXP-6 で必要だった『段階の記録』は、SQLite では別の形になる。
-- [UNVERIFIED] foreign-keys-default | MySQL: (未測定) | SQLite: 検査されない（親の無い行が入る）
--     MySQL 側: MYSQL_DSN 未設定
+- [DIFFERENT_MECHANISM] foreign-keys-default | MySQL: 検査される（親の無い行は拒否） | SQLite: 検査されない（親の無い行が入る）
 -     → SQLite の外部キー検査は既定で OFF、しかも**接続ごとの設定**。DSN ではなく db.Exec("PRAGMA foreign_keys=ON") で入れると、プールの中の1本にしか効かない（Accident_接続ごとのPRAGMA で再現した）。
-- [UNVERIFIED] empty-where-update | MySQL: (未測定) | SQLite: 止まらない（全件更新が通る）
--     MySQL 側: MYSQL_DSN 未設定
+- [DIFFERENT_MECHANISM] empty-where-update | MySQL: 止まる: Error 1175 (HY000): You are using safe update mode and you tried to update a table without… | SQLite: 止まらない（全件更新が通る）
 -     → MySQL には sql_safe_updates があるが、SQLite には無い。『間違えて全件更新』を止める仕組みが1つ減るので、repo の文字列検査（EXP-8）と Expect による影響行数の確認の比重が上がる。
-- [UNVERIFIED] append-only-trigger | MySQL: (未測定) | SQLite: 守れる（更新が拒否される）
--     MySQL 側: MYSQL_DSN 未設定
--     → 止められること自体は同じだが、書き方が違う（MySQL は SIGNAL、SQLite は RAISE(ABORT)）。『トリガで守る』方針は持ち込めるが、DDL は書き直しになる。
-- [UNVERIFIED] advisory-lock | MySQL: (未測定) | SQLite: なし（GET_LOCK という関数が無い）
--     MySQL 側: MYSQL_DSN 未設定
+- [SAME_SEMANTICS] append-only-trigger | MySQL: 守れる（更新が拒否される） | SQLite: 守れる（更新が拒否される）
+- [DIFFERENT_MECHANISM] advisory-lock | MySQL: あり（GET_LOCK=1） | SQLite: なし（GET_LOCK という関数が無い）
 -     → EXP-6 のマイグレーションは GET_LOCK で『同時に1つだけ』を作っている（docs/locking.md）。SQLite には相当物が無い。代わりに**書き込みロックがデータベース全体で1つ**なので、BEGIN IMMEDIATE を取った側だけが進む、という別の作り方になる。
-- [UNVERIFIED] returning | MySQL: (未測定) | SQLite: 使える（更新後の値 2 が1往復で取れる）
--     MySQL 側: MYSQL_DSN 未設定
+- [DIFFERENT_RESULT] returning | MySQL: 使えない: Error 1064 (42000): You have an error in your SQL syntax; check the manual that correspond… | SQLite: 使える（更新後の値 2 が1往復で取れる）
 -     → 『更新して、更新後の行を1往復で取る』が SQLite では書ける。MySQL 8.0 では書けない。SQLite 前提で書くと MySQL へ戻せなくなる（片道の移植になる）。
-- [UNVERIFIED] datetime-type | MySQL: (未測定) | SQLite: time.Time "2026-01-02 03:04:05.678 +0000 UTC"
--     MySQL 側: MYSQL_DSN 未設定
--     → SQLite に日時型は無い（TEXT / INTEGER / REAL のいずれかに落ちる）。MySQL の DATETIME(3) と同じ精度・同じ比較ができるかは、入れ方しだいで変わる。lease の期限比較（EXP-2）は文字列比較になるので、必ず同じ書式で入れる必要がある。
-- [UNVERIFIED] datetime-mixed-format | MySQL: (未測定) | SQLite: あと=1件（正=1） 同時刻=1件（正=2） 格納形 "2026-01-02 03:04:05 +0000 UTC" / "2026-01-02 04:04:05 +0000 UTC"
--     MySQL 側: MYSQL_DSN 未設定
+- [SAME_SEMANTICS] datetime-type | MySQL: time.Time "2026-01-02 03:04:05.678 +0000 UTC" | SQLite: time.Time "2026-01-02 03:04:05.678 +0000 UTC"
+- [DIFFERENT_RESULT] datetime-mixed-format | MySQL: あと=1件（正=1） 同時刻=2件（正=2） 格納形 "2026-01-02 03:04:05 +0000 UTC" / "2026-01-02 04:04:05 +0000 UTC" | SQLite: あと=1件（正=1） 同時刻=1件（正=2） 格納形 "2026-01-02 03:04:05 +0000 UTC" / "2026-01-02 04:04:05 +0000 UTC"
 -     → lease の期限判定（EXP-2）は `WHERE expires_at < ?` の形。SQLite に日時型は無く、比較は**入っている文字列の辞書順**になる。入れ方が2通り混ざると、`2026-01-02 03:04:05.678` と `2026-01-02T03:04:05.678Z` が同じ時刻として比較されない。
-- [UNVERIFIED] datetime-text-column | MySQL: (未測定) | SQLite: あと=1件（正=1） 同時刻=1件（正=2） 格納形 "2026-01-02 03:04:05 +0000 UTC" / "2026-01-02 04:04:05"
--     MySQL 側: MYSQL_DSN 未設定
--     → SQLite の列の型は助言でしかないが、**ドライバはその宣言を見て time.Time へ変換している**。つまり『時刻として扱われるか』は列の宣言しだいで変わる。MySQL では VARCHAR に入れても入れた文字列がそのまま返るだけで、変換は起きない。
-- [UNVERIFIED] affected-rows-noop | MySQL: (未測定) | SQLite: 1 行
--     MySQL 側: MYSQL_DSN 未設定
--     → repo.Expect（EXP-2 の fencing、楽観ロック）は影響行数で持ち主を判定している。MySQL は既定で『実際に変わった行数』を返すので 0 になり、『自分が持ち主でない』と誤判定する（EXP-2 で踏んだ罠。clientFoundRows=true で回避した）。
-- [UNVERIFIED] upsert-affected-rows | MySQL: (未測定) | SQLite: 挿入=1 更新=1 変化なし=1
--     MySQL 側: MYSQL_DSN 未設定
--     → MySQL の ON DUPLICATE KEY UPDATE は 挿入=1 / 更新=2 / 変化なし=0 を返す。『2 なら更新だった』という判定を書いていると、SQLite ではすべて 1 で常に『挿入』に見える。
-- [UNVERIFIED] type-affinity | MySQL: (未測定) | SQLite: 入る（読み戻すと "abc"）
--     MySQL 側: MYSQL_DSN 未設定
--     → SQLite は型宣言を**助言**として扱う（型親和性）。文字列がそのまま入る。MySQL は厳格モードで拒否する。『列の型で守られている』という前提が SQLite では成り立たない。
-- [UNVERIFIED] ddl-rollback | MySQL: (未測定) | SQLite: ROLLBACK で消えた（DDL はトランザクションに入る）
--     MySQL 側: MYSQL_DSN 未設定
--     → MySQL の DDL は暗黙にコミットされる（EXP-6 のマイグレーション事故の原因）。SQLite の DDL はトランザクションに入るので、『マイグレーション全体を1つのトランザクション』にできる。つまり EXP-6 で必要だった『段階の記録』は、SQLite では別の形になる。
-- [UNVERIFIED] foreign-keys-default | MySQL: (未測定) | SQLite: 検査されない（親の無い行が入る）
--     MySQL 側: MYSQL_DSN 未設定
--     → SQLite の外部キー検査は既定で OFF、しかも**接続ごとの設定**。DSN ではなく db.Exec("PRAGMA foreign_keys=ON") で入れると、プールの中の1本にしか効かない（Accident_接続ごとのPRAGMA で再現した）。
-- [UNVERIFIED] empty-where-update | MySQL: (未測定) | SQLite: 止まらない（全件更新が通る）
--     MySQL 側: MYSQL_DSN 未設定
--     → MySQL には sql_safe_updates があるが、SQLite には無い。『間違えて全件更新』を止める仕組みが1つ減るので、repo の文字列検査（EXP-8）と Expect による影響行数の確認の比重が上がる。
-- [UNVERIFIED] append-only-trigger | MySQL: (未測定) | SQLite: 守れる（更新が拒否される）
--     MySQL 側: MYSQL_DSN 未設定
--     → 止められること自体は同じだが、書き方が違う（MySQL は SIGNAL、SQLite は RAISE(ABORT)）。『トリガで守る』方針は持ち込めるが、DDL は書き直しになる。
-- [UNVERIFIED] advisory-lock | MySQL: (未測定) | SQLite: なし（GET_LOCK という関数が無い）
--     MySQL 側: MYSQL_DSN 未設定
--     → EXP-6 のマイグレーションは GET_LOCK で『同時に1つだけ』を作っている（docs/locking.md）。SQLite には相当物が無い。代わりに**書き込みロックがデータベース全体で1つ**なので、BEGIN IMMEDIATE を取った側だけが進む、という別の作り方になる。
-- [UNVERIFIED] returning | MySQL: (未測定) | SQLite: 使える（更新後の値 2 が1往復で取れる）
--     MySQL 側: MYSQL_DSN 未設定
--     → 『更新して、更新後の行を1往復で取る』が SQLite では書ける。MySQL 8.0 では書けない。SQLite 前提で書くと MySQL へ戻せなくなる（片道の移植になる）。
-- [UNVERIFIED] datetime-type | MySQL: (未測定) | SQLite: time.Time "2026-01-02 03:04:05.678 +0000 UTC"
--     MySQL 側: MYSQL_DSN 未設定
--     → SQLite に日時型は無い（TEXT / INTEGER / REAL のいずれかに落ちる）。MySQL の DATETIME(3) と同じ精度・同じ比較ができるかは、入れ方しだいで変わる。lease の期限比較（EXP-2）は文字列比較になるので、必ず同じ書式で入れる必要がある。
-- [UNVERIFIED] datetime-mixed-format | MySQL: (未測定) | SQLite: あと=1件（正=1） 同時刻=1件（正=2） 格納形 "2026-01-02 03:04:05 +0000 UTC" / "2026-01-02 04:04:05 +0000 UTC"
--     MySQL 側: MYSQL_DSN 未設定
--     → lease の期限判定（EXP-2）は `WHERE expires_at < ?` の形。SQLite に日時型は無く、比較は**入っている文字列の辞書順**になる。入れ方が2通り混ざると、`2026-01-02 03:04:05.678` と `2026-01-02T03:04:05.678Z` が同じ時刻として比較されない。
-- [UNVERIFIED] datetime-text-column | MySQL: (未測定) | SQLite: あと=1件（正=1） 同時刻=1件（正=2） 格納形 "2026-01-02 03:04:05+00:00" / "2026-01-02 04:04:05"
--     MySQL 側: MYSQL_DSN 未設定
+- [DIFFERENT_RESULT] datetime-text-column | MySQL: あと=1件（正=1） 同時刻=2件（正=2） 格納形 "2026-01-02 03:04:05" / "2026-01-02 04:04:05" | SQLite: あと=1件（正=1） 同時刻=1件（正=2） 格納形 "2026-01-02 03:04:05 +0000 UTC" / "2026-01-02 04:04:05"
 -     → SQLite の列の型は助言でしかないが、**ドライバはその宣言を見て time.Time へ変換している**。つまり『時刻として扱われるか』は列の宣言しだいで変わる。MySQL では VARCHAR に入れても入れた文字列がそのまま返るだけで、変換は起きない。
 
 ### ドライバを入れ替えて同じ問いを投げた（仮説1の検証） — **事故あり**
@@ -121,21 +73,21 @@ MaxOpenConns=1 / WAL / synchronous=NORMAL / 500 行
 | --- | --- |
 | read_busy | 0 |
 | read_errs | 0 |
-| read_ops | 100213 |
+| read_ops | 80873 |
 | write_busy | 0 |
 | write_errs | 0 |
-| write_ops | 38268 |
+| write_ops | 36176 |
 
 | 測ったもの | 値 |
 | --- | --- |
-| read_p50_us | 8.000 |
-| read_p99_us | 30.000 |
-| read_per_sec | 100210.721 |
-| write_p50_us | 14.000 |
-| write_p99_us | 57.000 |
-| write_per_sec | 38266.966 |
+| read_p50_us | 10.000 |
+| read_p99_us | 33.000 |
+| read_per_sec | 80870.991 |
+| write_p50_us | 17.000 |
+| write_p99_us | 52.000 |
+| write_per_sec | 36174.896 |
 
-遅延: n=38268 p50=14µs p95=29µs p99=57µs max=11.205ms
+遅延: n=36176 p50=17µs p95=30µs p99=53µs max=9.299ms
 
 - 同じホスト・同じ条件で測ったドライバ間の比較。**MySQL との比較には使わない**
 
@@ -147,21 +99,21 @@ MaxOpenConns=1 / WAL / synchronous=NORMAL / 500 行
 | --- | --- |
 | read_busy | 0 |
 | read_errs | 0 |
-| read_ops | 124343 |
+| read_ops | 103406 |
 | write_busy | 0 |
 | write_errs | 0 |
-| write_ops | 43965 |
+| write_ops | 50650 |
 
 | 測ったもの | 値 |
 | --- | --- |
-| read_p50_us | 6.000 |
-| read_p99_us | 27.000 |
-| read_per_sec | 124338.460 |
-| write_p50_us | 9.000 |
-| write_p99_us | 42.000 |
-| write_per_sec | 43706.185 |
+| read_p50_us | 8.000 |
+| read_p99_us | 29.000 |
+| read_per_sec | 103403.685 |
+| write_p50_us | 11.000 |
+| write_p99_us | 38.000 |
+| write_per_sec | 50648.602 |
 
-遅延: n=43965 p50=10µs p95=18µs p99=43µs max=49.573ms
+遅延: n=50650 p50=11µs p95=18µs p99=39µs max=9.021ms
 
 - 同じホスト・同じ条件で測ったドライバ間の比較。**MySQL との比較には使わない**
 
@@ -190,13 +142,13 @@ cmd/sizeprobe（開いて sqlite_version() を1回聞くだけの main）を各�
 | --- | --- |
 | busy | 0 |
 | errs | 0 |
-| ops | 39585 |
+| ops | 37119 |
 
 | 測ったもの | 値 |
 | --- | --- |
-| p50_us | 14.000 |
-| p99_us | 53.000 |
-| per_sec | 39583.440 |
+| p50_us | 17.000 |
+| p99_us | 50.000 |
+| per_sec | 37117.609 |
 
 ### 書き込み 4 並行 / MaxOpenConns=1 — OK
 
@@ -204,13 +156,13 @@ cmd/sizeprobe（開いて sqlite_version() を1回聞くだけの main）を各�
 | --- | --- |
 | busy | 0 |
 | errs | 0 |
-| ops | 21690 |
+| ops | 20968 |
 
 | 測ったもの | 値 |
 | --- | --- |
-| p50_us | 115.000 |
-| p99_us | 576.000 |
-| per_sec | 21686.556 |
+| p50_us | 113.000 |
+| p99_us | 527.000 |
+| per_sec | 15756.464 |
 
 ### 書き込み 4 並行 / MaxOpenConns=4 — OK
 
@@ -218,13 +170,13 @@ cmd/sizeprobe（開いて sqlite_version() を1回聞くだけの main）を各�
 | --- | --- |
 | busy | 0 |
 | errs | 0 |
-| ops | 40353 |
+| ops | 38637 |
 
 | 測ったもの | 値 |
 | --- | --- |
-| p50_us | 15.000 |
-| p99_us | 1233.000 |
-| per_sec | 40297.800 |
+| p50_us | 18.000 |
+| p99_us | 512.000 |
+| per_sec | 38134.137 |
 
 ### 書き込み 8 並行 / MaxOpenConns=8 — OK
 
@@ -232,13 +184,13 @@ cmd/sizeprobe（開いて sqlite_version() を1回聞くだけの main）を各�
 | --- | --- |
 | busy | 0 |
 | errs | 0 |
-| ops | 34790 |
+| ops | 38567 |
 
 | 測ったもの | 値 |
 | --- | --- |
-| p50_us | 16.000 |
-| p99_us | 2378.000 |
-| per_sec | 34368.591 |
+| p50_us | 18.000 |
+| p99_us | 1164.000 |
+| per_sec | 38006.077 |
 
 ### journal_mode=delete で読みながら書く — **事故あり**
 
@@ -248,16 +200,16 @@ cmd/sizeprobe（開いて sqlite_version() を1回聞くだけの main）を各�
 | --- | --- |
 | read_busy | 3 |
 | read_errs | 0 |
-| read_ops | 78 |
+| read_ops | 36 |
 | write_busy | 0 |
 | write_errs | 0 |
-| write_ops | 1088 |
+| write_ops | 1505 |
 
 | 測ったもの | 値 |
 | --- | --- |
-| read_p99_us | 191311.000 |
-| read_per_sec | 74.492 |
-| write_per_sec | 1087.118 |
+| read_p99_us | 501711.000 |
+| read_per_sec | 33.273 |
+| write_per_sec | 1504.588 |
 
 ### journal_mode=wal で読みながら書く — OK
 
@@ -267,16 +219,16 @@ cmd/sizeprobe（開いて sqlite_version() を1回聞くだけの main）を各�
 | --- | --- |
 | read_busy | 0 |
 | read_errs | 0 |
-| read_ops | 58667 |
+| read_ops | 67015 |
 | write_busy | 0 |
 | write_errs | 0 |
-| write_ops | 11082 |
+| write_ops | 12442 |
 
 | 測ったもの | 値 |
 | --- | --- |
-| read_p99_us | 309.000 |
-| read_per_sec | 58664.915 |
-| write_per_sec | 11081.740 |
+| read_p99_us | 282.000 |
+| read_per_sec | 67012.110 |
+| write_per_sec | 12441.911 |
 
 ### 別プロセス3本が同じファイルを書く / WAL 無し・待たない（busy_timeout=0） — **事故あり**
 
@@ -284,13 +236,13 @@ goroutine ではなく本物の別プロセス（OS のファイルロック越�
 
 | 数えたもの | 値 |
 | --- | --- |
-| busy | 164212 |
+| busy | 152851 |
 | errs | 0 |
-| ops | 801 |
+| ops | 1137 |
 
-- プロセス1: {"driver":"modernc(pure Go)","ops":265,"busy":54880,"errs":0,"per_sec":264.9947817227583,"p50_us":903,"p99_us":4675,"journal_mode":"delete"}
-- プロセス2: {"driver":"modernc(pure Go)","ops":289,"busy":57195,"errs":0,"per_sec":288.7111943970424,"p50_us":963,"p99_us":4904,"journal_mode":"delete"}
-- プロセス3: {"driver":"modernc(pure Go)","ops":247,"busy":52137,"errs":0,"per_sec":246.99460020405033,"p50_us":929,"p99_us":5914,"journal_mode":"delete"}
+- プロセス1: {"driver":"modernc(pure Go)","ops":380,"busy":51549,"errs":0,"per_sec":379.989692399604,"p50_us":690,"p99_us":4060,"journal_mode":"delete"}
+- プロセス2: {"driver":"modernc(pure Go)","ops":353,"busy":50587,"errs":0,"per_sec":352.9899609655102,"p50_us":664,"p99_us":2616,"journal_mode":"delete"}
+- プロセス3: {"driver":"modernc(pure Go)","ops":404,"busy":50715,"errs":0,"per_sec":403.8451298350047,"p50_us":683,"p99_us":3431,"journal_mode":"delete"}
 
 ### 別プロセス3本が同じファイルを書く / WAL 有り・待たない（busy_timeout=0） — **事故あり**
 
@@ -298,13 +250,13 @@ goroutine ではなく本物の別プロセス（OS のファイルロック越�
 
 | 数えたもの | 値 |
 | --- | --- |
-| busy | 54825 |
+| busy | 46701 |
 | errs | 0 |
-| ops | 31570 |
+| ops | 31324 |
 
-- プロセス1: {"driver":"modernc(pure Go)","ops":10924,"busy":18680,"errs":0,"per_sec":10921.296902567536,"p50_us":29,"p99_us":1168,"journal_mode":"wal"}
-- プロセス2: {"driver":"modernc(pure Go)","ops":9745,"busy":17075,"errs":0,"per_sec":9720.330055048868,"p50_us":30,"p99_us":1209,"journal_mode":"wal"}
-- プロセス3: {"driver":"modernc(pure Go)","ops":10901,"busy":19070,"errs":0,"per_sec":10900.454682953578,"p50_us":29,"p99_us":1143,"journal_mode":"wal"}
+- プロセス1: {"driver":"modernc(pure Go)","ops":10300,"busy":14785,"errs":0,"per_sec":10299.556871865145,"p50_us":34,"p99_us":867,"journal_mode":"wal"}
+- プロセス2: {"driver":"modernc(pure Go)","ops":10605,"busy":16278,"errs":0,"per_sec":10604.364300173298,"p50_us":33,"p99_us":837,"journal_mode":"wal"}
+- プロセス3: {"driver":"modernc(pure Go)","ops":10419,"busy":15638,"errs":0,"per_sec":10414.751260564248,"p50_us":33,"p99_us":818,"journal_mode":"wal"}
 
 ### 別プロセス3本が同じファイルを書く / WAL 有り・待つ（busy_timeout=5s） — OK
 
@@ -314,11 +266,11 @@ goroutine ではなく本物の別プロセス（OS のファイルロック越�
 | --- | --- |
 | busy | 0 |
 | errs | 0 |
-| ops | 40149 |
+| ops | 36860 |
 
-- プロセス1: {"driver":"modernc(pure Go)","ops":13479,"busy":0,"errs":0,"per_sec":13478.60219253489,"p50_us":17,"p99_us":914,"journal_mode":"wal"}
-- プロセス2: {"driver":"modernc(pure Go)","ops":9679,"busy":0,"errs":0,"per_sec":9669.908448775546,"p50_us":17,"p99_us":947,"journal_mode":"wal"}
-- プロセス3: {"driver":"modernc(pure Go)","ops":16991,"busy":0,"errs":0,"per_sec":16900.27069397614,"p50_us":16,"p99_us":634,"journal_mode":"wal"}
+- プロセス1: {"driver":"modernc(pure Go)","ops":4285,"busy":0,"errs":0,"per_sec":4000.260161610697,"p50_us":18,"p99_us":66,"journal_mode":"wal"}
+- プロセス2: {"driver":"modernc(pure Go)","ops":23108,"busy":0,"errs":0,"per_sec":23107.40308956339,"p50_us":17,"p99_us":72,"journal_mode":"wal"}
+- プロセス3: {"driver":"modernc(pure Go)","ops":9467,"busy":0,"errs":0,"per_sec":9388.296222870356,"p50_us":19,"p99_us":370,"journal_mode":"wal"}
 
 ### PRAGMA を db.Exec で1回だけ入れた（事故） — **事故あり**
 
@@ -385,13 +337,13 @@ MySQL では DDL が暗黙にコミットされるので、この形は作れな
 
 | 数えたもの | 値 |
 | --- | --- |
-| ops | 903 |
+| ops | 1337 |
 
 | 測ったもの | 値 |
 | --- | --- |
-| p50_us | 971.000 |
-| p99_us | 2980.000 |
-| per_sec | 902.931 |
+| p50_us | 702.000 |
+| p99_us | 1421.000 |
+| per_sec | 1336.725 |
 
 - この数字は fsync の有無で決まる。**engine 間の速度比較には使えない**
 
@@ -401,13 +353,13 @@ MySQL では DDL が暗黙にコミットされるので、この形は作れな
 
 | 数えたもの | 値 |
 | --- | --- |
-| ops | 18911 |
+| ops | 18498 |
 
 | 測ったもの | 値 |
 | --- | --- |
-| p50_us | 45.000 |
-| p99_us | 164.000 |
-| per_sec | 18910.074 |
+| p50_us | 47.000 |
+| p99_us | 117.000 |
+| per_sec | 18497.456 |
 
 - この数字は fsync の有無で決まる。**engine 間の速度比較には使えない**
 
@@ -417,13 +369,13 @@ MySQL では DDL が暗黙にコミットされるので、この形は作れな
 
 | 数えたもの | 値 |
 | --- | --- |
-| ops | 3845 |
+| ops | 6415 |
 
 | 測ったもの | 値 |
 | --- | --- |
-| p50_us | 164.000 |
-| p99_us | 981.000 |
-| per_sec | 3843.946 |
+| p50_us | 137.000 |
+| p99_us | 365.000 |
+| per_sec | 6414.072 |
 
 - この数字は fsync の有無で決まる。**engine 間の速度比較には使えない**
 
@@ -433,13 +385,13 @@ MySQL では DDL が暗黙にコミットされるので、この形は作れな
 
 | 数えたもの | 値 |
 | --- | --- |
-| ops | 37186 |
+| ops | 34965 |
 
 | 測ったもの | 値 |
 | --- | --- |
-| p50_us | 14.000 |
-| p99_us | 54.000 |
-| per_sec | 37184.673 |
+| p50_us | 17.000 |
+| p99_us | 49.000 |
+| per_sec | 34906.004 |
 
 - この数字は fsync の有無で決まる。**engine 間の速度比較には使えない**
 
@@ -449,13 +401,13 @@ MySQL では DDL が暗黙にコミットされるので、この形は作れな
 
 | 数えたもの | 値 |
 | --- | --- |
-| ops | 58210 |
+| ops | 50566 |
 
 | 測ったもの | 値 |
 | --- | --- |
-| p50_us | 14.000 |
-| p99_us | 49.000 |
-| per_sec | 58207.948 |
+| p50_us | 17.000 |
+| p99_us | 47.000 |
+| per_sec | 50564.937 |
 
 - この数字は fsync の有無で決まる。**engine 間の速度比較には使えない**
 

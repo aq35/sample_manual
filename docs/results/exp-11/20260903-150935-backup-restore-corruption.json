@@ -3,18 +3,18 @@
   "name": "backup-restore-corruption",
   "title": "バックアップを別環境へ復元し、中身のハッシュとアプリの起動まで確かめる",
   "hypothesis": "1) mysqldump は書いている途中でも終了コード 0 を返すので、『コマンドが成功した』は復元できることを意味しない。2) 切れたバックアップ・バイト破損は、復元が失敗するか、復元後の指紋が違うことで拒否できる。3) 古いバックアップは行数が完全に同じでも、中身のハッシュが違うことで見分けられる。4) schema_migrations が『済』と言っていても、実際の表が足りないこと（スキーマ違い）は起こる。記録ではなく実物の表を指紋で見ないと分からない。5) 正常系は、別環境へ復元してアプリ（store + repo + lease）が起動し、lease・robot_state・マイグレーション状態を読み戻せる。",
-  "started_at": "2026-09-03T15:07:21.051485894Z",
-  "ended_at": "2026-09-03T15:07:22.767418428Z",
+  "started_at": "2026-09-03T15:09:35.29145496Z",
+  "ended_at": "2026-09-03T15:09:36.885806861Z",
   "env": {
-    "captured_at": "2026-09-03T15:07:21.051525539Z",
+    "captured_at": "2026-09-03T15:09:35.291500694Z",
     "go_version": "go1.24.7",
     "os": "linux",
     "arch": "amd64",
     "num_cpu": 4,
     "gomaxprocs": 4,
     "hostname": "vm",
-    "git_sha": "de9027e3d9244fae235a5c8c81fcff2391e9e970",
-    "git_dirty": true,
+    "git_sha": "83598d6b4d1ec55173f92de4cc32db1c96e7d5f5",
+    "git_dirty": false,
     "mysql_version": "8.0.46-0ubuntu0.24.04.4"
   },
   "workload": {
@@ -36,7 +36,7 @@
   "variants": [
     {
       "name": "正常系（--single-transaction / 別環境へ復元 / 起動）",
-      "desc": "バックアップ 106781 バイト・80ms",
+      "desc": "バックアップ 106781 バイト・71ms",
       "counters": {
         "アプリ起動": 1,
         "復元できた": 1

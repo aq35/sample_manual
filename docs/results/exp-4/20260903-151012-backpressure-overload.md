@@ -3,10 +3,10 @@
 | | |
 | --- | --- |
 | Experiment | EXP-4 / backpressure-overload |
-| Starting SHA | `29c844e064c2` (作業ツリーに未コミットの変更あり) |
+| Starting SHA | `83598d6b4d1e` (作業ツリーに未コミットの変更あり) |
 | Hypothesis (frozen before result) | 1) 無制限キューは、入力が処理能力を超えるとメモリと遅延が増え続ける。 2) 有界キューはメモリを抑えるが、代わりに『待たせる』か『捨てる』のどちらかを選ぶことになる。 3) キーごとに最新だけ残す方式は、同じ対象への連続更新が多いほど書き込みを減らし、    遅延も小さくなる。 4) テナントごとに枠を分けないと、1テナントの氾濫が他テナントの処理を奪う。 |
-| Environment | go1.24.7 linux/amd64 cpu=4 gomaxprocs=4 mysql=8.0.46-0ubuntu0.24.04.4 sha=29c844e064c2+dirty |
-| Started / Ended | 2026-09-03T13:20:11Z / 2026-09-03T13:20:39Z |
+| Environment | go1.24.7 linux/amd64 cpu=4 gomaxprocs=4 mysql=8.0.46-0ubuntu0.24.04.4 sha=83598d6b4d1e+dirty |
+| Started / Ended | 2026-09-03T15:10:12Z / 2026-09-03T15:10:35Z |
 
 ## Workload
 
@@ -31,25 +31,25 @@
 
 | 数えたもの | 値 |
 | --- | --- |
-| accepted | 19960 |
+| accepted | 19760 |
 | coalesced | 0 |
 | committed | 1000 |
 | dropped | 0 |
-| leftover_at_stop | 18951 |
-| max_queue | 19080 |
-| produced | 19960 |
+| leftover_at_stop | 18751 |
+| max_queue | 18880 |
+| produced | 19760 |
 | txs | 100 |
 
 | 測ったもの | 値 |
 | --- | --- |
 | blocked_seconds | 0.000 |
-| heap_max_mb | 14.881 |
-| rss_max_mb | 23.051 |
-| tx_per_sec | 49.975 |
+| heap_max_mb | 14.771 |
+| rss_max_mb | 23.301 |
+| tx_per_sec | 49.996 |
 
-遅延: n=1000 p50=1.116383s p95=2.087136s p99=2.17507s max=2.198323s
+遅延: n=1000 p50=1.120555s p95=2.074443s p99=2.162485s max=2.185049s
 
-goroutine 最大 9 / 終了時 7 ・ヒープ最大 14.9 MB ・RSS 最大 23.1 MB ・DB 接続 最大 1（待ち 0 回 / 0s）
+goroutine 最大 9 / 終了時 7 ・ヒープ最大 14.8 MB ・RSS 最大 23.3 MB ・DB 接続 最大 1（待ち 0 回 / 0s）
 
 - ★キューが伸び続け、反映の遅れもそのぶん増える。落ちるまで気づきにくい
 
@@ -59,27 +59,27 @@ goroutine 最大 9 / 終了時 7 ・ヒープ最大 14.9 MB ・RSS 最大 23.1 M
 
 | 数えたもの | 値 |
 | --- | --- |
-| accepted | 1900 |
+| accepted | 1920 |
 | coalesced | 0 |
-| committed | 1000 |
+| committed | 1020 |
 | dropped | 0 |
 | leftover_at_stop | 891 |
 | max_queue | 1024 |
-| produced | 1900 |
-| txs | 100 |
+| produced | 1920 |
+| txs | 102 |
 
 | 測ったもの | 値 |
 | --- | --- |
-| blocked_seconds | 1.910 |
-| heap_max_mb | 17.063 |
-| rss_max_mb | 25.090 |
-| tx_per_sec | 49.487 |
+| blocked_seconds | 1.912 |
+| heap_max_mb | 16.978 |
+| rss_max_mb | 25.277 |
+| tx_per_sec | 50.446 |
 
-遅延: n=1000 p50=1.137663s p95=2.106664s p99=2.193211s max=2.215934s
+遅延: n=1020 p50=1.133909s p95=2.10361s p99=2.189081s max=2.212206s
 
-goroutine 最大 9 / 終了時 7 ・ヒープ最大 17.1 MB ・RSS 最大 25.1 MB ・DB 接続 最大 1（待ち 0 回 / 0s）
+goroutine 最大 9 / 終了時 8 ・ヒープ最大 17.0 MB ・RSS 最大 25.3 MB ・DB 接続 最大 1（待ち 0 回 / 0s）
 
-- 生産側が待たされた合計 1.91s（これが背圧の量）
+- 生産側が待たされた合計 1.912s（これが背圧の量）
 
 ### bounded_drop — OK
 
@@ -87,27 +87,27 @@ goroutine 最大 9 / 終了時 7 ・ヒープ最大 17.1 MB ・RSS 最大 25.1 M
 
 | 数えたもの | 値 |
 | --- | --- |
-| accepted | 1904 |
+| accepted | 1914 |
 | coalesced | 0 |
-| committed | 1000 |
-| dropped | 18056 |
+| committed | 1010 |
+| dropped | 18086 |
 | leftover_at_stop | 895 |
 | max_queue | 1024 |
-| produced | 19960 |
-| txs | 100 |
+| produced | 20000 |
+| txs | 101 |
 
 | 測ったもの | 値 |
 | --- | --- |
 | blocked_seconds | 0.000 |
-| heap_max_mb | 19.338 |
-| rss_max_mb | 27.535 |
-| tx_per_sec | 49.992 |
+| heap_max_mb | 19.535 |
+| rss_max_mb | 28.160 |
+| tx_per_sec | 50.488 |
 
-遅延: n=1000 p50=1.114014s p95=2.073055s p99=2.158744s max=2.181228s
+遅延: n=1010 p50=1.101316s p95=2.075202s p99=2.160764s max=2.181035s
 
-goroutine 最大 9 / 終了時 6 ・ヒープ最大 19.3 MB ・RSS 最大 27.5 MB ・DB 接続 最大 1（待ち 0 回 / 0s）
+goroutine 最大 9 / 終了時 7 ・ヒープ最大 19.5 MB ・RSS 最大 28.2 MB ・DB 接続 最大 1（待ち 0 回 / 0s）
 
-- 捨てた 18056 件（数えているので、あとから説明できる）
+- 捨てた 18086 件（数えているので、あとから説明できる）
 
 ### coalesce_latest — OK
 
@@ -115,27 +115,27 @@ goroutine 最大 9 / 終了時 6 ・ヒープ最大 19.3 MB ・RSS 最大 27.5 M
 
 | 数えたもの | 値 |
 | --- | --- |
-| accepted | 19980 |
-| coalesced | 19580 |
-| committed | 293 |
+| accepted | 19700 |
+| coalesced | 19300 |
+| committed | 92 |
 | dropped | 0 |
 | leftover_at_stop | 200 |
 | max_queue | 200 |
-| produced | 19980 |
-| txs | 293 |
+| produced | 19700 |
+| txs | 92 |
 
 | 測ったもの | 値 |
 | --- | --- |
 | blocked_seconds | 0.000 |
-| heap_max_mb | 3.516 |
-| rss_max_mb | 14.852 |
-| tx_per_sec | 146.420 |
+| heap_max_mb | 3.502 |
+| rss_max_mb | 14.754 |
+| tx_per_sec | 45.995 |
 
-遅延: n=293 p50=1.838252s p95=4.509988s p99=4.777675s max=4.8384s
+遅延: n=92 p50=1.108477s p95=1.998159s p99=2.058673s max=2.118383s
 
-goroutine 最大 9 / 終了時 7 ・ヒープ最大 3.5 MB ・RSS 最大 14.9 MB ・DB 接続 最大 1（待ち 0 回 / 0s）
+goroutine 最大 9 / 終了時 6 ・ヒープ最大 3.5 MB ・RSS 最大 14.8 MB ・DB 接続 最大 1（待ち 0 回 / 0s）
 
-- まとめた 19580 件
+- まとめた 19300 件
 
 ### coalesce_batch — OK
 
@@ -143,63 +143,63 @@ goroutine 最大 9 / 終了時 7 ・ヒープ最大 3.5 MB ・RSS 最大 14.9 MB
 
 | 数えたもの | 値 |
 | --- | --- |
-| accepted | 19720 |
-| coalesced | 17700 |
-| committed | 2020 |
+| accepted | 19580 |
+| coalesced | 17561 |
+| committed | 2019 |
 | dropped | 0 |
-| leftover_at_stop | 20 |
+| leftover_at_stop | 19 |
 | max_queue | 200 |
-| produced | 19720 |
+| produced | 19580 |
 | txs | 11 |
 
 | 測ったもの | 値 |
 | --- | --- |
 | blocked_seconds | 0.000 |
-| heap_max_mb | 3.582 |
-| rss_max_mb | 14.723 |
+| heap_max_mb | 3.729 |
+| rss_max_mb | 14.988 |
 | tx_per_sec | 5.497 |
 
-遅延: n=2020 p50=43.678ms p95=93.072ms p99=198.439ms max=224.052ms
+遅延: n=2019 p50=41.157ms p95=91.251ms p99=180.342ms max=222.621ms
 
-goroutine 最大 8 / 終了時 7 ・ヒープ最大 3.6 MB ・RSS 最大 14.7 MB ・DB 接続 最大 1（待ち 0 回 / 0s）
+goroutine 最大 9 / 終了時 7 ・ヒープ最大 3.7 MB ・RSS 最大 15.0 MB ・DB 接続 最大 1（待ち 0 回 / 0s）
 
-- まとめた 17700 件 / トランザクション 11 回
+- まとめた 17561 件 / トランザクション 11 回
 
 ### まとめて書く / DB 遅延 0s — OK
 
 | 数えたもの | 値 |
 | --- | --- |
-| committed | 2020 |
+| committed | 2000 |
 | max_queue | 200 |
-| produced | 19900 |
-| txs | 11 |
+| produced | 19540 |
+| txs | 10 |
 
 | 測ったもの | 値 |
 | --- | --- |
-| heap_max_mb | 3.663 |
-| tx_per_sec | 5.498 |
+| heap_max_mb | 3.667 |
+| tx_per_sec | 4.998 |
 
-遅延: n=2020 p50=21.4ms p95=74.452ms p99=178.417ms max=203.376ms
+遅延: n=2000 p50=21.115ms p95=72.674ms p99=107.237ms max=179.414ms
 
-- キュー最大 200 件 / 反映の遅れ p99 178ms
+- キュー最大 200 件 / 反映の遅れ p99 107ms
 
 ### まとめて書く / DB 遅延 10ms — OK
 
 | 数えたもの | 値 |
 | --- | --- |
-| committed | 2000 |
+| committed | 2020 |
 | max_queue | 200 |
-| produced | 19960 |
-| txs | 10 |
+| produced | 20000 |
+| txs | 11 |
 
 | 測ったもの | 値 |
 | --- | --- |
-| heap_max_mb | 3.653 |
-| tx_per_sec | 5.000 |
+| heap_max_mb | 3.634 |
+| tx_per_sec | 5.499 |
 
-遅延: n=2000 p50=30.84ms p95=77.316ms p99=112.384ms max=188.303ms
+遅延: n=2020 p50=31.146ms p95=80.794ms p99=190.194ms max=215.088ms
 
-- キュー最大 200 件 / 反映の遅れ p99 112ms
+- キュー最大 200 件 / 反映の遅れ p99 190ms
 
 ### まとめて書く / DB 遅延 100ms — OK
 
@@ -207,51 +207,51 @@ goroutine 最大 8 / 終了時 7 ・ヒープ最大 3.6 MB ・RSS 最大 14.7 MB
 | --- | --- |
 | committed | 2000 |
 | max_queue | 200 |
-| produced | 19940 |
+| produced | 20000 |
 | txs | 10 |
 
 | 測ったもの | 値 |
 | --- | --- |
-| heap_max_mb | 3.585 |
-| tx_per_sec | 4.998 |
+| heap_max_mb | 3.595 |
+| tx_per_sec | 4.997 |
 
-遅延: n=2000 p50=120.256ms p95=166.719ms p99=200.158ms max=278.862ms
+遅延: n=2000 p50=122.113ms p95=169.296ms p99=204.08ms max=279.627ms
 
-- キュー最大 200 件 / 反映の遅れ p99 200ms
+- キュー最大 200 件 / 反映の遅れ p99 204ms
 
 ### 1テナントが入力の90%を占める / bounded_drop — OK
 
 | 数えたもの | 値 |
 | --- | --- |
-| committed_big | 902 |
-| committed_small | 98 |
-| dropped | 18844 |
+| committed_big | 898 |
+| committed_small | 112 |
+| dropped | 18864 |
 | max_queue | 256 |
 
 | 測ったもの | 値 |
 | --- | --- |
-| small_tenant_share | 0.098 |
+| small_tenant_share | 0.111 |
 
-遅延: n=1000 p50=601.11ms p95=625.07ms p99=625.667ms max=626.568ms
+遅延: n=1010 p50=591.763ms p95=614.773ms p99=616.788ms max=617.625ms
 
-- 少数派テナントの取り分 9.8%（入力比では 10%）
+- 少数派テナントの取り分 11.1%（入力比では 10%）
 
 ### 1テナントが入力の90%を占める / per_tenant_quota — OK
 
 | 数えたもの | 値 |
 | --- | --- |
-| committed_big | 1000 |
-| committed_small | 990 |
-| dropped | 17959 |
+| committed_big | 1010 |
+| committed_small | 1010 |
+| dropped | 17971 |
 | max_queue | 256 |
 
 | 測ったもの | 値 |
 | --- | --- |
-| small_tenant_share | 0.497 |
+| small_tenant_share | 0.500 |
 
-遅延: n=1990 p50=313.192ms p95=329.404ms p99=334.29ms max=335.256ms
+遅延: n=2020 p50=310.455ms p95=318.631ms p99=319.579ms max=320.01ms
 
-- 少数派テナントの取り分 49.7%（入力比では 10%）
+- 少数派テナントの取り分 50.0%（入力比では 10%）
 
 ## Verdict
 

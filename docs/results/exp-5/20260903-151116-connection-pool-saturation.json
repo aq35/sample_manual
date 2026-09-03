@@ -3,17 +3,17 @@
   "name": "connection-pool-saturation",
   "title": "同時実行数と MaxOpenConns を振って、スループットが伸びなくなる点を探す",
   "hypothesis": "1) 同時実行数を上げていくと、ある点から先はスループットが伸びず、遅延だけが線形に伸びる。 2) その点は MaxOpenConns 付近にあり、超えた分は database/sql の待ち行列（WaitCount）に現れる。 3) MaxOpenConns を増やしても、CPU やディスクが先に頭打ちになれば伸びない。 4) 遅い処理（DB 側で待つトランザクション）は、その時間ぶん接続を占有し、    同時実行数に関係なく MaxOpenConns / 処理時間 で上限が決まる。",
-  "started_at": "2026-09-03T13:21:19.868896015Z",
-  "ended_at": "2026-09-03T13:21:45.462480892Z",
+  "started_at": "2026-09-03T15:11:16.383815355Z",
+  "ended_at": "2026-09-03T15:11:41.997052248Z",
   "env": {
-    "captured_at": "2026-09-03T13:21:19.868930182Z",
+    "captured_at": "2026-09-03T15:11:16.383848526Z",
     "go_version": "go1.24.7",
     "os": "linux",
     "arch": "amd64",
     "num_cpu": 4,
     "gomaxprocs": 4,
     "hostname": "vm",
-    "git_sha": "29c844e064c20702f4c8a87c8516b6e0b7d3d028",
+    "git_sha": "83598d6b4d1ec55173f92de4cc32db1c96e7d5f5",
     "git_dirty": true,
     "mysql_version": "8.0.46-0ubuntu0.24.04.4"
   },
@@ -29,23 +29,23 @@
       "name": "主キー読み / 並列 1 / MaxOpen 8",
       "counters": {
         "new_connections": 0,
-        "ops": 7228,
+        "ops": 7156,
         "server_threads_connected_max": 0,
         "server_threads_running_max": 0,
         "wait_count": 0
       },
       "metrics": {
-        "ops_per_sec": 4818.201597787776,
+        "ops_per_sec": 4770.339116101599,
         "wait_duration_ms": 0
       },
       "latency": {
-        "count": 7228,
-        "min_ns": 88739,
-        "p50_ns": 194323,
-        "p95_ns": 327293,
-        "p99_ns": 400393,
-        "max_ns": 3530531,
-        "mean_ns": 207128
+        "count": 7156,
+        "min_ns": 98016,
+        "p50_ns": 195710,
+        "p95_ns": 313209,
+        "p99_ns": 382390,
+        "max_ns": 20304224,
+        "mean_ns": 209269
       },
       "accident": false
     },
@@ -53,23 +53,23 @@
       "name": "主キー読み / 並列 2 / MaxOpen 8",
       "counters": {
         "new_connections": 0,
-        "ops": 14386,
+        "ops": 14672,
         "server_threads_connected_max": 0,
         "server_threads_running_max": 0,
         "wait_count": 0
       },
       "metrics": {
-        "ops_per_sec": 9589.953321185521,
+        "ops_per_sec": 9780.490698417376,
         "wait_duration_ms": 0
       },
       "latency": {
-        "count": 14386,
-        "min_ns": 50414,
-        "p50_ns": 199057,
-        "p95_ns": 317578,
-        "p99_ns": 395806,
-        "max_ns": 2788235,
-        "mean_ns": 208124
+        "count": 14672,
+        "min_ns": 62512,
+        "p50_ns": 194152,
+        "p95_ns": 312628,
+        "p99_ns": 399379,
+        "max_ns": 986834,
+        "mean_ns": 204070
       },
       "accident": false
     },
@@ -77,23 +77,23 @@
       "name": "主キー読み / 並列 4 / MaxOpen 8",
       "counters": {
         "new_connections": 0,
-        "ops": 24622,
+        "ops": 23766,
         "server_threads_connected_max": 0,
         "server_threads_running_max": 0,
         "wait_count": 0
       },
       "metrics": {
-        "ops_per_sec": 16412.069828623204,
+        "ops_per_sec": 15842.242092009996,
         "wait_duration_ms": 0
       },
       "latency": {
-        "count": 24622,
-        "min_ns": 38333,
-        "p50_ns": 223732,
-        "p95_ns": 427227,
-        "p99_ns": 594379,
-        "max_ns": 3623241,
-        "mean_ns": 243130
+        "count": 23766,
+        "min_ns": 62887,
+        "p50_ns": 230613,
+        "p95_ns": 436077,
+        "p99_ns": 601659,
+        "max_ns": 4551338,
+        "mean_ns": 251981
       },
       "accident": false
     },
@@ -101,23 +101,23 @@
       "name": "主キー読み / 並列 8 / MaxOpen 8",
       "counters": {
         "new_connections": 0,
-        "ops": 34904,
+        "ops": 35119,
         "server_threads_connected_max": 0,
         "server_threads_running_max": 0,
         "wait_count": 0
       },
       "metrics": {
-        "ops_per_sec": 23264.462654412724,
+        "ops_per_sec": 23408.244974035046,
         "wait_duration_ms": 0
       },
       "latency": {
-        "count": 34904,
-        "min_ns": 46663,
-        "p50_ns": 298992,
-        "p95_ns": 690862,
-        "p99_ns": 1033820,
-        "max_ns": 5343698,
-        "mean_ns": 343293
+        "count": 35119,
+        "min_ns": 61299,
+        "p50_ns": 295808,
+        "p95_ns": 670465,
+        "p99_ns": 1045538,
+        "max_ns": 6765804,
+        "mean_ns": 341069
       },
       "accident": false
     },
@@ -125,23 +125,23 @@
       "name": "主キー読み / 並列 16 / MaxOpen 8",
       "counters": {
         "new_connections": 0,
-        "ops": 32467,
+        "ops": 33873,
         "server_threads_connected_max": 0,
         "server_threads_running_max": 0,
-        "wait_count": 32474
+        "wait_count": 33880
       },
       "metrics": {
-        "ops_per_sec": 21637.32887145092,
-        "wait_duration_ms": 12059
+        "ops_per_sec": 22578.82331008576,
+        "wait_duration_ms": 12060
       },
       "latency": {
-        "count": 32467,
-        "min_ns": 62045,
-        "p50_ns": 637217,
-        "p95_ns": 1567654,
-        "p99_ns": 2223389,
-        "max_ns": 6676591,
-        "mean_ns": 738270
+        "count": 33873,
+        "min_ns": 95770,
+        "p50_ns": 612116,
+        "p95_ns": 1473706,
+        "p99_ns": 2101417,
+        "max_ns": 5506371,
+        "mean_ns": 707670
       },
       "accident": false
     },
@@ -149,23 +149,23 @@
       "name": "主キー読み / 並列 32 / MaxOpen 8",
       "counters": {
         "new_connections": 0,
-        "ops": 28154,
+        "ops": 34214,
         "server_threads_connected_max": 0,
         "server_threads_running_max": 0,
-        "wait_count": 28178
+        "wait_count": 34238
       },
       "metrics": {
-        "ops_per_sec": 18766.52182061127,
-        "wait_duration_ms": 36045
+        "ops_per_sec": 22803.767906548106,
+        "wait_duration_ms": 36050
       },
       "latency": {
-        "count": 28154,
-        "min_ns": 110517,
-        "p50_ns": 1298641,
-        "p95_ns": 4363962,
-        "p99_ns": 6613156,
-        "max_ns": 19890281,
-        "mean_ns": 1702303
+        "count": 34214,
+        "min_ns": 101416,
+        "p50_ns": 1083506,
+        "p95_ns": 3542104,
+        "p99_ns": 5282633,
+        "max_ns": 16045748,
+        "mean_ns": 1401372
       },
       "accident": false
     },
@@ -173,23 +173,23 @@
       "name": "主キー読み / 並列 64 / MaxOpen 8",
       "counters": {
         "new_connections": 0,
-        "ops": 32235,
+        "ops": 37292,
         "server_threads_connected_max": 0,
         "server_threads_running_max": 0,
-        "wait_count": 32291
+        "wait_count": 37348
       },
       "metrics": {
-        "ops_per_sec": 21488.691252747944,
-        "wait_duration_ms": 84047
+        "ops_per_sec": 24857.89992705154,
+        "wait_duration_ms": 84041
       },
       "latency": {
-        "count": 32235,
-        "min_ns": 98169,
-        "p50_ns": 2129800,
-        "p95_ns": 8409788,
-        "p99_ns": 13149610,
-        "max_ns": 34043175,
-        "mean_ns": 2973082
+        "count": 37292,
+        "min_ns": 122249,
+        "p50_ns": 1850516,
+        "p95_ns": 7157177,
+        "p99_ns": 11015705,
+        "max_ns": 39449743,
+        "mean_ns": 2567754
       },
       "accident": false
     },
@@ -201,32 +201,32 @@
       },
       "accident": false,
       "notes": [
-        "MaxOpen  1:     4135 ops/s（前段からの伸び  +0.0%）p99=34.38ms   待ち  6235 回",
-        "MaxOpen  2:     8088 ops/s（前段からの伸び +95.6%）p99=17.443ms  待ち 12163 回",
-        "MaxOpen  4:    15117 ops/s（前段からの伸び +86.9%）p99=8.876ms   待ち 22708 回",
-        "MaxOpen  8:    21392 ops/s（前段からの伸び +41.5%）p99=5.814ms   待ち 32116 回",
-        "MaxOpen 16:    25726 ops/s（前段からの伸び +20.3%）p99=4.008ms   待ち 38616 回",
-        "MaxOpen 32:    26262 ops/s（前段からの伸び  +2.1%）p99=4.449ms   待ち     0 回"
+        "MaxOpen  1:     4728 ops/s（前段からの伸び  +0.0%）p99=31.041ms  待ち  7124 回",
+        "MaxOpen  2:     8983 ops/s（前段からの伸び +90.0%）p99=15.209ms  待ち 13507 回",
+        "MaxOpen  4:    16896 ops/s（前段からの伸び +88.1%）p99=7.892ms   待ち 25374 回",
+        "MaxOpen  8:    22460 ops/s（前段からの伸び +32.9%）p99=5.454ms   待ち 33719 回",
+        "MaxOpen 16:    29336 ops/s（前段からの伸び +30.6%）p99=3.775ms   待ち 44038 回",
+        "MaxOpen 32:    29231 ops/s（前段からの伸び  -0.4%）p99=3.657ms   待ち     0 回"
       ]
     },
     {
       "name": "同時実行数を振る（MaxOpen 8 固定）",
       "desc": "頭打ちの位置と、超えた分がどこに現れるか",
       "counters": {
-        "peak_concurrency": 8
+        "peak_concurrency": 64
       },
       "metrics": {
-        "peak_ops_per_sec": 23264.462654412724
+        "peak_ops_per_sec": 24857.89992705154
       },
       "accident": false,
       "notes": [
-        "並列   1:     4818 ops/s p50=194µs    p99=400µs     待ち     0 回 / 合計 0s・サーバ接続 最大 0",
-        "並列   2:     9590 ops/s p50=199µs    p99=396µs     待ち     0 回 / 合計 0s・サーバ接続 最大 0",
-        "並列   4:    16412 ops/s p50=224µs    p99=594µs     待ち     0 回 / 合計 0s・サーバ接続 最大 0",
-        "並列   8:    23264 ops/s p50=299µs    p99=1.034ms   待ち     0 回 / 合計 0s・サーバ接続 最大 0",
-        "並列  16:    21637 ops/s p50=637µs    p99=2.223ms   待ち 32474 回 / 合計 12.06s・サーバ接続 最大 0",
-        "並列  32:    18767 ops/s p50=1.299ms  p99=6.613ms   待ち 28178 回 / 合計 36.045s・サーバ接続 最大 0",
-        "並列  64:    21489 ops/s p50=2.13ms   p99=13.15ms   待ち 32291 回 / 合計 1m24.048s・サーバ接続 最大 0"
+        "並列   1:     4770 ops/s p50=196µs    p99=382µs     待ち     0 回 / 合計 0s・サーバ接続 最大 0",
+        "並列   2:     9780 ops/s p50=194µs    p99=399µs     待ち     0 回 / 合計 0s・サーバ接続 最大 0",
+        "並列   4:    15842 ops/s p50=231µs    p99=602µs     待ち     0 回 / 合計 0s・サーバ接続 最大 0",
+        "並列   8:    23408 ops/s p50=296µs    p99=1.046ms   待ち     0 回 / 合計 0s・サーバ接続 最大 0",
+        "並列  16:    22579 ops/s p50=612µs    p99=2.101ms   待ち 33880 回 / 合計 12.06s・サーバ接続 最大 0",
+        "並列  32:    22804 ops/s p50=1.084ms  p99=5.283ms   待ち 34238 回 / 合計 36.05s・サーバ接続 最大 0",
+        "並列  64:    24858 ops/s p50=1.851ms  p99=11.016ms  待ち 37348 回 / 合計 1m24.042s・サーバ接続 最大 0"
       ]
     },
     {
@@ -234,8 +234,8 @@
       "desc": "接続の張り直しがスループットに出るか",
       "accident": false,
       "notes": [
-        "MaxIdle  2:    26759 ops/s / 新規接続     0 本 / アイドル超過で閉じた    35 本 / p99 2.056ms",
-        "MaxIdle 16:    28968 ops/s / 新規接続     0 本 / アイドル超過で閉じた     0 本 / p99 1.794ms"
+        "MaxIdle  2:    31778 ops/s / 新規接続     0 本 / アイドル超過で閉じた    88 本 / p99 2.078ms",
+        "MaxIdle 16:    30909 ops/s / 新規接続     0 本 / アイドル超過で閉じた     0 本 / p99 1.803ms"
       ]
     },
     {
@@ -247,28 +247,28 @@
         "wait_count": 144
       },
       "metrics": {
-        "ops_per_sec": 38.652089069926035,
+        "ops_per_sec": 38.65833758608651,
         "theoretical_max": 40,
-        "wait_duration_ms": 84026
+        "wait_duration_ms": 84013
       },
       "latency": {
         "count": 116,
-        "min_ns": 102273289,
-        "p50_ns": 513938253,
-        "p95_ns": 1439097949,
-        "p99_ns": 2056769130,
-        "max_ns": 2158015584,
-        "mean_ns": 591307124
+        "min_ns": 102180166,
+        "p50_ns": 514529376,
+        "p95_ns": 1441109384,
+        "p99_ns": 2468231228,
+        "max_ns": 2569798075,
+        "mean_ns": 629497445
       },
       "accident": false,
       "notes": [
         "実測 38.7 ops/s（理論上限 MaxOpen/処理時間 = 40 ops/s）",
-        "待ち 144 回・合計 1m24.027s。並列を増やしても、この上限は動かない",
+        "待ち 144 回・合計 1m24.013s。並列を増やしても、この上限は動かない",
         "★上限を決めるのは同時実行数ではなく『接続数 ÷ 1件あたりの占有時間』"
       ]
     }
   ],
-  "verdict": "この環境（4 CPU・同一ホスト）では、主キー読みの頂点は並列 8 付近で 23264 ops/s だった。それを超えると database/sql の待ち行列に積まれ、スループットは伸びずに遅延だけが伸びる。遅いトランザクションでは上限が『接続数 ÷ 占有時間』で決まり、並列を増やしても動かない。",
+  "verdict": "この環境（4 CPU・同一ホスト）では、主キー読みの頂点は並列 64 付近で 24858 ops/s だった。それを超えると database/sql の待ち行列に積まれ、スループットは伸びずに遅延だけが伸びる。遅いトランザクションでは上限が『接続数 ÷ 占有時間』で決まり、並列を増やしても動かない。",
   "scope": [
     "MySQL 8.0 / 同一ホスト / 4 CPU のコンテナ。DB とアプリが同じ機械にある",
     "表は 64 行・主キー読みが中心。実データの分布や索引の効き方は含まない",

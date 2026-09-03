@@ -3,17 +3,17 @@
   "name": "static-analysis",
   "title": "実験で分かった事故のうち、構文で見つかるものを go/analysis で検出する",
   "hypothesis": "1) 生の *sql.DB の受け渡し、トランザクション内の外部呼び出し、影響行数の捨て、    context 無しの DB 呼び出し、ループ内クエリ、業務ロジック内の time.Now() は、    構文だけで検出できる。 2) unmanaged goroutine と unbounded channel は、構文だけでは判定できない（検出しない）。 3) 逃げ道は塞がず、理由を必須にして使用回数を数える。",
-  "started_at": "2026-09-03T13:20:10.845030883Z",
-  "ended_at": "2026-09-03T13:20:11.501890748Z",
+  "started_at": "2026-09-03T15:10:10.743249648Z",
+  "ended_at": "2026-09-03T15:10:12.264671531Z",
   "env": {
-    "captured_at": "2026-09-03T13:20:10.84505117Z",
+    "captured_at": "2026-09-03T15:10:10.743274939Z",
     "go_version": "go1.24.7",
     "os": "linux",
     "arch": "amd64",
     "num_cpu": 4,
     "gomaxprocs": 4,
     "hostname": "vm",
-    "git_sha": "29c844e064c20702f4c8a87c8516b6e0b7d3d028",
+    "git_sha": "83598d6b4d1ec55173f92de4cc32db1c96e7d5f5",
     "git_dirty": true
   },
   "workload": {},
@@ -23,12 +23,12 @@
       "name": "このリポジトリ全体に当てた結果（対応後）",
       "desc": "go run ./cmd/sqllint ./...（_test.go は対象外）",
       "counters": {
-        "escape_hatches": 53
+        "escape_hatches": 55
       },
       "accident": false,
       "notes": [
         "このリポジトリでは指摘なし",
-        "理由つきの逃げ道 53 箇所（すべて grep で一覧できる）"
+        "理由つきの逃げ道 55 箇所（すべて grep で一覧できる）"
       ]
     },
     {
