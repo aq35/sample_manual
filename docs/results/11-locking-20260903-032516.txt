@@ -1,0 +1,110 @@
+# ⑪ 排他制御の実験（GET_LOCK の性質と代替）
+# 実行: 2026-09-03T03:27:34+00:00
+# コマンド: go test ./internal/repo/ -run TestExperimentLock_|TestWithLock|TestMigrate -v -timeout 10m
+
+=== RUN   TestExperimentLock_接続に紐づく
+    experiment_lock_test.go:106: ① プールごしの RELEASE_LOCK: 0 ＝ **解放できていない**（別の接続が持っている）
+    experiment_lock_test.go:111:    → ロックはまだ接続 950 が持っている。プールに残った接続が持ち続ける
+    experiment_lock_test.go:118:    後片付けの KILL に失敗: Error 1317 (70100): Query execution was interrupted
+[mysql] 2026/09/03 03:27:35 connection.go:803 closing bad idle connection: EOF
+    experiment_lock_test.go:135: ② db.Conn() で接続を固定すれば、取得と解放が同じセッションになる → 正しく動く
+    experiment_lock_test.go:136: → 結論: GET_LOCK を *sql.DB のメソッドで直接呼んではいけない。必ず db.Conn() で固定する
+--- PASS: TestExperimentLock_接続に紐づく (0.11s)
+=== RUN   TestExperimentLock_プールに残ったロックは他の処理に見える
+    experiment_lock_test.go:166: ロックを持ったままプールに戻った接続を、別の処理が借りた: IS_FREE_LOCK=0, その処理が RELEASE_LOCK=1
+    experiment_lock_test.go:167: → 「取った人だけが解放する」という前提が、接続プールでは成り立たない
+    experiment_lock_test.go:168:   接続を固定していない GET_LOCK は、ロックを持ったまま忘れる／他人に解放される、のどちらかになる
+--- PASS: TestExperimentLock_プールに残ったロックは他の処理に見える (0.00s)
+=== RUN   TestExperimentLock_トランザクションと無関係
+    experiment_lock_test.go:192: ROLLBACK してもロックは解放されない（トランザクションの外にある）
+    experiment_lock_test.go:197: → 良い面: DDL の暗黙コミットに巻き込まれない。悪い面: 明示的に解放しないと残る
+--- PASS: TestExperimentLock_トランザクションと無関係 (0.00s)
+=== RUN   TestExperimentLock_DDLは行ロックを外す
+    experiment_lock_test.go:248: ★ A が DDL を1つ実行した時点で、A の行ロックは外れていた（DDL の暗黙コミット）
+    experiment_lock_test.go:249:   → B が同時にマイグレーションを始められる。行ロック方式は DDL には使えない
+    experiment_lock_test.go:265: ★ GET_LOCK は DDL をまたいでも保持される → マイグレーションの排他にはこちらが要る
+--- PASS: TestExperimentLock_DDLは行ロックを外す (1.03s)
+=== RUN   TestExperimentLock_名前はサーバ全体で共通
+    experiment_lock_test.go:306: 別のデータベース（workerdb2）からでも、同じ名前のロックは取れない
+    experiment_lock_test.go:307: → ロック名はサーバ全体の名前空間。同居しているアプリと衝突する
+    experiment_lock_test.go:308:   対策: 名前にスキーマ名やアプリ名を含める（例: workerdb.migrate）
+--- PASS: TestExperimentLock_名前はサーバ全体で共通 (1.00s)
+=== RUN   TestExperimentLock_待ち方と状態の確認
+    experiment_lock_test.go:329: タイムアウト 0（待たない）: 結果 0 / 所要 0s
+    experiment_lock_test.go:333: タイムアウト 1秒       : 結果 0 / 所要 1.001s
+    experiment_lock_test.go:340: IS_FREE_LOCK=0 / IS_USED_LOCK=961 (使用中=true, これは接続 ID)
+    experiment_lock_test.go:341: → 誰が持っているかは IS_USED_LOCK で分かる。performance_schema.metadata_locks でも見える
+    experiment_lock_test.go:351: 同じ名前を2回取った場合: 1回目の解放=1（まだ使用中=true）→ 2回目の解放=1（使用中=false）
+    experiment_lock_test.go:353: → 取得と解放の回数を合わせる必要がある。defer で1回ずつ対応させるのが安全
+--- PASS: TestExperimentLock_待ち方と状態の確認 (1.01s)
+=== RUN   TestExperimentLock_接続が切れたら解放される
+[mysql] 2026/09/03 03:27:38 connection.go:803 closing bad idle connection: EOF
+    experiment_lock_test.go:378: 接続が切れると、そのセッションのロックは即座に解放される
+    experiment_lock_test.go:379: → プロセスが落ちてもロックは残らない。これは GET_LOCK の良いところ
+--- PASS: TestExperimentLock_接続が切れたら解放される (0.00s)
+=== RUN   TestExperimentLock_ロック無しで同時にDDLを流す
+    experiment_lock_test.go:438: ロック無しで8並列: 7/8 が失敗
+    experiment_lock_test.go:440:   7 件: DDL: Error 1050 (42S01): Table 'exp_nolock' already exists
+    experiment_lock_test.go:446: 適用の記録: 1 件（1 であってほしい）
+    experiment_lock_test.go:447: → 起動のたびにこれが起きる。エラーで落ちたコンテナは再起動を繰り返す。
+    experiment_lock_test.go:448:   「DDL は結局1つしか通らないから大丈夫」ではなく、**残りは全部エラーになる** のが問題
+--- PASS: TestExperimentLock_ロック無しで同時にDDLを流す (0.03s)
+=== RUN   TestExperimentLock_代金
+    experiment_lock_test.go:494: GET_LOCK + RELEASE_LOCK: 343µs /回（往復2回）
+    experiment_lock_test.go:495: 行ロック（BEGIN + FOR UPDATE + COMMIT）: 423µs /回（往復3回）
+    experiment_lock_test.go:496: → どちらも往復の回数ぶん。ロックの種類そのものの差ではない
+--- PASS: TestExperimentLock_代金 (0.17s)
+=== RUN   TestExperimentLock_長時間の担当には向かない
+    experiment_lock_test.go:523: 20 テナントの担当を GET_LOCK で保持 → 接続を 20 本、保持している間ずっと占有する
+    experiment_lock_test.go:531: → プールが枯渇し、通常の問い合わせが取れなくなった
+    experiment_lock_test.go:540: → 「誰が担当か」を長時間持つ用途に GET_LOCK は向かない。
+    experiment_lock_test.go:541:   接続を占有するうえ、期限も無い（アプリが固まって接続が生きていると、永久に持ち続ける）
+    experiment_lock_test.go:542:   この用途は internal/lease の『期限つきリース』が正しい（§2.8）
+--- PASS: TestExperimentLock_長時間の担当には向かない (0.52s)
+=== RUN   TestExperimentLock_先に記録する方式
+    experiment_lock_test.go:591: ① 先に記録する方式・8並列: 適用 1 / 見送り 7 / エラー 0
+    experiment_lock_test.go:592:    → ロック無しでも、エラーは出ない（ロック無しで DDL を撃ち合うと 7/8 が失敗した）
+    experiment_lock_test.go:606: ② 記録した直後に落ちた場合: 記録あり(done=0) / 表は存在しない(0)
+    experiment_lock_test.go:607:    → 次の起動は「適用済み」と判断して飛ばす。**永久に当たらないマイグレーションが生まれる**
+    experiment_lock_test.go:608:    → 対策: done フラグを見て「開始したが終わっていない」を検出し、起動を止めて人に知らせる
+    experiment_lock_test.go:614: ③ DDL 後・記録前に落ちた場合、次の起動で同じ DDL を流すと: Error 1050 (42S01): Table 'exp_ifirst' already exists
+    experiment_lock_test.go:615:    → DDL を冪等に書く（CREATE TABLE IF NOT EXISTS / ALTER の前に存在確認）か、人が直す前提にする
+    experiment_lock_test.go:616: → 結論: ロックは『同時に走らせない』ためのもので、『途中で落ちる』には効かない。両方別に手当てする
+--- PASS: TestExperimentLock_先に記録する方式 (0.08s)
+=== RUN   TestWithLock_同時に走らない
+    lock_test.go:49: 8並列で呼んでも、同時に走ったのは 1 つだけ
+--- PASS: TestWithLock_同時に走らない (0.18s)
+=== RUN   TestWithLock_終わったら必ず解放される
+    lock_test.go:70: 20回繰り返しても、終わるたびに解放されている（接続を固定しているから）
+    lock_test.go:82: 中でエラーになっても解放される
+--- PASS: TestWithLock_終わったら必ず解放される (0.02s)
+=== RUN   TestWithLock_取れなければ待って諦める
+    lock_test.go:114: 先客がいる間は 1.001s 待って、排他ロックを取れなかった を返した
+--- PASS: TestWithLock_取れなければ待って諦める (1.01s)
+=== RUN   TestWithLock_名前にスキーマ名が付く
+    lock_test.go:150: ロック名は "workerdb.test_name" になる（サーバ全体で名前空間が共有されるため）
+--- PASS: TestWithLock_名前にスキーマ名が付く (0.01s)
+=== RUN   TestWithLock_長すぎる名前は拒否する
+    lock_test.go:166: 64文字を超える名前は実行前に弾く: ロック名が長すぎる（64文字まで）: workerdb.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+--- PASS: TestWithLock_長すぎる名前は拒否する (0.01s)
+=== RUN   TestWithLock_接続を占有し続けない
+    lock_test.go:183: 5回ロックを取ったあとの接続: 使用中 0 / アイドル 2
+    lock_test.go:187: ロックのために固定した接続は、終わるとプールに戻る
+--- PASS: TestWithLock_接続を占有し続けない (0.01s)
+=== RUN   TestMigrate_同時に起動しても壊れない
+    migrate_test.go:51: 8並列で Migrate を呼んでも、適用済みは 2 件のまま（GET_LOCK で直列化）
+--- PASS: TestMigrate_同時に起動しても壊れない (0.05s)
+=== RUN   TestMigrate_適用済みの書き換えを検出する
+    migrate_test.go:69: 検出した: 適用済みのマイグレーションが書き換えられている: 0001_robot_profile（適用済みのファイルは書き換えず、新しい番号を足すこと）
+--- PASS: TestMigrate_適用済みの書き換えを検出する (0.02s)
+=== RUN   TestMigrate_ファイルの並びが正しい
+    migrate_test.go:98: 0001_robot_profile (checksum 0f4b7523...)
+    migrate_test.go:98: 0002_robot_profile_index (checksum 79390c40...)
+--- PASS: TestMigrate_ファイルの並びが正しい (0.00s)
+=== RUN   TestMigrate_途中で終わっていたら止まる
+    migrate_test.go:121: 検出した: 前回のマイグレーションが途中で終わっている: [9999_broken]（DB の状態を確認し、直してから schema_migrations を手で直すこと）
+    migrate_test.go:122: → 黙って飛ばすと『永久に当たらないマイグレーション』になる。止めて人に知らせる
+--- PASS: TestMigrate_途中で終わっていたら止まる (0.01s)
+PASS
+
+ok  	github.com/aq35/sample_manual/internal/repo	5.285s

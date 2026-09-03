@@ -29,6 +29,13 @@ type Options struct {
 	MaxRetries int
 	// MaxRows: 1回の取得で許す行数の上限（既定 1000）。超えたら ErrTooManyRows。
 	MaxRows int
+	// MaxLockHold: 排他ロックをこれより長く持っていたら警告する（既定 1分）。
+	// GET_LOCK は接続を1本占有するので、長く持つ用途には向かない（docs/locking.md 3.7）。
+	MaxLockHold time.Duration
+	// MigrateLockWait: マイグレーションの排他ロックを待つ時間（既定 30秒）。
+	// 先に起動したコンテナが当て終わるのを待つ時間なので、いちばん長い
+	// マイグレーションより長くしておく。
+	MigrateLockWait time.Duration
 
 	Logger *slog.Logger
 }
@@ -49,6 +56,12 @@ func (o *Options) setDefaults() {
 	if o.MaxRows == 0 {
 		o.MaxRows = 1000
 	}
+	if o.MaxLockHold == 0 {
+		o.MaxLockHold = time.Minute
+	}
+	if o.MigrateLockWait == 0 {
+		o.MigrateLockWait = 30 * time.Second
+	}
 	if o.Logger == nil {
 		o.Logger = slog.Default()
 	}
@@ -65,12 +78,14 @@ type Stats struct {
 	Blocked      int64 // 検査で止めた回数（テナント忘れ・危険な SQL・行数違い）
 	CrossTenant  int64 // テナントを跨ぐ操作を明示的に行った回数
 	RowsAffected int64
+	Locks        int64 // 排他ロック（GET_LOCK）を取った回数
 }
 
 type counters struct {
 	queries, execs, txs, retries atomic.Int64
 	slow, longTx, blocked, cross atomic.Int64
 	rowsAffected                 atomic.Int64
+	locks                        atomic.Int64
 }
 
 func (c *counters) snapshot() Stats {
@@ -84,14 +99,16 @@ func (c *counters) snapshot() Stats {
 		Blocked:      c.blocked.Load(),
 		CrossTenant:  c.cross.Load(),
 		RowsAffected: c.rowsAffected.Load(),
+		Locks:        c.locks.Load(),
 	}
 }
 
 // DB はプロセスに1つ持つハンドル。★テナントごとに作らない（調査 §5.1）。
 type DB struct {
-	sqldb *sql.DB
-	opt   Options
-	cnt   counters
+	sqldb  *sql.DB
+	opt    Options
+	cnt    counters
+	schema atomic.Value // string。ロック名に付けるスキーマ名（初回に一度だけ問い合わせる）
 }
 
 // Open は接続プールを1つ作る。

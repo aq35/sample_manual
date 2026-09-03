@@ -1,0 +1,31 @@
+# ② JSON の扱い（§6.1 / §6.2）
+# 実行: 2026-09-03T03:25:36+00:00
+# コマンド: go test ./internal/jsonx/ -bench . -benchmem -run XXX -count=3
+
+goos: linux
+goarch: amd64
+pkg: github.com/aq35/sample_manual/internal/jsonx
+cpu: Intel(R) Xeon(R) Processor @ 2.80GHz
+BenchmarkParse_SlimStruct-4               	     218	   5382139 ns/op	  86.55 MB/s	  186328 B/op	    3019 allocs/op
+BenchmarkParse_SlimStruct-4               	     204	   5885328 ns/op	  79.15 MB/s	  186308 B/op	    3019 allocs/op
+BenchmarkParse_SlimStruct-4               	     207	   5717097 ns/op	  81.48 MB/s	  186306 B/op	    3019 allocs/op
+BenchmarkParse_FatStruct-4                	     140	   8700540 ns/op	  53.54 MB/s	 1227479 B/op	   13020 allocs/op
+BenchmarkParse_FatStruct-4                	     126	   9305891 ns/op	  50.06 MB/s	 1227473 B/op	   13020 allocs/op
+BenchmarkParse_FatStruct-4                	     134	   8758642 ns/op	  53.19 MB/s	 1227477 B/op	   13020 allocs/op
+BenchmarkParse_MapAny-4                   	     120	  10307650 ns/op	  45.19 MB/s	 2873772 B/op	   66991 allocs/op
+BenchmarkParse_MapAny-4                   	     100	  12736258 ns/op	  36.58 MB/s	 2873735 B/op	   66991 allocs/op
+BenchmarkParse_MapAny-4                   	     100	  14283885 ns/op	  32.61 MB/s	 2873745 B/op	   66991 allocs/op
+BenchmarkReceive_ReadAllThenUnmarshal-4   	     123	   9843696 ns/op	  47.32 MB/s	 2724102 B/op	    3044 allocs/op
+BenchmarkReceive_ReadAllThenUnmarshal-4   	     124	   9731963 ns/op	  47.87 MB/s	 2724120 B/op	    3044 allocs/op
+BenchmarkReceive_ReadAllThenUnmarshal-4   	     100	  10012401 ns/op	  46.53 MB/s	 2724107 B/op	    3044 allocs/op
+BenchmarkReceive_DecodeWhole-4            	     150	   7737740 ns/op	  60.20 MB/s	 1233121 B/op	    3033 allocs/op
+BenchmarkReceive_DecodeWhole-4            	     174	   7078997 ns/op	  65.81 MB/s	 1233121 B/op	    3033 allocs/op
+BenchmarkReceive_DecodeWhole-4            	     166	   7334020 ns/op	  63.52 MB/s	 1233129 B/op	    3033 allocs/op
+BenchmarkReceive_StreamEach-4             	     200	   5930950 ns/op	  78.55 MB/s	  106656 B/op	    4018 allocs/op
+BenchmarkReceive_StreamEach-4             	     210	   5478762 ns/op	  85.03 MB/s	  106656 B/op	    4018 allocs/op
+BenchmarkReceive_StreamEach-4             	     220	   5504302 ns/op	  84.63 MB/s	  106656 B/op	    4018 allocs/op
+BenchmarkReceive_SingleUnmarshal-4        	  219051	      5623 ns/op	     320 B/op	       8 allocs/op
+BenchmarkReceive_SingleUnmarshal-4        	  218096	      5885 ns/op	     320 B/op	       8 allocs/op
+BenchmarkReceive_SingleUnmarshal-4        	  228055	      5396 ns/op	     320 B/op	       8 allocs/op
+PASS
+ok  	github.com/aq35/sample_manual/internal/jsonx	25.511s

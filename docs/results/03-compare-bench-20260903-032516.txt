@@ -1,0 +1,19 @@
+# ③ 状態比較のコスト（§8）
+# 実行: 2026-09-03T03:26:02+00:00
+# コマンド: go test ./internal/model/ -bench Compare -benchmem -run XXX -count=3
+
+goos: linux
+goarch: amd64
+pkg: github.com/aq35/sample_manual/internal/model
+cpu: Intel(R) Xeon(R) Processor @ 2.80GHz
+BenchmarkCompare_StatusUint8-4             	63400555	        19.42 ns/op	       0 B/op	       0 allocs/op
+BenchmarkCompare_StatusUint8-4             	63572521	        19.42 ns/op	       0 B/op	       0 allocs/op
+BenchmarkCompare_StatusUint8-4             	61972068	        19.49 ns/op	       0 B/op	       0 allocs/op
+BenchmarkCompare_StatusString-4            	57790674	        20.86 ns/op	       0 B/op	       0 allocs/op
+BenchmarkCompare_StatusString-4            	53882868	        21.08 ns/op	       0 B/op	       0 allocs/op
+BenchmarkCompare_StatusString-4            	59033256	        21.47 ns/op	       0 B/op	       0 allocs/op
+BenchmarkCompare_StatusStringWorstCase-4   	47474887	        25.81 ns/op	       0 B/op	       0 allocs/op
+BenchmarkCompare_StatusStringWorstCase-4   	46711278	        25.54 ns/op	       0 B/op	       0 allocs/op
+BenchmarkCompare_StatusStringWorstCase-4   	47060186	        27.08 ns/op	       0 B/op	       0 allocs/op
+PASS
+ok  	github.com/aq35/sample_manual/internal/model	10.988s

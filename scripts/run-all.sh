@@ -51,9 +51,11 @@ if [[ -n "${MYSQL_DSN:-}" ]]; then
   run "08-repo-experiments-${stamp}.txt" "⑧ リポジトリ層の実験（表設計・読み方・事故）" \
       go test ./internal/repo/ -run TestExperiment_ -v -timeout 20m
   run "09-repo-guards-${stamp}.txt" "⑨ リポジトリ層が事故を止めることの確認" \
-      go test ./internal/repo/... -run 'TestScope|TestRepo|TestTx|TestPage|TestMigrate|TestCheck|TestBind|TestExpect|TestHarden' -v -timeout 10m
+      go test ./internal/repo/... -run 'TestScope|TestRepo|TestTx|TestPage|TestCheck|TestBind|TestExpect|TestHarden' -v -timeout 10m
   run "10-repo-bench-${stamp}.txt" "⑩ リポジトリ層の代金" \
       go test ./internal/repo/ -bench 'PointRead|CheckAndBind' -benchmem -run XXX -count=3
+  run "11-locking-${stamp}.txt" "⑪ 排他制御の実験（GET_LOCK の性質と代替）" \
+      go test ./internal/repo/ -run 'TestExperimentLock_|TestWithLock|TestMigrate' -v -timeout 10m
 fi
 
 echo "結果は ${OUT}/ に残した"
