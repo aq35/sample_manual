@@ -69,6 +69,7 @@ func lockHolder(t *testing.T, db *sql.DB, name string) (int64, bool) {
 // 実験1: GET_LOCK は「接続（セッション）」に紐づく。
 // database/sql のプールごしに使うと、取ったのと違う接続で解放しようとして失敗する。
 func TestExperimentLock_接続に紐づく(t *testing.T) {
+	mysqltest.Serialize(t)
 	db := mysqltest.Raw(t)
 	db.SetMaxOpenConns(4)
 	ctx := context.Background()
@@ -138,6 +139,7 @@ func TestExperimentLock_接続に紐づく(t *testing.T) {
 
 // 実験2: ロックを持ったままの接続がプールに戻ると、次にその接続を使う処理が影響を受ける。
 func TestExperimentLock_プールに残ったロックは他の処理に見える(t *testing.T) {
+	mysqltest.Serialize(t)
 	db := mysqltest.Raw(t)
 	db.SetMaxOpenConns(1) // 全員が同じ接続を使う状況を作る
 	db.SetMaxIdleConns(1)
@@ -170,6 +172,7 @@ func TestExperimentLock_プールに残ったロックは他の処理に見え�
 
 // 実験3: GET_LOCK はトランザクションと無関係。COMMIT でも ROLLBACK でも解放されない。
 func TestExperimentLock_トランザクションと無関係(t *testing.T) {
+	mysqltest.Serialize(t)
 	db := mysqltest.Raw(t)
 	ctx := context.Background()
 	c, err := db.Conn(ctx)
@@ -200,6 +203,7 @@ func TestExperimentLock_トランザクションと無関係(t *testing.T) {
 // 実験4（重要）: 代替案「ロック用の行を SELECT ... FOR UPDATE」は、DDL では使えない。
 // MySQL の DDL は暗黙にコミットするので、その瞬間に行ロックが外れる。
 func TestExperimentLock_DDLは行ロックを外す(t *testing.T) {
+	mysqltest.Serialize(t)
 	db := mysqltest.Raw(t)
 	ctx := context.Background()
 	mustExec(t, db, "DROP TABLE IF EXISTS exp_lock_row")
@@ -268,6 +272,7 @@ func TestExperimentLock_DDLは行ロックを外す(t *testing.T) {
 
 // 実験5: ロック名は「サーバ全体」で共通。データベースが違っても衝突する。
 func TestExperimentLock_名前はサーバ全体で共通(t *testing.T) {
+	mysqltest.Serialize(t)
 	dsn := mysqltest.DSN(t)
 	other := strings.Replace(dsn, "/workerdb?", "/workerdb2?", 1)
 	if other == dsn {
@@ -313,6 +318,7 @@ func TestExperimentLock_名前はサーバ全体で共通(t *testing.T) {
 
 // 実験6: 待ち方（タイムアウトの指定）と、状態の確認方法。
 func TestExperimentLock_待ち方と状態の確認(t *testing.T) {
+	mysqltest.Serialize(t)
 	db := mysqltest.Raw(t)
 	ctx := context.Background()
 	a, _ := db.Conn(ctx)
@@ -355,6 +361,7 @@ func TestExperimentLock_待ち方と状態の確認(t *testing.T) {
 
 // 実験7: 接続が切れたらロックはどうなるか。
 func TestExperimentLock_接続が切れたら解放される(t *testing.T) {
+	mysqltest.Serialize(t)
 	db := mysqltest.Raw(t)
 	ctx := context.Background()
 	victim, err := db.Conn(ctx)
@@ -386,6 +393,7 @@ func TestExperimentLock_接続が切れたら解放される(t *testing.T) {
 
 // 実験8: 「そもそもロックは要るのか」— 無しで同時にマイグレーションすると何が起きるか。
 func TestExperimentLock_ロック無しで同時にDDLを流す(t *testing.T) {
+	mysqltest.Serialize(t)
 	db := mysqltest.Raw(t)
 	ctx := context.Background()
 	mustExec(t, db, "DROP TABLE IF EXISTS exp_nolock_hist")
@@ -450,6 +458,7 @@ func TestExperimentLock_ロック無しで同時にDDLを流す(t *testing.T) {
 
 // 実験9: 排他の代金を測る。
 func TestExperimentLock_代金(t *testing.T) {
+	mysqltest.Serialize(t)
 	db := mysqltest.Raw(t)
 	ctx := context.Background()
 	mustExec(t, db, "DROP TABLE IF EXISTS exp_lock_cost")
@@ -498,6 +507,7 @@ func TestExperimentLock_代金(t *testing.T) {
 
 // 実験10: 長時間の「担当」を GET_LOCK でやるとどうなるか（リース方式との比較）。
 func TestExperimentLock_長時間の担当には向かない(t *testing.T) {
+	mysqltest.Serialize(t)
 	db := mysqltest.Raw(t)
 	ctx := context.Background()
 	const tenants = 20
@@ -547,6 +557,7 @@ func TestExperimentLock_長時間の担当には向かない(t *testing.T) {
 // 一意キーの取り合いで勝った1つだけが DDL を流す。ロックは要らない。
 // ただし **途中で落ちたとき** に何が残るかが変わる。
 func TestExperimentLock_先に記録する方式(t *testing.T) {
+	mysqltest.Serialize(t)
 	db := mysqltest.Raw(t)
 	ctx := context.Background()
 	reset := func() {

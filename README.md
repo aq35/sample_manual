@@ -10,6 +10,10 @@
 - **リポジトリ層（DB アクセス層）の設計**は [`docs/repository-layer.md`](docs/repository-layer.md)。
   マルチテナントのテナント分離、誤更新の防止、性能を崩さない書き方を、実験して決めたもの
 - **排他制御（GET_LOCK は要るのか・代わりは何か）**は [`docs/locking.md`](docs/locking.md)
+- **異常系の実験**（crash / 担当の交代 / 終了 / マイグレーション）:
+  [`docs/experiments.md`](docs/experiments.md)（実験基盤）、
+  [`crash-effects.md`](docs/crash-effects.md)、[`fencing.md`](docs/fencing.md)、
+  [`shutdown.md`](docs/shutdown.md)、[`migration-crash.md`](docs/migration-crash.md)
 - 他プロジェクトのレビューに使う入口は 2つ
   - [`.claude/skills/go-mysql-worker-review/`](.claude/skills/go-mysql-worker-review/SKILL.md) — 常時稼働ワーカー
   - [`.claude/skills/go-mysql-repository-review/`](.claude/skills/go-mysql-repository-review/SKILL.md) — リポジトリ層
@@ -36,6 +40,12 @@ go test ./internal/repo/... -v
 
 # 排他制御（GET_LOCK の性質と代替）
 go test ./internal/repo/ -run TestExperimentLock_ -v
+
+# 異常系の実験（それぞれ docs/results/exp-N/ に測定条件つきの結果を残す）
+go test ./internal/effectlab/  -run TestEXP1 -v   # 外部 effect 途中の SIGKILL
+go test ./internal/fencelab/   -run TestEXP2 -v   # lease / fencing / 時計のずれ
+go test ./internal/shutdownlab/ -run TestEXP3 -v  # graceful shutdown
+go test ./internal/repo/       -run TestEXP6 -v   # マイグレーション途中の crash
 ```
 
 `MYSQL_DSN` が未設定のときは、DB を使うテストは skip される（CI で壊れない）。

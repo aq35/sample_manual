@@ -24,6 +24,7 @@ const (
 // InnoDB は主キー順に行を物理配置する（クラスタ化索引）。
 // テナント単位で読むなら、同じテナントの行が隣り合っているかどうかで読むページ数が変わるはず。
 func TestExperiment_主キー設計(t *testing.T) {
+	mysqltest.Serialize(t)
 	db := mysqltest.Raw(t)
 
 	setup := func(name, ddl string) {
@@ -150,6 +151,7 @@ func TestExperiment_主キー設計(t *testing.T) {
 
 // 実験2: 主キーをランダム（UUID 相当）にすると、挿入と表のサイズがどうなるか。
 func TestExperiment_ランダムな主キー(t *testing.T) {
+	mysqltest.Serialize(t)
 	db := mysqltest.Raw(t)
 	const rows = 100000
 
