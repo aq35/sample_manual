@@ -1,0 +1,423 @@
+{
+  "unit": "EXP-4",
+  "name": "backpressure-overload",
+  "title": "入力が処理能力を超えたときのメモリ・遅延・公平性",
+  "hypothesis": "1) 無制限キューは、入力が処理能力を超えるとメモリと遅延が増え続ける。 2) 有界キューはメモリを抑えるが、代わりに『待たせる』か『捨てる』のどちらかを選ぶことになる。 3) キーごとに最新だけ残す方式は、同じ対象への連続更新が多いほど書き込みを減らし、    遅延も小さくなる。 4) テナントごとに枠を分けないと、1テナントの氾濫が他テナントの処理を奪う。",
+  "started_at": "2026-09-03T13:20:11.766916691Z",
+  "ended_at": "2026-09-03T13:20:39.380747741Z",
+  "env": {
+    "captured_at": "2026-09-03T13:20:11.766961469Z",
+    "go_version": "go1.24.7",
+    "os": "linux",
+    "arch": "amd64",
+    "num_cpu": 4,
+    "gomaxprocs": 4,
+    "hostname": "vm",
+    "git_sha": "29c844e064c20702f4c8a87c8516b6e0b7d3d028",
+    "git_dirty": true,
+    "mysql_version": "8.0.46-0ubuntu0.24.04.4"
+  },
+  "workload": {
+    "batch_size": 10,
+    "capacity": 1024,
+    "duration": "2s",
+    "keys_per_tenant": 200,
+    "payload_bytes": 512,
+    "rate_events_per_sec": 10000,
+    "workers": 1
+  },
+  "injection": {
+    "db_delay_per_tx": "20ms",
+    "tenant_skew": "1テナントが入力の 90% を占める条件を別途実行"
+  },
+  "variants": [
+    {
+      "name": "unbounded_queue",
+      "desc": "入ってきたぶんだけ溜める",
+      "counters": {
+        "accepted": 19960,
+        "coalesced": 0,
+        "committed": 1000,
+        "dropped": 0,
+        "leftover_at_stop": 18951,
+        "max_queue": 19080,
+        "produced": 19960,
+        "txs": 100
+      },
+      "metrics": {
+        "blocked_seconds": 0,
+        "heap_max_mb": 14.880966186523438,
+        "rss_max_mb": 23.05078125,
+        "tx_per_sec": 49.97517533140588
+      },
+      "latency": {
+        "count": 1000,
+        "min_ns": 22565451,
+        "p50_ns": 1116382799,
+        "p95_ns": 2087136166,
+        "p99_ns": 2175070350,
+        "max_ns": 2198323054,
+        "mean_ns": 1106178677
+      },
+      "samples": {
+        "count": 48,
+        "max_goroutines": 9,
+        "final_goroutines": 7,
+        "max_heap_alloc_bytes": 15603824,
+        "final_heap_alloc_bytes": 15603824,
+        "max_rss_bytes": 24170496,
+        "max_db_open_conns": 1,
+        "max_db_in_use": 1,
+        "db_wait_count": 0,
+        "db_wait_duration_ns": 0,
+        "max_custom": {
+          "queue_depth": 19073
+        }
+      },
+      "accident": true,
+      "notes": [
+        "★キューが伸び続け、反映の遅れもそのぶん増える。落ちるまで気づきにくい"
+      ]
+    },
+    {
+      "name": "bounded_block",
+      "desc": "有界。いっぱいなら生産側を待たせる（入口へ背圧をかける）",
+      "counters": {
+        "accepted": 1900,
+        "coalesced": 0,
+        "committed": 1000,
+        "dropped": 0,
+        "leftover_at_stop": 891,
+        "max_queue": 1024,
+        "produced": 1900,
+        "txs": 100
+      },
+      "metrics": {
+        "blocked_seconds": 1.9100580219999999,
+        "heap_max_mb": 17.062667846679688,
+        "rss_max_mb": 25.08984375,
+        "tx_per_sec": 49.48683329188604
+      },
+      "latency": {
+        "count": 1000,
+        "min_ns": 23248588,
+        "p50_ns": 1137663178,
+        "p95_ns": 2106664039,
+        "p99_ns": 2193210814,
+        "max_ns": 2215933961,
+        "mean_ns": 1123609793
+      },
+      "samples": {
+        "count": 48,
+        "max_goroutines": 9,
+        "final_goroutines": 7,
+        "max_heap_alloc_bytes": 17891504,
+        "final_heap_alloc_bytes": 17891504,
+        "max_rss_bytes": 26308608,
+        "max_db_open_conns": 1,
+        "max_db_in_use": 1,
+        "db_wait_count": 0,
+        "db_wait_duration_ns": 0,
+        "max_custom": {
+          "queue_depth": 1024
+        }
+      },
+      "accident": false,
+      "notes": [
+        "生産側が待たされた合計 1.91s（これが背圧の量）"
+      ]
+    },
+    {
+      "name": "bounded_drop",
+      "desc": "有界。いっぱいなら捨てる",
+      "counters": {
+        "accepted": 1904,
+        "coalesced": 0,
+        "committed": 1000,
+        "dropped": 18056,
+        "leftover_at_stop": 895,
+        "max_queue": 1024,
+        "produced": 19960,
+        "txs": 100
+      },
+      "metrics": {
+        "blocked_seconds": 0,
+        "heap_max_mb": 19.337860107421875,
+        "rss_max_mb": 27.53515625,
+        "tx_per_sec": 49.991798720440414
+      },
+      "latency": {
+        "count": 1000,
+        "min_ns": 22721889,
+        "p50_ns": 1114014224,
+        "p95_ns": 2073055101,
+        "p99_ns": 2158744102,
+        "max_ns": 2181228290,
+        "mean_ns": 1100507100
+      },
+      "samples": {
+        "count": 48,
+        "max_goroutines": 9,
+        "final_goroutines": 6,
+        "max_heap_alloc_bytes": 20277216,
+        "final_heap_alloc_bytes": 1103224,
+        "max_rss_bytes": 28872704,
+        "max_db_open_conns": 1,
+        "max_db_in_use": 1,
+        "db_wait_count": 0,
+        "db_wait_duration_ns": 0,
+        "max_custom": {
+          "queue_depth": 1024
+        }
+      },
+      "accident": false,
+      "notes": [
+        "捨てた 18056 件（数えているので、あとから説明できる）"
+      ]
+    },
+    {
+      "name": "coalesce_latest",
+      "desc": "キーごとに最新だけ残す（1件ずつ書く）",
+      "counters": {
+        "accepted": 19980,
+        "coalesced": 19580,
+        "committed": 293,
+        "dropped": 0,
+        "leftover_at_stop": 200,
+        "max_queue": 200,
+        "produced": 19980,
+        "txs": 293
+      },
+      "metrics": {
+        "blocked_seconds": 0,
+        "heap_max_mb": 3.515838623046875,
+        "rss_max_mb": 14.8515625,
+        "tx_per_sec": 146.4196648010316
+      },
+      "latency": {
+        "count": 293,
+        "min_ns": 44239968,
+        "p50_ns": 1838251781,
+        "p95_ns": 4509988472,
+        "p99_ns": 4777675359,
+        "max_ns": 4838400150,
+        "mean_ns": 2129447497
+      },
+      "samples": {
+        "count": 138,
+        "max_goroutines": 9,
+        "final_goroutines": 7,
+        "max_heap_alloc_bytes": 3686624,
+        "final_heap_alloc_bytes": 519760,
+        "max_rss_bytes": 15572992,
+        "max_db_open_conns": 1,
+        "max_db_in_use": 1,
+        "db_wait_count": 0,
+        "db_wait_duration_ns": 0,
+        "max_custom": {
+          "queue_depth": 200
+        }
+      },
+      "accident": false,
+      "notes": [
+        "まとめた 19580 件"
+      ]
+    },
+    {
+      "name": "coalesce_batch",
+      "desc": "キーごとに最新だけ残し、1トランザクションでまとめて書く",
+      "counters": {
+        "accepted": 19720,
+        "coalesced": 17700,
+        "committed": 2020,
+        "dropped": 0,
+        "leftover_at_stop": 20,
+        "max_queue": 200,
+        "produced": 19720,
+        "txs": 11
+      },
+      "metrics": {
+        "blocked_seconds": 0,
+        "heap_max_mb": 3.5818252563476562,
+        "rss_max_mb": 14.72265625,
+        "tx_per_sec": 5.49679906823739
+      },
+      "latency": {
+        "count": 2020,
+        "min_ns": 25901288,
+        "p50_ns": 43677999,
+        "p95_ns": 93071656,
+        "p99_ns": 198439172,
+        "max_ns": 224052344,
+        "mean_ns": 50305498
+      },
+      "samples": {
+        "count": 48,
+        "max_goroutines": 8,
+        "final_goroutines": 7,
+        "max_heap_alloc_bytes": 3755816,
+        "final_heap_alloc_bytes": 2433128,
+        "max_rss_bytes": 15437824,
+        "max_db_open_conns": 1,
+        "max_db_in_use": 1,
+        "db_wait_count": 0,
+        "db_wait_duration_ns": 0,
+        "max_custom": {
+          "queue_depth": 200
+        }
+      },
+      "accident": false,
+      "notes": [
+        "まとめた 17700 件 / トランザクション 11 回"
+      ]
+    },
+    {
+      "name": "まとめて書く / DB 遅延 0s",
+      "counters": {
+        "committed": 2020,
+        "max_queue": 200,
+        "produced": 19900,
+        "txs": 11
+      },
+      "metrics": {
+        "heap_max_mb": 3.6631546020507812,
+        "tx_per_sec": 5.498028621359496
+      },
+      "latency": {
+        "count": 2020,
+        "min_ns": 4778126,
+        "p50_ns": 21400082,
+        "p95_ns": 74452079,
+        "p99_ns": 178416784,
+        "max_ns": 203375622,
+        "mean_ns": 29170811
+      },
+      "accident": false,
+      "notes": [
+        "キュー最大 200 件 / 反映の遅れ p99 178ms"
+      ]
+    },
+    {
+      "name": "まとめて書く / DB 遅延 10ms",
+      "counters": {
+        "committed": 2000,
+        "max_queue": 200,
+        "produced": 19960,
+        "txs": 10
+      },
+      "metrics": {
+        "heap_max_mb": 3.6532363891601562,
+        "tx_per_sec": 4.99955288248639
+      },
+      "latency": {
+        "count": 2000,
+        "min_ns": 16436153,
+        "p50_ns": 30840140,
+        "p95_ns": 77315862,
+        "p99_ns": 112384129,
+        "max_ns": 188302709,
+        "mean_ns": 37263213
+      },
+      "accident": false,
+      "notes": [
+        "キュー最大 200 件 / 反映の遅れ p99 112ms"
+      ]
+    },
+    {
+      "name": "まとめて書く / DB 遅延 100ms",
+      "counters": {
+        "committed": 2000,
+        "max_queue": 200,
+        "produced": 19940,
+        "txs": 10
+      },
+      "metrics": {
+        "heap_max_mb": 3.5852127075195312,
+        "tx_per_sec": 4.998419267401152
+      },
+      "latency": {
+        "count": 2000,
+        "min_ns": 105433300,
+        "p50_ns": 120255789,
+        "p95_ns": 166718906,
+        "p99_ns": 200158418,
+        "max_ns": 278862177,
+        "mean_ns": 126546125
+      },
+      "accident": false,
+      "notes": [
+        "キュー最大 200 件 / 反映の遅れ p99 200ms"
+      ]
+    },
+    {
+      "name": "1テナントが入力の90%を占める / bounded_drop",
+      "counters": {
+        "committed_big": 902,
+        "committed_small": 98,
+        "dropped": 18844,
+        "max_queue": 256
+      },
+      "metrics": {
+        "small_tenant_share": 0.098
+      },
+      "latency": {
+        "count": 1000,
+        "min_ns": 22786701,
+        "p50_ns": 601109719,
+        "p95_ns": 625069685,
+        "p99_ns": 625667326,
+        "max_ns": 626568096,
+        "mean_ns": 525931393
+      },
+      "accident": false,
+      "notes": [
+        "少数派テナントの取り分 9.8%（入力比では 10%）"
+      ]
+    },
+    {
+      "name": "1テナントが入力の90%を占める / per_tenant_quota",
+      "counters": {
+        "committed_big": 1000,
+        "committed_small": 990,
+        "dropped": 17959,
+        "max_queue": 256
+      },
+      "metrics": {
+        "small_tenant_share": 0.49748743718592964
+      },
+      "latency": {
+        "count": 1990,
+        "min_ns": 23712395,
+        "p50_ns": 313191585,
+        "p95_ns": 329403786,
+        "p99_ns": 334289903,
+        "max_ns": 335256332,
+        "mean_ns": 286890482
+      },
+      "accident": false,
+      "notes": [
+        "少数派テナントの取り分 49.7%（入力比では 10%）"
+      ]
+    }
+  ],
+  "verdict": "無制限キューは入力が処理能力を超えた瞬間からメモリと遅延が伸び続け、有界にすると『待たせる』『捨てる』のどちらかを選ぶことになる（選ばない選択肢は無い）。キーごとに最新だけ残す方式は、同じ対象への更新が多い場面で書き込みと遅延の両方を下げた。テナントごとに枠を分けると、氾濫しているテナントの隣で少数派の処理が生き残った。",
+  "scope": [
+    "MySQL 8.0 / 同一ホスト / 1プロセス内のパイプライン（生成→キュー→バッチ→トランザクション）",
+    "DB 遅延は SELECT SLEEP で DB 側に実際に待たせている（接続の占有まで含まれる）",
+    "入力レートは 10,000 件/秒。処理側は DB 遅延によって明確に追いつかない条件"
+  ],
+  "uncertainty": [
+    "ヒープ最大値は方式の比較に使えなかった（10,000件/秒では割り当ての回転と GC の時機に支配される）。方式の差は『キューが抱えている件数×1件の大きさ』で見ている",
+    "spill-to-disk（あふれをディスクへ退避）は未実装・未測定",
+    "複数プロセスでの公平性（同じ DB を複数 worker が奪い合う場合）は未測定",
+    "入力が止まったあとの回復時間は、2秒の走行では十分に観測できていない",
+    "GC の挙動は Go の既定のまま（GOGC 未調整）"
+  ],
+  "artifacts": [
+    "internal/loadlab: 6方式の受け口（無制限/有界待ち/有界捨て/まとめ/まとめ+バッチ/テナント枠）",
+    "expkit.Sampler の custom で queue depth を時系列に残す型"
+  ],
+  "next": [
+    "EXP-5 接続プールの飽和点"
+  ]
+}

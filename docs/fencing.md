@@ -7,7 +7,7 @@ eval "$(./scripts/mysql-up.sh --export)"
 go test ./internal/fencelab/ -run TestEXP2 -v -timeout 20m
 ```
 
-結果ファイル: [`docs/results/exp-2/20260903-120131-lease-fencing-clock-skew.md`](results/exp-2/20260903-120131-lease-fencing-clock-skew.md)
+結果ファイル: [`docs/results/exp-2/20260903-131953-lease-fencing-clock-skew.md`](results/exp-2/20260903-131953-lease-fencing-clock-skew.md)
 
 ---
 

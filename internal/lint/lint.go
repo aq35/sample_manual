@@ -12,6 +12,7 @@ import (
 	"go/ast"
 	"go/token"
 	"strings"
+	"sync"
 
 	"golang.org/x/tools/go/analysis"
 )
@@ -36,10 +37,21 @@ func Analyzers() []*analysis.Analyzer {
 const AllowPrefix = "smlint:allow "
 
 // escapes は、逃げ道が使われた回数（監査用）。
-var escapes = map[string]int{}
+//
+// ★ロックが要る。go/analysis は**パッケージごとに並列に**検査を走らせるので、
+// ここは複数の goroutine から同時に書かれる。
+// 最初これを素の map にしていて、リポジトリ全体へ当てたときに
+// `fatal error: concurrent map writes` で落ちた。
+// 逃げ道が少ないうちは（＝書き込みが稀なうちは）たまたま落ちなかった。
+var (
+	escapesMu sync.Mutex
+	escapes   = map[string]int{}
+)
 
 // Escapes は逃げ道の使用回数を返す（実験で数えるため）。
 func Escapes() map[string]int {
+	escapesMu.Lock()
+	defer escapesMu.Unlock()
 	out := map[string]int{}
 	for k, v := range escapes {
 		out[k] = v
@@ -48,7 +60,17 @@ func Escapes() map[string]int {
 }
 
 // ResetEscapes は数え直す。
-func ResetEscapes() { escapes = map[string]int{} }
+func ResetEscapes() {
+	escapesMu.Lock()
+	defer escapesMu.Unlock()
+	escapes = map[string]int{}
+}
+
+func countEscape(rule string) {
+	escapesMu.Lock()
+	escapes[rule]++
+	escapesMu.Unlock()
+}
 
 // allowed は、その位置に有効な逃げ道コメントがあるか。
 //
@@ -85,7 +107,7 @@ func allowed(pass *analysis.Pass, pos token.Pos, rule string) bool {
 				pass.Reportf(c.Pos(), "逃げ道には理由を書くこと: %s%s 理由: ...", AllowPrefix, rule)
 				return false
 			}
-			escapes[rule]++
+			countEscape(rule)
 			return true
 		}
 	}

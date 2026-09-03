@@ -7,7 +7,7 @@ go build -o /tmp/sqllint ./cmd/sqllint && /tmp/sqllint ./...
 go test ./internal/lint/ -v          # 検査そのものの検査（analysistest）
 ```
 
-結果ファイル: [`docs/results/exp-9/20260903-125500-static-analysis.md`](results/exp-9/20260903-125500-static-analysis.md)
+結果ファイル: [`docs/results/exp-9/20260903-132010-static-analysis.md`](results/exp-9/20260903-132010-static-analysis.md)
 
 ---
 
@@ -104,6 +104,22 @@ EXP-6 で作った安全網（started → done の二相記録）が、ここで
 
 gofmt がディレクティブとして扱うのは `//名前:語` の形で、名前にハイフンを含められない。
 `//smlint:allow` に変えて解決した（テストが落ちて気づいた）。
+
+## 4.1 検査自身のバグ（あとから出た）
+
+EXP-10 のコードを足したところ、リポジトリ全体に当てた瞬間に落ちた。
+
+```
+fatal error: concurrent map writes
+	github.com/aq35/sample_manual/internal/lint.allowed(...)
+```
+
+逃げ道の使用回数を数える map にロックが無かった。
+`go/analysis` は**パッケージごとに並列で**検査を走らせるので、ここは同時に書かれる。
+
+**逃げ道が少ないうちは書き込みが稀で、たまたま落ちていなかった。**
+「このリポジトリで 0 件だった」は「正しく動く」ことの証明ではない、という実例。
+`sync.Mutex` を足して直した（`internal/lint/lint.go`）。
 
 ## 5. 適用範囲と未検証
 

@@ -66,6 +66,22 @@ if [[ -n "${MYSQL_DSN:-}" ]]; then
       go test ./internal/shutdownlab/ -run TestEXP3 -v -timeout 20m
   run "15-exp6-migration-crash-${stamp}.txt" "⑮ EXP-6 マイグレーション途中の crash" \
       go test ./internal/repo/ -run TestEXP6 -v -timeout 20m
+  run "16-exp4-backpressure-${stamp}.txt" "⑯ EXP-4 backpressure と過負荷" \
+      go test ./internal/loadlab/ -run TestEXP4 -v -timeout 20m
+  run "17-exp5-pool-${stamp}.txt" "⑰ EXP-5 接続プールの飽和点" \
+      go test ./internal/poollab/ -run TestEXP5 -v -timeout 20m
+  run "18-exp7-plan-${stamp}.txt" "⑱ EXP-7 実行計画とデータの偏り" \
+      go test ./internal/planlab/ -run TestEXP7 -v -timeout 20m
 fi
+
+# ---- MySQL が無くても走る実験 ----
+run "19-exp8-guard-fuzz-${stamp}.txt" "⑲ EXP-8 SQL 検査の fuzz（回帰入力ぶんのみ）" \
+    go test ./internal/repo/ -run 'TestEXP8|TestGuardProperties' -v -timeout 10m
+run "20-exp9-static-analysis-${stamp}.txt" "⑳ EXP-9 保守性の自動検査" \
+    go test ./internal/lint/ -run 'TestEXP9|TestAnalyzers|TestEscapeHatch' -v -timeout 10m
+# EXP-10 は MYSQL_DSN があれば両エンジンを突き合わせ、無ければ SQLite 側だけを測って
+# MySQL 側は UNVERIFIED として残す（測れなかったことを結論にしない）
+run "21-exp10-sqlite-${stamp}.txt" "㉑ EXP-10 SQLite companion" \
+    go test ./internal/sqlitefacts/ -run TestEXP10 -v -timeout 20m
 
 echo "結果は ${OUT}/ に残した"
