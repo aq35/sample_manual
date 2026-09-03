@@ -189,6 +189,9 @@ func TestSilent_接続は生きているのに何も来ない(t *testing.T) {
 
 	// サービスが送信をやめた。接続は維持されたまま。
 	svc.SetSilent(true)
+	// ★同じミリ秒に2回状態が変わると、observed_at が進まず「古い観測」として捨てられる
+	// （§2.7 の比較は厳密に新しいものだけ通す）。テストでも実際に踏んだので、間を空ける。
+	time.Sleep(5 * time.Millisecond)
 	svc.Publish("r001", "error", true, 5) // 届かない
 	time.Sleep(500 * time.Millisecond)
 

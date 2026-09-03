@@ -4,6 +4,7 @@ package repo_test
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"testing"
 
@@ -96,4 +97,27 @@ func TestMigrate_ファイルの並びが正しい(t *testing.T) {
 		}
 		t.Logf("%04d_%s (checksum %s...)", m.Version, m.Name, m.Checksum[:8])
 	}
+}
+
+// 途中で終わったマイグレーションがあれば、起動を止める。
+func TestMigrate_途中で終わっていたら止まる(t *testing.T) {
+	db := newDB(t)
+	ctx := context.Background()
+
+	// 「開始は記録したが、完了していない」状態を作る（DDL の途中で落ちた想定）
+	if _, err := db.SQL().ExecContext(ctx,
+		`INSERT INTO schema_migrations (version, name, checksum, state)
+		 VALUES (9999, 'broken', 'x', 'started')`); err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		_, _ = db.SQL().ExecContext(ctx, "DELETE FROM schema_migrations WHERE version = 9999")
+	}()
+
+	err := repo.Migrate(ctx, db)
+	if !errors.Is(err, repo.ErrMigrationUnfinished) {
+		t.Fatalf("途中終了を検出できていない: %v", err)
+	}
+	t.Logf("検出した: %v", err)
+	t.Log("→ 黙って飛ばすと『永久に当たらないマイグレーション』になる。止めて人に知らせる")
 }

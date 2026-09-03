@@ -1,0 +1,23 @@
+# ⑩ リポジトリ層の代金
+# 実行: 2026-09-03T03:27:20+00:00
+# コマンド: go test ./internal/repo/ -bench PointRead|CheckAndBind -benchmem -run XXX -count=3
+
+goos: linux
+goarch: amd64
+pkg: github.com/aq35/sample_manual/internal/repo
+cpu: Intel(R) Xeon(R) Processor @ 2.80GHz
+BenchmarkCheckAndBind-4           	 7153212	       168.2 ns/op	      64 B/op	       2 allocs/op
+BenchmarkCheckAndBind-4           	 6708915	       158.8 ns/op	      64 B/op	       2 allocs/op
+BenchmarkCheckAndBind-4           	 7493757	       155.9 ns/op	      64 B/op	       2 allocs/op
+BenchmarkCheckAndBind_NoCache-4   	  237391	      5131 ns/op	    2072 B/op	      14 allocs/op
+BenchmarkCheckAndBind_NoCache-4   	  210458	      5042 ns/op	    2072 B/op	      14 allocs/op
+BenchmarkCheckAndBind_NoCache-4   	  237188	      4891 ns/op	    2072 B/op	      14 allocs/op
+BenchmarkRawSQL_PointRead-4       	    4328	    247762 ns/op	     856 B/op	      25 allocs/op
+BenchmarkRawSQL_PointRead-4       	    4281	    247096 ns/op	     856 B/op	      25 allocs/op
+BenchmarkRawSQL_PointRead-4       	    4381	    251738 ns/op	     856 B/op	      25 allocs/op
+BenchmarkRepo_PointRead-4         	    4719	    253470 ns/op	     984 B/op	      28 allocs/op
+BenchmarkRepo_PointRead-4         	    4434	    253601 ns/op	     984 B/op	      28 allocs/op
+BenchmarkRepo_PointRead-4         	    4678	    258494 ns/op	     984 B/op	      28 allocs/op
+PASS
+
+ok  	github.com/aq35/sample_manual/internal/repo	13.725s

@@ -34,9 +34,12 @@ if docker info >/dev/null 2>&1; then
     if docker exec worker-mysql mysqladmin ping -h127.0.0.1 --silent >/dev/null 2>&1; then break; fi
     sleep 1
   done
-  # §9 の検証テストは SET GLOBAL を使うので権限を足す
+  # §9 の検証テストは SET GLOBAL を、排他制御の実験は2つめのデータベースを使う
   docker exec worker-mysql mysql -uroot -e \
-    "GRANT SYSTEM_VARIABLES_ADMIN, PROCESS ON *.* TO '${USER}'@'%'; FLUSH PRIVILEGES;" >/dev/null 2>&1 || true
+    "CREATE DATABASE IF NOT EXISTS ${DB}2;
+     GRANT ALL PRIVILEGES ON ${DB}2.* TO '${USER}'@'%';
+     GRANT SYSTEM_VARIABLES_ADMIN, PROCESS, CONNECTION_ADMIN ON *.* TO '${USER}'@'%';
+     FLUSH PRIVILEGES;" >/dev/null 2>&1 || true
 else
   log "docker が無いので、ローカルにインストールされた MySQL を使う"
   log "（未インストールなら: sudo apt-get install -y mysql-server）"
@@ -50,9 +53,12 @@ else
   fi
   mysql -e "
     CREATE DATABASE IF NOT EXISTS ${DB} CHARACTER SET utf8mb4;
+    -- 排他制御の実験で『ロック名はサーバ全体で共通』を確かめるのに使う
+    CREATE DATABASE IF NOT EXISTS ${DB}2 CHARACTER SET utf8mb4;
     CREATE USER IF NOT EXISTS '${USER}'@'%' IDENTIFIED BY '${PASS}';
     GRANT ALL PRIVILEGES ON ${DB}.* TO '${USER}'@'%';
-    GRANT SYSTEM_VARIABLES_ADMIN, PROCESS, RELOAD ON *.* TO '${USER}'@'%';
+    GRANT ALL PRIVILEGES ON ${DB}2.* TO '${USER}'@'%';
+    GRANT SYSTEM_VARIABLES_ADMIN, PROCESS, RELOAD, CONNECTION_ADMIN ON *.* TO '${USER}'@'%';
     FLUSH PRIVILEGES;"
 fi
 

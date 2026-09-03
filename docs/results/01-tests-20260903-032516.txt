@@ -1,6 +1,5 @@
 # ① 設計チェックリストのテスト（§2〜§6）
-# 実行: 2026-09-03T00:03:26+00:00
-# コマンド: go test ./... -v -timeout 10m
+# 実行: 2026-09-03T03:28:42+00:00
 
 ?   	github.com/aq35/sample_manual/cmd/loadsim	[no test files]
 ?   	github.com/aq35/sample_manual/cmd/worker	[no test files]
@@ -9,50 +8,50 @@
 === RUN   TestFullSync_Bだけでは拾えないものがある
     app_test.go:108: ① 新規追加された r002 は、B の対象リストにそもそも載らないので拾えない
     app_test.go:122: ② A（全件同期）を回すと、名簿の追加も、間違った値の訂正も入る
---- PASS: TestFullSync_Bだけでは拾えないものがある (0.07s)
+--- PASS: TestFullSync_Bだけでは拾えないものがある (0.08s)
 === RUN   TestUnknown_APIが答えないときは不明のままにする
     app_test.go:153: API が答えない → 状態は「不明」。オフラインとは言わない
     app_test.go:165: API が「停止中」と答えた → オフライン確定
---- PASS: TestUnknown_APIが答えないときは不明のままにする (0.07s)
+--- PASS: TestUnknown_APIが答えないときは不明のままにする (0.08s)
 === RUN   TestSilent_接続は生きているのに何も来ない
-    app_test.go:202: 接続数=1（正常に見える）なのに、最後の受信から 510ms 経っている
-    app_test.go:203: → 監視するのは「接続の有無」ではなく「最後に受信した時刻」（§2.6）
-    app_test.go:212: → 沈黙の間に起きた変化は、B が API で取り直して初めて反映される
---- PASS: TestSilent_接続は生きているのに何も来ない (0.53s)
+    app_test.go:205: 接続数=1（正常に見える）なのに、最後の受信から 520ms 経っている
+    app_test.go:206: → 監視するのは「接続の有無」ではなく「最後に受信した時刻」（§2.6）
+    app_test.go:215: → 沈黙の間に起きた変化は、B が API で取り直して初めて反映される
+--- PASS: TestSilent_接続は生きているのに何も来ない (0.56s)
 === RUN   TestPing_応答が無ければ自分から切って繋ぎ直す
-    app_test.go:238: Pong が返らない接続を 2 回張り直した（TCP は生きているので、これが無いと永久に無音のまま）
+    app_test.go:241: Pong が返らない接続を 2 回張り直した（TCP は生きているので、これが無いと永久に無音のまま）
 --- PASS: TestPing_応答が無ければ自分から切って繋ぎ直す (1.12s)
 === RUN   TestWebSocket_変化が即座に反映される
-    app_test.go:265: WebSocket 経由の反映まで 10ms（A は 1h0m0s ごと、B は 1h0m0s ごと）
+    app_test.go:268: WebSocket 経由の反映まで 10ms（A は 1h0m0s ごと、B は 1h0m0s ごと）
 --- PASS: TestWebSocket_変化が即座に反映される (0.03s)
 === RUN   TestUnknownField_知らない項目があっても止まらない
-    app_test.go:286: 知らない項目（experimental_field / schema_version）があっても、全件同期は通る
+    app_test.go:289: 知らない項目（experimental_field / schema_version）があっても、全件同期は通る
 --- PASS: TestUnknownField_知らない項目があっても止まらない (0.01s)
 PASS
-ok  	github.com/aq35/sample_manual/internal/app	1.844s
+ok  	github.com/aq35/sample_manual/internal/app	1.901s
 ?   	github.com/aq35/sample_manual/internal/fakesvc	[no test files]
 === RUN   TestPayloadSize
     fixture_test.go:8: 1,000件の応答: 465849 バイト (454.9 KB)
     fixture_test.go:9: WebSocket 1件: 463 バイト
 --- PASS: TestPayloadSize (0.01s)
 PASS
-ok  	github.com/aq35/sample_manual/internal/fixture	(cached)
+ok  	github.com/aq35/sample_manual/internal/fixture	0.010s
 testing: warning: no tests to run
 PASS
-ok  	github.com/aq35/sample_manual/internal/jsonx	(cached) [no tests to run]
+ok  	github.com/aq35/sample_manual/internal/jsonx	0.017s [no tests to run]
 === RUN   TestLease_同時に取りに行っても担当は1つ
     lease_test.go:57: 8 コンテナが同時に取りに行って、担当は "container-H" の1つだけ
---- PASS: TestLease_同時に取りに行っても担当は1つ (0.02s)
+--- PASS: TestLease_同時に取りに行っても担当は1つ (0.04s)
 === RUN   TestLease_期限が切れたら別のコンテナが拾う
     lease_test.go:95: A(fence=1) が落ちた → 1.5s 後に B(fence=2) が担当を引き継いだ
---- PASS: TestLease_期限が切れたら別のコンテナが拾う (1.81s)
+--- PASS: TestLease_期限が切れたら別のコンテナが拾う (1.82s)
 === RUN   TestLease_明け渡すと即座に次が取れる
---- PASS: TestLease_明け渡すと即座に次が取れる (0.01s)
+--- PASS: TestLease_明け渡すと即座に次が取れる (0.02s)
 PASS
-ok  	github.com/aq35/sample_manual/internal/lease	1.850s
+ok  	github.com/aq35/sample_manual/internal/lease	1.884s
 testing: warning: no tests to run
 PASS
-ok  	github.com/aq35/sample_manual/internal/model	(cached) [no tests to run]
+ok  	github.com/aq35/sample_manual/internal/model	0.006s [no tests to run]
 === RUN   TestFact_flush_log_at_trx_commit
     facts_test.go:36: MySQL 8.0.46-0ubuntu0.24.04.4
     facts_test.go:42: GLOBAL の現在値: 1
@@ -61,11 +60,11 @@ ok  	github.com/aq35/sample_manual/internal/model	(cached) [no tests to run]
     facts_test.go:68: ★ただしサーバ全体に効くため、同居している他の業務データにも一律で効く。専用インスタンスでない限り触らないこと
 --- PASS: TestFact_flush_log_at_trx_commit (0.00s)
 === RUN   TestFact_flush設定ごとのコミット速度
-    facts_test.go:104: innodb_flush_log_at_trx_commit=1: autocommit 1件あたり 1.442652ms (693 tx/s)
-    facts_test.go:104: innodb_flush_log_at_trx_commit=2: autocommit 1件あたり 957.805µs (1044 tx/s)
-    facts_test.go:104: innodb_flush_log_at_trx_commit=0: autocommit 1件あたり 871.292µs (1148 tx/s)
+    facts_test.go:104: innodb_flush_log_at_trx_commit=1: autocommit 1件あたり 1.087556ms (919 tx/s)
+    facts_test.go:104: innodb_flush_log_at_trx_commit=2: autocommit 1件あたり 922.928µs (1084 tx/s)
+    facts_test.go:104: innodb_flush_log_at_trx_commit=0: autocommit 1件あたり 832.596µs (1201 tx/s)
     facts_test.go:106: ※ 1 は「コミットのたびにディスク同期」。0/2 は同期を省くぶん速いが、落ちたときに直近のコミットを失う
---- PASS: TestFact_flush設定ごとのコミット速度 (0.68s)
+--- PASS: TestFact_flush設定ごとのコミット速度 (0.59s)
 === RUN   TestFact_行エイリアス構文
     facts_test.go:112: MySQL 8.0.46-0ubuntu0.24.04.4
     facts_test.go:123: AS new（行エイリアス）が使える
@@ -76,37 +75,37 @@ ok  	github.com/aq35/sample_manual/internal/model	(cached) [no tests to run]
     facts_test.go:182: 同じ値の UPDATE: affected_rows=0 / 違う値の UPDATE: affected_rows=1
     facts_test.go:186: → 値が変わらない UPDATE は行を書き換えない。ただし ★往復とロックは発生する（§4.2）
     facts_test.go:209: 値が変わらない UPDATE でも行ロックは取られる → 別トランザクションは待たされる: Error 1205 (HY000): Lock wait timeout exceeded; try restarting transaction
---- PASS: TestFact_同じ値のUPDATEは書き込みを省く (1.10s)
+--- PASS: TestFact_同じ値のUPDATEは書き込みを省く (1.02s)
 === RUN   TestFact_パーティションの削除はDELETEより速い
     facts_test.go:233: PARTITION BY RANGE COLUMNS(date) の構文が通る
-    facts_test.go:270: 50000 行の削除: DROP PARTITION 16.246139ms / DELETE 205.760042ms （12.7 倍）
+    facts_test.go:270: 50000 行の削除: DROP PARTITION 14.229762ms / DELETE 208.889373ms （14.7 倍）
     facts_test.go:272: ※ DELETE はこのあと undo の purge も残る。DROP PARTITION は表領域ごと落とすので後始末が要らない
---- PASS: TestFact_パーティションの削除はDELETEより速い (14.95s)
+--- PASS: TestFact_パーティションの削除はDELETEより速い (14.82s)
 === RUN   TestFact_長いトランザクションはundoを伸ばす
-    facts_test.go:317: History list length: 開始 28 → 長いトランザクションを開いたまま2000回更新 2000 → コミット後 2002
+    facts_test.go:317: History list length: 開始 80 → 長いトランザクションを開いたまま2000回更新 2234 → コミット後 1090
     facts_test.go:322: → 長いトランザクションを開いている間、古い版が undo に溜まり続ける（§4.6）
---- PASS: TestFact_長いトランザクションはundoを伸ばす (6.52s)
+--- PASS: TestFact_長いトランザクションはundoを伸ばす (2.80s)
 === RUN   TestFact_DBへの1往復の実測
-    facts_test.go:360: SELECT 1（純粋な往復）              92.426µs
-    facts_test.go:360: 主キー1件 SELECT                 142.464µs
-    facts_test.go:360: 1件 UPDATE（autocommit）        1.131432ms
+    facts_test.go:360: SELECT 1（純粋な往復）              123.486µs
+    facts_test.go:360: 主キー1件 SELECT                 328.536µs
+    facts_test.go:360: 1件 UPDATE（autocommit）        1.057657ms
     facts_test.go:392: ※ 同一ホスト・TCP。ネットワークを跨ぐ本番はこれより大きい。桁（メモリ比較の10万倍）が変わらないことが要点（§1）
---- PASS: TestFact_DBへの1往復の実測 (0.77s)
+--- PASS: TestFact_DBへの1往復の実測 (0.86s)
 === RUN   TestFact_MaxIdleConnsの既定値2が再接続を生む
-    facts_test.go:438: 300クエリ（10並列×30回）で新しく張られた接続数: MaxIdleConns=2 → 199 本 / MaxIdleConns=10 → 10 本
+    facts_test.go:438: 300クエリ（10並列×30回）で新しく張られた接続数: MaxIdleConns=2 → 219 本 / MaxIdleConns=10 → 10 本
     facts_test.go:443: → 既定値のままだと、上限まで開いた接続が毎回捨てられ、張り直しになる（§5.2）
 --- PASS: TestFact_MaxIdleConnsの既定値2が再接続を生む (0.09s)
 === RUN   TestFact_wait_timeoutとConnMaxIdleTime
-[mysql] 2026/09/02 23:32:26 connection.go:803 closing bad idle connection: unexpected read from socket
+[mysql] 2026/09/03 03:29:07 connection.go:803 closing bad idle connection: unexpected read from socket
     facts_test.go:486: ① 単発クエリ（database/sql が再試行する）: err=<nil>
-[mysql] 2026/09/02 23:32:30 packets.go:68 [warn] unexpected sequence nr: expected 1, got 0
+[mysql] 2026/09/03 03:29:11 packets.go:68 [warn] unexpected sequence nr: expected 1, got 0
     facts_test.go:500: ② sql.Conn を掴んだまま放置（再試行されない）: err=Error 4031 (HY000): The client was disconnected by the server because of inactivity. See wait_timeout and interactive_timeout for configuring this behavior.
-[mysql] 2026/09/02 23:32:34 packets.go:68 [warn] unexpected sequence nr: expected 1, got 0
+[mysql] 2026/09/03 03:29:15 packets.go:68 [warn] unexpected sequence nr: expected 1, got 0
     facts_test.go:509: ③ トランザクションを開いたまま放置: err=Error 4031 (HY000): The client was disconnected by the server because of inactivity. See wait_timeout and interactive_timeout for configuring this behavior.
     facts_test.go:526: ④ ConnMaxIdleTime(0.5s) < wait_timeout(2s) にすると、死んだ接続を掴むこと自体が起きない（§5.2）
 --- PASS: TestFact_wait_timeoutとConnMaxIdleTime (16.01s)
 PASS
-ok  	github.com/aq35/sample_manual/internal/mysqlfacts	(cached)
+ok  	github.com/aq35/sample_manual/internal/mysqlfacts	36.243s
 ?   	github.com/aq35/sample_manual/internal/mysqltest	[no test files]
 === RUN   TestCheckStatement
 --- PASS: TestCheckStatement (0.00s)
@@ -117,47 +116,116 @@ ok  	github.com/aq35/sample_manual/internal/mysqlfacts	(cached)
 === RUN   TestHardenDSN
 --- PASS: TestHardenDSN (0.00s)
 === RUN   TestExperiment_主キー設計
-    experiment_design_test.go:92: 投入: 複合主キー 2.358s / 単独主キー+索引 2.417s （100000 行）
-    experiment_design_test.go:130: テナント1件ぶん(5000行)の読み出し: 複合主キー 4.019ms / 単独主キー+索引 7.555ms （1.9 倍）
+    experiment_design_test.go:92: 投入: 複合主キー 2.523s / 単独主キー+索引 2.531s （100000 行）
+    experiment_design_test.go:130: テナント1件ぶん(5000行)の読み出し: 複合主キー 6.384ms / 単独主キー+索引 12.281ms （1.9 倍）
     experiment_design_test.go:137: 複合主キー   : type=ref key=PRIMARY rows=8570 filtered=100 extra=-
     experiment_design_test.go:138: 単独主キー+索引: type=ref key=idx_tenant rows=5000 filtered=100 extra=-
     experiment_design_test.go:139: ※ 単独主キー側は、二次索引で行を特定してから1行ずつ主キーを引き直す（ランダムアクセス）。
     experiment_design_test.go:140:   索引だけで足りる問い合わせ（covering index）なら差は出ない。差が出るのは列を取りに行くとき。
     experiment_design_test.go:145: 表のサイズ: 複合主キー 16.5 MB / 単独主キー+索引 16.0 MB
---- PASS: TestExperiment_主キー設計 (5.03s)
+--- PASS: TestExperiment_主キー設計 (5.38s)
 === RUN   TestExperiment_ランダムな主キー
-    experiment_design_test.go:197: 100000 行の投入: 連番 1.673s / ランダム(UUIDv4相当) 2.87s （1.7 倍）
+    experiment_design_test.go:197: 100000 行の投入: 連番 1.929s / ランダム(UUIDv4相当) 3.077s （1.6 倍）
     experiment_design_test.go:201: 表のサイズ: 連番 13.5 MB / ランダム 26.6 MB
---- PASS: TestExperiment_ランダムな主キー (4.65s)
+--- PASS: TestExperiment_ランダムな主キー (5.14s)
+=== RUN   TestExperimentLock_接続に紐づく
+    experiment_lock_test.go:106: ① プールごしの RELEASE_LOCK: 0 ＝ **解放できていない**（別の接続が持っている）
+    experiment_lock_test.go:111:    → ロックはまだ接続 1071 が持っている。プールに残った接続が持ち続ける
+    experiment_lock_test.go:118:    後片付けの KILL に失敗: Error 1317 (70100): Query execution was interrupted
+[mysql] 2026/09/03 03:28:54 connection.go:803 closing bad idle connection: EOF
+    experiment_lock_test.go:135: ② db.Conn() で接続を固定すれば、取得と解放が同じセッションになる → 正しく動く
+    experiment_lock_test.go:136: → 結論: GET_LOCK を *sql.DB のメソッドで直接呼んではいけない。必ず db.Conn() で固定する
+--- PASS: TestExperimentLock_接続に紐づく (0.11s)
+=== RUN   TestExperimentLock_プールに残ったロックは他の処理に見える
+    experiment_lock_test.go:166: ロックを持ったままプールに戻った接続を、別の処理が借りた: IS_FREE_LOCK=0, その処理が RELEASE_LOCK=1
+    experiment_lock_test.go:167: → 「取った人だけが解放する」という前提が、接続プールでは成り立たない
+    experiment_lock_test.go:168:   接続を固定していない GET_LOCK は、ロックを持ったまま忘れる／他人に解放される、のどちらかになる
+--- PASS: TestExperimentLock_プールに残ったロックは他の処理に見える (0.00s)
+=== RUN   TestExperimentLock_トランザクションと無関係
+    experiment_lock_test.go:192: ROLLBACK してもロックは解放されない（トランザクションの外にある）
+    experiment_lock_test.go:197: → 良い面: DDL の暗黙コミットに巻き込まれない。悪い面: 明示的に解放しないと残る
+--- PASS: TestExperimentLock_トランザクションと無関係 (0.00s)
+=== RUN   TestExperimentLock_DDLは行ロックを外す
+    experiment_lock_test.go:248: ★ A が DDL を1つ実行した時点で、A の行ロックは外れていた（DDL の暗黙コミット）
+    experiment_lock_test.go:249:   → B が同時にマイグレーションを始められる。行ロック方式は DDL には使えない
+    experiment_lock_test.go:265: ★ GET_LOCK は DDL をまたいでも保持される → マイグレーションの排他にはこちらが要る
+--- PASS: TestExperimentLock_DDLは行ロックを外す (1.03s)
+=== RUN   TestExperimentLock_名前はサーバ全体で共通
+    experiment_lock_test.go:306: 別のデータベース（workerdb2）からでも、同じ名前のロックは取れない
+    experiment_lock_test.go:307: → ロック名はサーバ全体の名前空間。同居しているアプリと衝突する
+    experiment_lock_test.go:308:   対策: 名前にスキーマ名やアプリ名を含める（例: workerdb.migrate）
+--- PASS: TestExperimentLock_名前はサーバ全体で共通 (1.00s)
+=== RUN   TestExperimentLock_待ち方と状態の確認
+    experiment_lock_test.go:329: タイムアウト 0（待たない）: 結果 0 / 所要 1ms
+    experiment_lock_test.go:333: タイムアウト 1秒       : 結果 0 / 所要 1s
+    experiment_lock_test.go:340: IS_FREE_LOCK=0 / IS_USED_LOCK=1082 (使用中=true, これは接続 ID)
+    experiment_lock_test.go:341: → 誰が持っているかは IS_USED_LOCK で分かる。performance_schema.metadata_locks でも見える
+    experiment_lock_test.go:351: 同じ名前を2回取った場合: 1回目の解放=1（まだ使用中=true）→ 2回目の解放=1（使用中=false）
+    experiment_lock_test.go:353: → 取得と解放の回数を合わせる必要がある。defer で1回ずつ対応させるのが安全
+--- PASS: TestExperimentLock_待ち方と状態の確認 (1.01s)
+=== RUN   TestExperimentLock_接続が切れたら解放される
+[mysql] 2026/09/03 03:28:57 connection.go:803 closing bad idle connection: EOF
+    experiment_lock_test.go:378: 接続が切れると、そのセッションのロックは即座に解放される
+    experiment_lock_test.go:379: → プロセスが落ちてもロックは残らない。これは GET_LOCK の良いところ
+--- PASS: TestExperimentLock_接続が切れたら解放される (0.00s)
+=== RUN   TestExperimentLock_ロック無しで同時にDDLを流す
+    experiment_lock_test.go:438: ロック無しで8並列: 7/8 が失敗
+    experiment_lock_test.go:440:   7 件: DDL: Error 1050 (42S01): Table 'exp_nolock' already exists
+    experiment_lock_test.go:446: 適用の記録: 1 件（1 であってほしい）
+    experiment_lock_test.go:447: → 起動のたびにこれが起きる。エラーで落ちたコンテナは再起動を繰り返す。
+    experiment_lock_test.go:448:   「DDL は結局1つしか通らないから大丈夫」ではなく、**残りは全部エラーになる** のが問題
+--- PASS: TestExperimentLock_ロック無しで同時にDDLを流す (0.04s)
+=== RUN   TestExperimentLock_代金
+    experiment_lock_test.go:494: GET_LOCK + RELEASE_LOCK: 529µs /回（往復2回）
+    experiment_lock_test.go:495: 行ロック（BEGIN + FOR UPDATE + COMMIT）: 490µs /回（往復3回）
+    experiment_lock_test.go:496: → どちらも往復の回数ぶん。ロックの種類そのものの差ではない
+--- PASS: TestExperimentLock_代金 (0.23s)
+=== RUN   TestExperimentLock_長時間の担当には向かない
+    experiment_lock_test.go:523: 20 テナントの担当を GET_LOCK で保持 → 接続を 20 本、保持している間ずっと占有する
+    experiment_lock_test.go:531: → プールが枯渇し、通常の問い合わせが取れなくなった
+    experiment_lock_test.go:540: → 「誰が担当か」を長時間持つ用途に GET_LOCK は向かない。
+    experiment_lock_test.go:541:   接続を占有するうえ、期限も無い（アプリが固まって接続が生きていると、永久に持ち続ける）
+    experiment_lock_test.go:542:   この用途は internal/lease の『期限つきリース』が正しい（§2.8）
+--- PASS: TestExperimentLock_長時間の担当には向かない (0.52s)
+=== RUN   TestExperimentLock_先に記録する方式
+    experiment_lock_test.go:591: ① 先に記録する方式・8並列: 適用 1 / 見送り 7 / エラー 0
+    experiment_lock_test.go:592:    → ロック無しでも、エラーは出ない（ロック無しで DDL を撃ち合うと 7/8 が失敗した）
+    experiment_lock_test.go:606: ② 記録した直後に落ちた場合: 記録あり(done=0) / 表は存在しない(0)
+    experiment_lock_test.go:607:    → 次の起動は「適用済み」と判断して飛ばす。**永久に当たらないマイグレーションが生まれる**
+    experiment_lock_test.go:608:    → 対策: done フラグを見て「開始したが終わっていない」を検出し、起動を止めて人に知らせる
+    experiment_lock_test.go:614: ③ DDL 後・記録前に落ちた場合、次の起動で同じ DDL を流すと: Error 1050 (42S01): Table 'exp_ifirst' already exists
+    experiment_lock_test.go:615:    → DDL を冪等に書く（CREATE TABLE IF NOT EXISTS / ALTER の前に存在確認）か、人が直す前提にする
+    experiment_lock_test.go:616: → 結論: ロックは『同時に走らせない』ためのもので、『途中で落ちる』には効かない。両方別に手当てする
+--- PASS: TestExperimentLock_先に記録する方式 (0.09s)
 === RUN   TestExperiment_ページ送り
-    experiment_read_test.go:69: OFFSET              0 件目から 50 件: 482µs (取得 50 件)
-    experiment_read_test.go:69: OFFSET           1000 件目から 50 件: 838µs (取得 50 件)
-    experiment_read_test.go:69: OFFSET           4000 件目から 50 件: 2.383ms (取得 50 件)
-    experiment_read_test.go:69: キーセット               0 件目から 50 件: 482µs (取得 50 件)
-    experiment_read_test.go:69: キーセット            1000 件目から 50 件: 557µs (取得 50 件)
-    experiment_read_test.go:69: キーセット            4000 件目から 50 件: 525µs (取得 50 件)
+    experiment_read_test.go:69: OFFSET              0 件目から 50 件: 600µs (取得 50 件)
+    experiment_read_test.go:69: OFFSET           1000 件目から 50 件: 1.123ms (取得 50 件)
+    experiment_read_test.go:69: OFFSET           4000 件目から 50 件: 1.959ms (取得 50 件)
+    experiment_read_test.go:69: キーセット               0 件目から 50 件: 409µs (取得 50 件)
+    experiment_read_test.go:69: キーセット            1000 件目から 50 件: 386µs (取得 50 件)
+    experiment_read_test.go:69: キーセット            4000 件目から 50 件: 326µs (取得 50 件)
     experiment_read_test.go:95: OFFSET の計画     : type=ref key=PRIMARY rows=8570 filtered=100 extra=Using index
     experiment_read_test.go:97: キーセットの計画  : type=range key=PRIMARY rows=999 filtered=100 extra=Using where; Using index
     experiment_read_test.go:99: ※ OFFSET は捨てる行も読む。深くなるほど比例して遅くなる。キーセットは深さに依らない
---- PASS: TestExperiment_ページ送り (2.30s)
+--- PASS: TestExperiment_ページ送り (2.67s)
 === RUN   TestExperiment_N1問題
-    experiment_read_test.go:149: 500 件を取る: 1件ずつ 138.8ms / IN でまとめて 2.923ms / 範囲で 905µs
-    experiment_read_test.go:151: → 1件ずつは 47 倍遅い（取得 500 件）
+    experiment_read_test.go:149: 500 件を取る: 1件ずつ 125.276ms / IN でまとめて 2.307ms / 範囲で 1.16ms
+    experiment_read_test.go:151: → 1件ずつは 54 倍遅い（取得 500 件）
     experiment_read_test.go:152: ※ 往復1回あたり 0.1ms 前後（§1）。N+1 は「遅いクエリ」ではなく「速いクエリを N 回」なので、
     experiment_read_test.go:153:   スロークエリログには出ない。テストで問い合わせ回数を数えるのが確実
 --- PASS: TestExperiment_N1問題 (0.15s)
 === RUN   TestExperiment_必要な列だけ取る
-    experiment_read_test.go:181: 全列 (SELECT *)            4.869ms
-    experiment_read_test.go:181: 主キーの列だけ                  2.504ms
-    experiment_read_test.go:187: → 1.9 倍の差。type=ref key=PRIMARY rows=8570 filtered=100 extra=Using index
+    experiment_read_test.go:181: 全列 (SELECT *)            7.918ms
+    experiment_read_test.go:181: 主キーの列だけ                  2.991ms
+    experiment_read_test.go:187: → 2.6 倍の差。type=ref key=PRIMARY rows=8570 filtered=100 extra=Using index
     experiment_read_test.go:189: ※ 一覧画面が payload まで持ってくる必要がないなら、取らない。転送量とバッファプールの両方に効く
---- PASS: TestExperiment_必要な列だけ取る (0.11s)
+--- PASS: TestExperiment_必要な列だけ取る (0.17s)
 === RUN   TestExperiment_更新が消える
     experiment_safety_test.go:74: ① 読んで書く: 期待 300 / 実際 125 （175 回ぶんの更新が消えた）
-    experiment_safety_test.go:116: ② version で守る: 期待 300 / 実際 300 （衝突して やり直した回数 1175）
-    experiment_safety_test.go:140: ③ 読まずに書く (balance=balance+1): 期待 300 / 実際 300 / 所要 194ms
+    experiment_safety_test.go:116: ② version で守る: 期待 300 / 実際 300 （衝突して やり直した回数 1025）
+    experiment_safety_test.go:140: ③ 読まずに書く (balance=balance+1): 期待 300 / 実際 300 / 所要 263ms
     experiment_safety_test.go:145: → 「読んで書く」しかない場合だけ version を使う。DB 側で計算できるなら読まないほうが速くて安全
---- PASS: TestExperiment_更新が消える (0.76s)
+--- PASS: TestExperiment_更新が消える (1.48s)
 === RUN   TestExperiment_WHEREの書き間違い
     experiment_safety_test.go:160: 1行のつもりの UPDATE が 5 行に当たった（エラーは出ない）
     experiment_safety_test.go:164: → 影響行数を検査していなければ、そのままコミットされる。
@@ -180,7 +248,41 @@ ok  	github.com/aq35/sample_manual/internal/mysqlfacts	(cached)
     experiment_safety_test.go:233: → 止まるのは「キー列を使わない UPDATE/DELETE」。ただし LIMIT を付けると通る。
     experiment_safety_test.go:234:   『tenant_id 忘れ』は主キーの先頭列を欠くので拒否されるが、これは表の主キー次第で変わる。
     experiment_safety_test.go:235:   安全装置としては有効だが、テナント分離をこれに頼ってはいけない（アプリ側の保証が要る）
---- PASS: TestExperiment_safe_updatesは何を止めるか (0.03s)
+--- PASS: TestExperiment_safe_updatesは何を止めるか (0.04s)
+=== RUN   TestWithLock_同時に走らない
+    lock_test.go:49: 8並列で呼んでも、同時に走ったのは 1 つだけ
+--- PASS: TestWithLock_同時に走らない (0.18s)
+=== RUN   TestWithLock_終わったら必ず解放される
+    lock_test.go:70: 20回繰り返しても、終わるたびに解放されている（接続を固定しているから）
+    lock_test.go:82: 中でエラーになっても解放される
+--- PASS: TestWithLock_終わったら必ず解放される (0.02s)
+=== RUN   TestWithLock_取れなければ待って諦める
+    lock_test.go:114: 先客がいる間は 1.001s 待って、排他ロックを取れなかった を返した
+--- PASS: TestWithLock_取れなければ待って諦める (1.01s)
+=== RUN   TestWithLock_名前にスキーマ名が付く
+    lock_test.go:150: ロック名は "workerdb.test_name" になる（サーバ全体で名前空間が共有されるため）
+--- PASS: TestWithLock_名前にスキーマ名が付く (0.01s)
+=== RUN   TestWithLock_長すぎる名前は拒否する
+    lock_test.go:166: 64文字を超える名前は実行前に弾く: ロック名が長すぎる（64文字まで）: workerdb.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+--- PASS: TestWithLock_長すぎる名前は拒否する (0.01s)
+=== RUN   TestWithLock_接続を占有し続けない
+    lock_test.go:183: 5回ロックを取ったあとの接続: 使用中 0 / アイドル 2
+    lock_test.go:187: ロックのために固定した接続は、終わるとプールに戻る
+--- PASS: TestWithLock_接続を占有し続けない (0.01s)
+=== RUN   TestMigrate_同時に起動しても壊れない
+    migrate_test.go:51: 8並列で Migrate を呼んでも、適用済みは 2 件のまま（GET_LOCK で直列化）
+--- PASS: TestMigrate_同時に起動しても壊れない (0.04s)
+=== RUN   TestMigrate_適用済みの書き換えを検出する
+    migrate_test.go:69: 検出した: 適用済みのマイグレーションが書き換えられている: 0001_robot_profile（適用済みのファイルは書き換えず、新しい番号を足すこと）
+--- PASS: TestMigrate_適用済みの書き換えを検出する (0.02s)
+=== RUN   TestMigrate_ファイルの並びが正しい
+    migrate_test.go:98: 0001_robot_profile (checksum 0f4b7523...)
+    migrate_test.go:98: 0002_robot_profile_index (checksum 79390c40...)
+--- PASS: TestMigrate_ファイルの並びが正しい (0.00s)
+=== RUN   TestMigrate_途中で終わっていたら止まる
+    migrate_test.go:121: 検出した: 前回のマイグレーションが途中で終わっている: [9999_broken]（DB の状態を確認し、直してから schema_migrations を手で直すこと）
+    migrate_test.go:122: → 黙って飛ばすと『永久に当たらないマイグレーション』になる。止めて人に知らせる
+--- PASS: TestMigrate_途中で終わっていたら止まる (0.02s)
 === RUN   TestScope_テナント指定の無いSQLは実行しない
     repo_test.go:151: 止めた: tenant_id を書き忘れた UPDATE            → SQL に :tenant が無い: ":tenant" を書くこと（テナントを跨ぐ操作は DB.Unscoped を使う）
     repo_test.go:151: 止めた: tenant_id を書き忘れた SELECT            → SQL に :tenant が無い: ":tenant" を書くこと（テナントを跨ぐ操作は DB.Unscoped を使う）
@@ -189,14 +291,14 @@ ok  	github.com/aq35/sample_manual/internal/mysqlfacts	(cached)
     repo_test.go:151: 止めた: WHERE の無い DELETE                   → SQL に :tenant が無い: ":tenant" を書くこと（テナントを跨ぐ操作は DB.Unscoped を使う）
     repo_test.go:151: 止めた: LIMIT の無い SELECT                   → 一度に取りすぎ: LIMIT の無い SELECT（一覧は Keyset を使う。全件が要るなら AllowUnbounded）
     repo_test.go:166: AllowUnbounded を明示すれば LIMIT 無しでも通る（全件同期などの逃げ道）
---- PASS: TestScope_テナント指定の無いSQLは実行しない (0.01s)
+--- PASS: TestScope_テナント指定の無いSQLは実行しない (0.02s)
 === RUN   TestScope_他テナントの行は見えない
     repo_test.go:199: 同じ robot_id が別テナントにあっても、互いに見えない・消せない
---- PASS: TestScope_他テナントの行は見えない (0.01s)
+--- PASS: TestScope_他テナントの行は見えない (0.02s)
 === RUN   TestScope_影響行数が想定と違えばロールバックする
     repo_test.go:215: 止めた: 1行のはずが 5 行に当たったのでロールバック
     repo_test.go:227: トランザクションの外から呼んでも、暗黙のトランザクションで包んで巻き戻す
---- PASS: TestScope_影響行数が想定と違えばロールバックする (0.01s)
+--- PASS: TestScope_影響行数が想定と違えばロールバックする (0.02s)
 === RUN   TestRepo_楽観ロック
     repo_test.go:250: 止めた: 古い version での更新 → 他の処理が先に更新した
     repo_test.go:262: 呼び出し側は Retryable(err) を見て、読み直してやり直せばよい
@@ -206,45 +308,45 @@ ok  	github.com/aq35/sample_manual/internal/mysqlfacts	(cached)
 --- PASS: TestRepo_エラーが型で分かる (0.01s)
 === RUN   TestPage_キーセットで全件たどれる
     repo_test.go:319: 25 件を 3 ページで、重複も欠けもなくたどれた
---- PASS: TestPage_キーセットで全件たどれる (0.04s)
+--- PASS: TestPage_キーセットで全件たどれる (0.05s)
 === RUN   TestRepo_実行計画を固定する
     repo_test.go:341: 計画: table=robot_profile type=range key=PRIMARY rows=2500 filtered=100 extra=Using where
     repo_test.go:345: 計画: table=robot_profile type=const key=PRIMARY rows=1 filtered=100 extra=-
     repo_test.go:354: 索引の無い列で絞った場合の計画: table=robot_profile type=ref key=PRIMARY rows=2500 filtered=10 extra=Using where
     repo_test.go:355: → テナント内 2500 行を舐める。RequireRowsScanned(t, sc, 100, ...) ならここで落ちる
---- PASS: TestRepo_実行計画を固定する (0.16s)
+--- PASS: TestRepo_実行計画を固定する (0.14s)
 === RUN   TestRepo_N1を回数で検出する
     repo_test.go:381: GetMany は 1 回の問い合わせで済む
     repo_test.go:391: 1件ずつ引くと 20 回（テストで回数を縛れば、N+1 はレビュー前に落ちる）
---- PASS: TestRepo_N1を回数で検出する (0.10s)
+--- PASS: TestRepo_N1を回数で検出する (0.15s)
 === RUN   TestTx_デッドロックは自動でやり直す
     repo_test.go:436: すれ違う順序で更新 → デッドロックを 1 回やり直して、どちらも成功した
     repo_test.go:441: ※ やり直しても安全なのは、トランザクションの中で外部 API を呼んでいないから
---- PASS: TestTx_デッドロックは自動でやり直す (0.33s)
+--- PASS: TestTx_デッドロックは自動でやり直す (0.35s)
 === RUN   TestTx_入れ子は同じトランザクションになる
     repo_test.go:478: 入れ子の Tx は同じトランザクションに参加し、内側の失敗で全体が巻き戻る
---- PASS: TestTx_入れ子は同じトランザクションになる (0.01s)
+--- PASS: TestTx_入れ子は同じトランザクションになる (0.03s)
 === RUN   TestScope_テナントを跨ぐには明示が要る
     repo_test.go:501: Unscoped は理由つきで記録される（5 件を横断して数えた）
 --- PASS: TestScope_テナントを跨ぐには明示が要る (0.01s)
 === RUN   TestScope_安全装置が有効になっている
     repo_test.go:514: Open が DSN に sql_safe_updates=1 を強制する（アプリ側の検査をすり抜けた分の最後の網）
---- PASS: TestScope_安全装置が有効になっている (0.00s)
+--- PASS: TestScope_安全装置が有効になっている (0.01s)
 PASS
 
-ok  	github.com/aq35/sample_manual/internal/repo	13.838s
+ok  	github.com/aq35/sample_manual/internal/repo	21.285s
 ?   	github.com/aq35/sample_manual/internal/repo/repotest	[no test files]
 === RUN   TestUpsert_古い観測で上書きされない
---- PASS: TestUpsert_古い観測で上書きされない (0.01s)
+--- PASS: TestUpsert_古い観測で上書きされない (0.02s)
 === RUN   TestUpsert_同じ内容を2回書いても同じ
     store_test.go:82: affected_rows: 1回目=1（新規=1）, 2回目=0（変化なし=0）
---- PASS: TestUpsert_同じ内容を2回書いても同じ (0.01s)
+--- PASS: TestUpsert_同じ内容を2回書いても同じ (0.02s)
 === RUN   TestBatch_ソートしないとデッドロックする
     store_test.go:114: すれ違う順序 → デッドロック検出（MySQL が片方を巻き戻す）
     store_test.go:121: 主キー順に揃える → デッドロックしない
---- PASS: TestBatch_ソートしないとデッドロックする (0.54s)
+--- PASS: TestBatch_ソートしないとデッドロックする (0.55s)
 === RUN   TestWhereGuard_書き込みは避けられるが往復は残る
-    store_test.go:200: 値は変わらなかったが、往復に 380.992µs かかった（メモリで弾けばこれが 0 になる）
+    store_test.go:200: 値は変わらなかったが、往復に 650.436µs かかった（メモリで弾けばこれが 0 になる）
 --- PASS: TestWhereGuard_書き込みは避けられるが往復は残る (0.01s)
 === RUN   TestPoolConfig_既定値のままだと警告する
     store_test.go:210: 検出した問題:
@@ -253,18 +355,18 @@ ok  	github.com/aq35/sample_manual/internal/repo	13.838s
           - ConnMaxIdleTime が未設定: サーバに切られた接続を掴み続ける（§5.2）
 --- PASS: TestPoolConfig_既定値のままだと警告する (0.00s)
 PASS
-ok  	github.com/aq35/sample_manual/internal/store	0.575s
+ok  	github.com/aq35/sample_manual/internal/store	0.615s
 === RUN   TestMemory_1対象あたりのバイト数
 === RUN   TestMemory_1対象あたりのバイト数/1000件
-    memory_test.go:39: 1000 件: 合計 383.7 KB / 1件あたり 393 バイト
+    memory_test.go:39: 1000 件: 合計 388.6 KB / 1件あたり 398 バイト
 === RUN   TestMemory_1対象あたりのバイト数/10000件
     memory_test.go:39: 10000 件: 合計 3101.4 KB / 1件あたり 318 バイト
 === RUN   TestMemory_1対象あたりのバイト数/100000件
-    memory_test.go:39: 100000 件: 合計 25125.4 KB / 1件あたり 257 バイト
---- PASS: TestMemory_1対象あたりのバイト数 (0.29s)
+    memory_test.go:39: 100000 件: 合計 25125.8 KB / 1件あたり 257 バイト
+--- PASS: TestMemory_1対象あたりのバイト数 (0.30s)
     --- PASS: TestMemory_1対象あたりのバイト数/1000件 (0.00s)
     --- PASS: TestMemory_1対象あたりのバイト数/10000件 (0.02s)
-    --- PASS: TestMemory_1対象あたりのバイト数/100000件 (0.26s)
+    --- PASS: TestMemory_1対象あたりのバイト数/100000件 (0.27s)
 === RUN   TestObserve_同じ状態は書かない
 --- PASS: TestObserve_同じ状態は書かない (0.00s)
 === RUN   TestObserve_近況報告は間隔をあけて1回だけ
@@ -290,4 +392,4 @@ ok  	github.com/aq35/sample_manual/internal/store	0.575s
 === RUN   TestParseStatus_知らない値でも止まらない
 --- PASS: TestParseStatus_知らない値でも止まらない (0.00s)
 PASS
-ok  	github.com/aq35/sample_manual/internal/worker	(cached)
+ok  	github.com/aq35/sample_manual/internal/worker	0.310s

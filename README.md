@@ -9,6 +9,7 @@
 - 資料 §9 の「未検証の項目」は、**実際の MySQL 8.0 に聞いて確認した**（`internal/mysqlfacts/`）
 - **リポジトリ層（DB アクセス層）の設計**は [`docs/repository-layer.md`](docs/repository-layer.md)。
   マルチテナントのテナント分離、誤更新の防止、性能を崩さない書き方を、実験して決めたもの
+- **排他制御（GET_LOCK は要るのか・代わりは何か）**は [`docs/locking.md`](docs/locking.md)
 - 他プロジェクトのレビューに使う入口は 2つ
   - [`.claude/skills/go-mysql-worker-review/`](.claude/skills/go-mysql-worker-review/SKILL.md) — 常時稼働ワーカー
   - [`.claude/skills/go-mysql-repository-review/`](.claude/skills/go-mysql-repository-review/SKILL.md) — リポジトリ層
@@ -32,6 +33,9 @@ go run ./cmd/loadsim -rate 1000 -duration 10s -robots 1000 -change-rate 0.01
 # リポジトリ層: 事故を実際に起こす実験 → 層が止めることの確認
 go test ./internal/repo/ -run TestExperiment_ -v
 go test ./internal/repo/... -v
+
+# 排他制御（GET_LOCK の性質と代替）
+go test ./internal/repo/ -run TestExperimentLock_ -v
 ```
 
 `MYSQL_DSN` が未設定のときは、DB を使うテストは skip される（CI で壊れない）。
@@ -87,6 +91,18 @@ go test ./internal/repo/... -v
 | N+1 | 500件で **40〜64倍** 遅い。スロークエリログには出ない |
 | 実行計画は件数で変わる | 同じ SQL が 50行では filesort、5,000行では PRIMARY の range |
 | 層の検査の代金 | **147ns**（往復の 0.06%）。SQL ごとに結果を覚えると **33倍** 速くなる |
+
+### 排他制御（[`docs/locking.md`](docs/locking.md)）
+
+| 主張 | 実測 |
+| --- | --- |
+| `GET_LOCK` をプールごしに使うと壊れる | `RELEASE_LOCK` が **0**（解放できない）。ロックを持った接続がプールに残り、**別の処理が他人のロックを解放できた** |
+| マイグレーションに行ロック（`FOR UPDATE`）は使えない | **DDL の暗黙コミットで外れる**。`GET_LOCK` は DDL をまたいで保持される |
+| ロック無しで同時にマイグレーション | **7/8 が `Table already exists` で失敗**（DB は壊れないが、コンテナが起動できない） |
+| 一意キーで「先に記録」する代替 | 8並列でエラー 0。ただし**途中で落ちると永久に当たらない**マイグレーションになる |
+| ロック名はサーバ全体で共通 | 別データベースからでも同じ名前は取れない → スキーマ名を付ける |
+| 長時間の担当に `GET_LOCK` | 20テナントで**接続20本を占有**し、プールが枯渇 → 期限つきリースを使う |
+| 接続が切れたら | **即座に解放される**（プロセスが落ちてもロックは残らない） |
 
 ## 他のプロジェクトで使う
 

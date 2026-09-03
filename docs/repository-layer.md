@@ -294,7 +294,7 @@ Queries / Execs / Txs / Retries / SlowQueries / LongTxs / Blocked / CrossTenant 
 
 | 運用で起きること | 対策 | 確認 |
 | --- | --- | --- |
-| **複数コンテナが同時に起動する** | `GET_LOCK` で直列化。1つだけが当て、他は待って何もしない | `TestMigrate_同時に起動しても壊れない`（8並列で適用は1回） |
+| **複数コンテナが同時に起動する** | `GET_LOCK` で直列化。1つだけが当て、他は待って何もしない（**なぜ行ロックでは駄目か**は [locking.md](locking.md)） | `TestMigrate_同時に起動しても壊れない`（8並列で適用は1回） |
 | **適用済みの .sql を後から書き換える** | チェックサムを保存して照合し、**起動を止める** | `TestMigrate_適用済みの書き換えを検出する` |
 | **途中で失敗する** | そこで止める。以降は当てない | 半端な状態のまま先へ進まない |
 
@@ -304,6 +304,10 @@ Queries / Execs / Txs / Retries / SlowQueries / LongTxs / Blocked / CrossTenant 
 
 **MySQL の DDL は暗黙にコミットされる**ので、複数の DDL をまとめてロールバックはできない。
 1ファイル1変更にしておくと、失敗したときにどこまで進んだかが分かる。
+（この性質のせいで「ロック用の行を `FOR UPDATE`」方式が使えない。[locking.md](locking.md) 3.2）
+
+**「同時に走らない」と「途中で落ちる」は別の問題。** 前者はロック、後者は
+`started` → `done` の二相記録で受ける（[locking.md](locking.md) 6）。
 
 **索引を足すマイグレーションを入れたら、実行計画のテストを回すこと**（3.6）。
 実際、`(tenant_id, serial)` の UNIQUE 索引があるせいで、行数の少ない環境では
