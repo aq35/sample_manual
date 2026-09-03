@@ -57,6 +57,7 @@ type runResult struct {
 }
 
 func TestEXP3_gracefulShutdown(t *testing.T) {
+	mysqltest.Serialize(t)
 	dsn := mysqltest.DSN(t)
 	db := openDB(t, dsn)
 	ctx := context.Background()

@@ -70,3 +70,43 @@ func Truncate(t testing.TB, db *sql.DB, tenant string) {
 		}
 	}
 }
+
+// Serialize は、この MySQL を使う実験テストを一度に1つだけ走らせる。
+//
+// ★これが要る理由（実際に踏んだ）:
+// go test は **パッケージを並列に実行する**（既定 -p = CPU 数）。
+// 実験テストはグローバル変数（innodb_flush_log_at_trx_commit など）を変え、
+// 同じ名前の実験用テーブルを作っては消すので、並列に走ると
+// 「他のテストがテーブルを消した」「グローバル設定が書き換わった」で落ちる。
+// 落ち方が実行のたびに変わるため、**実装のバグに見えてしまう**のが厄介。
+//
+// GET_LOCK で直列化する。接続を固定する必要があるので db.Conn を使う（docs/locking.md 3.1）。
+func Serialize(t testing.TB) {
+	t.Helper()
+	db := Raw(t)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
+	conn, err := db.Conn(ctx)
+	if err != nil {
+		t.Fatalf("直列化用の接続を取れない: %v", err)
+	}
+	var got sql.NullInt64
+	if err := conn.QueryRowContext(ctx, "SELECT GET_LOCK(?, ?)", serializeLock, 300).Scan(&got); err != nil {
+		_ = conn.Close()
+		t.Fatalf("直列化ロックを取れない: %v", err)
+	}
+	if !got.Valid || got.Int64 != 1 {
+		_ = conn.Close()
+		t.Fatalf("直列化ロックを 300 秒待っても取れなかった")
+	}
+	t.Cleanup(func() {
+		relCtx, relCancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer relCancel()
+		var released sql.NullInt64
+		_ = conn.QueryRowContext(relCtx, "SELECT RELEASE_LOCK(?)", serializeLock).Scan(&released)
+		_ = conn.Close()
+	})
+}
+
+const serializeLock = "sample_manual.experiment_tests"

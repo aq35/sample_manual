@@ -45,6 +45,7 @@ type outcome struct {
 }
 
 func TestEXP1_外部effect途中のSIGKILL(t *testing.T) {
+	mysqltest.Serialize(t)
 	dsn := mysqltest.DSN(t)
 	db := openDB(t, dsn)
 	ctx := context.Background()

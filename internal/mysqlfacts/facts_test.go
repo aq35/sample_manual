@@ -11,6 +11,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -20,6 +21,26 @@ import (
 
 	"github.com/aq35/sample_manual/internal/mysqltest"
 )
+
+// TestMain は、前回の実行が途中で落ちて残した設定を戻してから始める。
+//
+// ★実験がグローバル設定を変える以上、「前回の残骸」を前提にしてはいけない。
+// 実際、並列実行で落ちた回のあと wait_timeout=2 が残り、
+// 別のテストが「接続が切られた」で落ちた（実装ではなく環境の状態が原因）。
+func TestMain(m *testing.M) {
+	if dsn := os.Getenv("MYSQL_DSN"); dsn != "" {
+		if db, err := sql.Open("mysql", dsn); err == nil {
+			for _, stmt := range []string{
+				"SET GLOBAL wait_timeout = 28800",
+				"SET GLOBAL innodb_flush_log_at_trx_commit = 1",
+			} {
+				_, _ = db.Exec(stmt)
+			}
+			_ = db.Close()
+		}
+	}
+	os.Exit(m.Run())
+}
 
 func version(t *testing.T, db *sql.DB) string {
 	t.Helper()
@@ -32,6 +53,7 @@ func version(t *testing.T, db *sql.DB) string {
 
 // §9 ①: innodb_flush_log_at_trx_commit はサーバ全体の設定か。動的に変えられるか。
 func TestFact_flush_log_at_trx_commit(t *testing.T) {
+	mysqltest.Serialize(t)
 	db := mysqltest.Raw(t)
 	t.Logf("MySQL %s", version(t, db))
 
@@ -70,6 +92,7 @@ func TestFact_flush_log_at_trx_commit(t *testing.T) {
 
 // §9 ①の続き: 0 / 1 / 2 でコミットのコストがどう変わるか、実際に測る。
 func TestFact_flush設定ごとのコミット速度(t *testing.T) {
+	mysqltest.Serialize(t)
 	db := mysqltest.Raw(t)
 	ctx := context.Background()
 
@@ -108,6 +131,7 @@ func TestFact_flush設定ごとのコミット速度(t *testing.T) {
 
 // §9 ②: INSERT ... ON DUPLICATE KEY UPDATE の行エイリアス構文（AS new）は使えるか。
 func TestFact_行エイリアス構文(t *testing.T) {
+	mysqltest.Serialize(t)
 	db := mysqltest.Raw(t)
 	t.Logf("MySQL %s", version(t, db))
 	if _, err := db.Exec("CREATE TABLE IF NOT EXISTS fact_alias (id INT PRIMARY KEY, v INT NOT NULL)"); err != nil {
@@ -158,6 +182,7 @@ func TestFact_行エイリアス構文(t *testing.T) {
 
 // §9 ③: 結果的に同じ値になる UPDATE を、MySQL は本当に省くのか（affected_rows=0）。
 func TestFact_同じ値のUPDATEは書き込みを省く(t *testing.T) {
+	mysqltest.Serialize(t)
 	db := mysqltest.Raw(t)
 	if _, err := db.Exec("CREATE TABLE IF NOT EXISTS fact_noop (id INT PRIMARY KEY, v INT NOT NULL)"); err != nil {
 		t.Fatal(err)
@@ -212,6 +237,7 @@ func TestFact_同じ値のUPDATEは書き込みを省く(t *testing.T) {
 
 // §9 ④: RANGE パーティションと DROP PARTITION。DELETE との差も測る。
 func TestFact_パーティションの削除はDELETEより速い(t *testing.T) {
+	mysqltest.Serialize(t)
 	db := mysqltest.Raw(t)
 	_, _ = db.Exec("DROP TABLE IF EXISTS fact_hist")
 	_, err := db.Exec(`
@@ -274,6 +300,7 @@ PARTITION BY RANGE COLUMNS(observed_date) (
 
 // §9 ⑤: 長いトランザクションが undo（History list）を伸ばすか。
 func TestFact_長いトランザクションはundoを伸ばす(t *testing.T) {
+	mysqltest.Serialize(t)
 	db := mysqltest.Raw(t)
 	if _, err := db.Exec("CREATE TABLE IF NOT EXISTS fact_undo (id INT PRIMARY KEY, v INT NOT NULL)"); err != nil {
 		t.Fatal(err)
@@ -344,6 +371,7 @@ func historyListLength(t *testing.T, db *sql.DB) int {
 
 // §1 / §8: 「DB へ1往復 ≒ 1 ms」は、この環境ではいくらか。
 func TestFact_DBへの1往復の実測(t *testing.T) {
+	mysqltest.Serialize(t)
 	db := mysqltest.Raw(t)
 	ctx := context.Background()
 
@@ -394,6 +422,7 @@ func TestFact_DBへの1往復の実測(t *testing.T) {
 
 // §5.2: MaxIdleConns の既定値 2 の影響を、サーバ側の接続数カウンタで確認する。
 func TestFact_MaxIdleConnsの既定値2が再接続を生む(t *testing.T) {
+	mysqltest.Serialize(t)
 	dsn := mysqltest.DSN(t)
 	counter := func(db *sql.DB) int {
 		var name string
@@ -446,6 +475,7 @@ func TestFact_MaxIdleConnsの既定値2が再接続を生む(t *testing.T) {
 
 // §5.2: ConnMaxIdleTime が wait_timeout より長いと何が起きるか。
 func TestFact_wait_timeoutとConnMaxIdleTime(t *testing.T) {
+	mysqltest.Serialize(t)
 	dsn := mysqltest.DSN(t)
 	admin := mysqltest.Raw(t)
 

@@ -56,6 +56,16 @@ if [[ -n "${MYSQL_DSN:-}" ]]; then
       go test ./internal/repo/ -bench 'PointRead|CheckAndBind' -benchmem -run XXX -count=3
   run "11-locking-${stamp}.txt" "⑪ 排他制御の実験（GET_LOCK の性質と代替）" \
       go test ./internal/repo/ -run 'TestExperimentLock_|TestWithLock|TestMigrate' -v -timeout 10m
+
+  # ---- 異常系の実験（EXP-1..3, 6）。結果は docs/results/exp-N/ にも保存される ----
+  run "12-exp1-effect-crash-${stamp}.txt" "⑫ EXP-1 外部 effect 途中の SIGKILL" \
+      go test ./internal/effectlab/ -run TestEXP1 -v -timeout 20m
+  run "13-exp2-fencing-${stamp}.txt" "⑬ EXP-2 lease / fencing / 時計のずれ" \
+      go test ./internal/fencelab/ -run TestEXP2 -v -timeout 20m
+  run "14-exp3-shutdown-${stamp}.txt" "⑭ EXP-3 graceful shutdown" \
+      go test ./internal/shutdownlab/ -run TestEXP3 -v -timeout 20m
+  run "15-exp6-migration-crash-${stamp}.txt" "⑮ EXP-6 マイグレーション途中の crash" \
+      go test ./internal/repo/ -run TestEXP6 -v -timeout 20m
 fi
 
 echo "結果は ${OUT}/ に残した"

@@ -38,6 +38,7 @@ func seedAccounts(t *testing.T, db *sql.DB) {
 
 // 事故1: 読んで、計算して、書く（read-modify-write）を同時にやると、更新が消える。
 func TestExperiment_更新が消える(t *testing.T) {
+	mysqltest.Serialize(t)
 	db := mysqltest.Raw(t)
 	seedAccounts(t, db)
 	defer func() { _, _ = db.Exec("DROP TABLE IF EXISTS exp_acct") }()
@@ -147,6 +148,7 @@ func TestExperiment_更新が消える(t *testing.T) {
 
 // 事故2: WHERE の書き間違いで、意図した以上の行が更新される。
 func TestExperiment_WHEREの書き間違い(t *testing.T) {
+	mysqltest.Serialize(t)
 	db := mysqltest.Raw(t)
 	seedAccounts(t, db)
 	defer func() { _, _ = db.Exec("DROP TABLE IF EXISTS exp_acct") }()
@@ -167,6 +169,7 @@ func TestExperiment_WHEREの書き間違い(t *testing.T) {
 
 // 事故3: tenant_id を忘れると、他テナントの行まで書き換わる。
 func TestExperiment_テナント指定を忘れる(t *testing.T) {
+	mysqltest.Serialize(t)
 	db := mysqltest.Raw(t)
 	seedAccounts(t, db)
 	defer func() { _, _ = db.Exec("DROP TABLE IF EXISTS exp_acct") }()
@@ -192,6 +195,7 @@ func TestExperiment_テナント指定を忘れる(t *testing.T) {
 
 // 事故4: MySQL の安全装置 sql_safe_updates は、何を止めて何を止めないか。
 func TestExperiment_safe_updatesは何を止めるか(t *testing.T) {
+	mysqltest.Serialize(t)
 	dsn := mysqltest.DSN(t)
 	sep := "?"
 	if strings.Contains(dsn, "?") {

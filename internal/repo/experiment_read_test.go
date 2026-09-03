@@ -54,6 +54,7 @@ func seedList(t *testing.T) {
 
 // 実験3: ページ送りを OFFSET でやるか、前ページの最後のキーから続けるか（キーセット法）。
 func TestExperiment_ページ送り(t *testing.T) {
+	mysqltest.Serialize(t)
 	db := mysqltest.Raw(t)
 	seedList(t)
 	const pageSize = 50
@@ -101,6 +102,7 @@ func TestExperiment_ページ送り(t *testing.T) {
 
 // 実験4: 1件ずつ引く（N+1）と、まとめて引く。
 func TestExperiment_N1問題(t *testing.T) {
+	mysqltest.Serialize(t)
 	db := mysqltest.Raw(t)
 	seedList(t)
 	const n = 500
@@ -155,6 +157,7 @@ func TestExperiment_N1問題(t *testing.T) {
 
 // 実験5: 索引だけで足りる問い合わせ（covering index）にすると何が変わるか。
 func TestExperiment_必要な列だけ取る(t *testing.T) {
+	mysqltest.Serialize(t)
 	db := mysqltest.Raw(t)
 	seedList(t)
 

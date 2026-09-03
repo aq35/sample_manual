@@ -45,6 +45,7 @@ func openDB(t *testing.T) *sql.DB {
 }
 
 func TestEXP2_lease_fencing_clockskew(t *testing.T) {
+	mysqltest.Serialize(t)
 	db := openDB(t)
 	ctx := context.Background()
 	bin := expkit.Build(t, "github.com/aq35/sample_manual/cmd/fencelab")

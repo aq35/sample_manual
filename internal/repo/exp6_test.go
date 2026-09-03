@@ -32,6 +32,7 @@ type migState struct {
 }
 
 func TestEXP6_マイグレーション途中のcrash(t *testing.T) {
+	mysqltest.Serialize(t)
 	dsn := labDSN(t)
 	bin := expkit.Build(t, "github.com/aq35/sample_manual/cmd/migratelab")
 	ctx := context.Background()

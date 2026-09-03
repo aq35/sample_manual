@@ -74,6 +74,25 @@ r.Uncertain("レプリカ構成・ネットワーク分断は未検証")
 files, _ := r.Save("...")
 ```
 
+## 実験テストの直列化（踏んだ罠）
+
+`go test` は **パッケージを並列に実行する**（既定 `-p` = CPU 数）。
+実験テストはグローバル設定（`innodb_flush_log_at_trx_commit`、`wait_timeout`）を変え、
+同じ名前の実験用テーブルを作っては消すので、**並列に走ると互いを壊す**。
+
+実際に踏んだ壊れ方:
+
+- 別パッケージのテストが実験用テーブルを消し、`Table 'exp_uuid' doesn't exist` で落ちた
+- 中断された実行が `wait_timeout=2` を残し、後続の実行が
+  「接続が切られた（Error 4031）」で落ちた
+
+**落ち方が実行のたびに変わるので、実装のバグに見えてしまう。** 対策は2つ。
+
+1. `mysqltest.Serialize(t)` — MySQL を使う実験テストの先頭で呼ぶ。
+   `GET_LOCK` で1つずつ実行する（接続を固定して取る。`docs/locking.md` 3.1）
+2. `internal/mysqlfacts` の `TestMain` — 前回の残骸を戻してから始める
+   （グローバル設定を変える実験は、開始時に既知の状態へ戻す）
+
 ## 測定器を疑う
 
 `internal/expkit/expkit_test.go` は測定器そのものの検査。
