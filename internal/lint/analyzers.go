@@ -402,3 +402,59 @@ func runDomainTime(pass *analysis.Pass) (any, error) {
 	}
 	return nil, nil
 }
+
+// LayerImport は「ユーティリティ/関数型ライブラリを DB 境界の層に入れていないか」を見る。
+//
+// repo / domain / service（DB 境界とその内側）が samber/lo・samber/mo・internal/appx を
+// import していたら指摘する。理由は docs/samber-io.md:
+//   - lo/mo の汎用型（Option/Result/IO）で error・context・テナント束縛の意味を覆うと、
+//     EXP-1/EXP-2 で守っている性質（OUTCOME_UNKNOWN・fencing）が隠れる。
+//   - 便利ユーティリティは app/usecase/handler 層に置く。
+//
+// ★検出範囲: import パスの文字列だけを見る。エイリアス import も検出する。
+// 逃げ道は //smlint:allow layerimport 理由: ... 。
+var LayerImport = &analysis.Analyzer{
+	Name: "layerimport",
+	Doc: "repo/domain/service 層が samber/lo・samber/mo・internal/appx を import していないか。" +
+		"便利ユーティリティ/関数型ライブラリは app 層に置く（DB 境界の意味を覆わない）。",
+	Run: runLayerImport,
+}
+
+// 境界とその内側の層（ここに置くと事故る層）。
+var boundaryMarkers = []string{"/repo", "/domain", "/store", "/model"}
+
+// 置いてはいけない import。
+var forbiddenInBoundary = []string{
+	"github.com/samber/lo",
+	"github.com/samber/mo",
+	"/internal/appx",
+}
+
+func runLayerImport(pass *analysis.Pass) (any, error) {
+	path := pass.Pkg.Path()
+	if !isBoundaryPackage(path) {
+		return nil, nil
+	}
+	for _, f := range pass.Files {
+		for _, imp := range f.Imports {
+			p := strings.Trim(imp.Path.Value, `"`)
+			for _, bad := range forbiddenInBoundary {
+				if strings.Contains(p, bad) {
+					report(pass, "layerimport", imp.Pos(),
+						"%s は DB 境界の層（%s）に import しない。app/usecase 層に置くこと（docs/samber-io.md）",
+						p, path)
+				}
+			}
+		}
+	}
+	return nil, nil
+}
+
+func isBoundaryPackage(path string) bool {
+	for _, m := range boundaryMarkers {
+		if strings.Contains(path, m) {
+			return true
+		}
+	}
+	return false
+}

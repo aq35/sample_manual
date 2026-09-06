@@ -37,6 +37,7 @@ func TestAnalyzers_想定どおり検出する(t *testing.T) {
 		{lint.RowsAffected, "rowsaffected/data"},
 		{lint.LoopQuery, "loopquery/data"},
 		{lint.TxExternalCall, "txhttp/data"},
+		{lint.LayerImport, "layerimport/repo"},
 	}
 	for _, c := range cases {
 		t.Run(c.a.Name, func(t *testing.T) {
