@@ -123,6 +123,7 @@ files, _ := r.Save("...")
 | EXP-11 | backup / restore / corruption | 済（[docs/backup-restore.md](backup-restore.md)） |
 | EXP-12 | ワーカーのポーリング頻度・スケジュール/命令/実績 | 済（[docs/scheduling.md](scheduling.md)） |
 | EXP-13 | DB 資格情報のローテーション（graceful pool swap） | 済（[docs/credential-rotation.md](credential-rotation.md)） |
+| EXP-14 | ポーリングの fan-out を畳む（テナント分離を保つ） | 済（[docs/fanout.md](fanout.md)） |
 
 ## 健全性・移植
 
