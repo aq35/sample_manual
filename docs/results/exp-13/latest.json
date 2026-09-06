@@ -1,0 +1,10 @@
+{
+  "ended_at": "2026-09-06T23:32:08Z",
+  "git_dirty": true,
+  "git_sha": "76c575d6294416017e3057ec39d0de0f3da20889",
+  "json": "exp-13-credential-rotation.json",
+  "md": "exp-13-credential-rotation.md",
+  "meter_version": "expkit/2",
+  "name": "credential-rotation",
+  "unit": "EXP-13"
+}

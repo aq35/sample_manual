@@ -122,6 +122,7 @@ files, _ := r.Save("...")
 | EXP-10 | SQLite companion | 済（[docs/sqlite.md](sqlite.md)） |
 | EXP-11 | backup / restore / corruption | 済（[docs/backup-restore.md](backup-restore.md)） |
 | EXP-12 | ワーカーのポーリング頻度・スケジュール/命令/実績 | 済（[docs/scheduling.md](scheduling.md)） |
+| EXP-13 | DB 資格情報のローテーション（graceful pool swap） | 済（[docs/credential-rotation.md](credential-rotation.md)） |
 
 ## 健全性・移植
 
@@ -131,3 +132,5 @@ files, _ := r.Save("...")
 | [docs/binary-in-history.md](binary-in-history.md) | 誤コミットした binary の記録と再発防止 |
 | [docs/kas-adoption.md](kas-adoption.md) | KAS への採用方針（各結果の分類） |
 | `internal/kascontract` | EXP-10 の結果を domain 契約 + 言語非依存ベクタにしたもの |
+| [docs/secrets.md](secrets.md) | 有効期限つき秘密（SecretManager 相当）の扱い・テナント分離・排他 |
+| [docs/samber-io.md](samber-io.md) | samber/lo・mo の使いどころと層の線引き |
