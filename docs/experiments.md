@@ -121,6 +121,7 @@ files, _ := r.Save("...")
 | EXP-9 | `go/analysis` による保守性検査 | 済（[docs/static-analysis.md](static-analysis.md)） |
 | EXP-10 | SQLite companion | 済（[docs/sqlite.md](sqlite.md)） |
 | EXP-11 | backup / restore / corruption | 済（[docs/backup-restore.md](backup-restore.md)） |
+| EXP-12 | ワーカーのポーリング頻度・スケジュール/命令/実績 | 済（[docs/scheduling.md](scheduling.md)） |
 
 ## 健全性・移植
 

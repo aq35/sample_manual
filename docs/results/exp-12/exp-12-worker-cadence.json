@@ -1,0 +1,299 @@
+{
+  "unit": "EXP-12",
+  "name": "worker-cadence",
+  "title": "ワーカーのポーリング頻度: dispatch 遅延と DB 負荷のトレードオフ",
+  "meter_version": "expkit/2",
+  "hypothesis": "1) 十分な batch で毎回 due を捌けるなら、dispatch 遅延 p95 はほぼポーリング間隔になる。 2) 間隔を短くすると遅延は下がるが、問い合わせ回数は増える。 3) 到着レートが低いのに速く引くと、空振りの問い合わせ回数が増える（無駄）。遅延は間隔で決まる。 4) 疎な到着では、signal 型の wake が空振りを無くし、ポーリングより低遅延で捌ける。 5) 別の制約: batch/interval が到着レート未満だと、間隔と無関係に backlog が溜まり遅延が発散する。",
+  "started_at": "2026-09-06T23:11:43.970849157Z",
+  "ended_at": "2026-09-06T23:12:30.14201369Z",
+  "env": {
+    "captured_at": "2026-09-06T23:11:43.970951389Z",
+    "go_version": "go1.24.7",
+    "os": "linux",
+    "arch": "amd64",
+    "num_cpu": 4,
+    "gomaxprocs": 4,
+    "hostname": "vm",
+    "git_sha": "dead7647bbd8036a5aa5e7dde0b0affaa60d14fe",
+    "git_dirty": true,
+    "mysql_version": "8.0.46-0ubuntu0.24.04.4"
+  },
+  "workload": {},
+  "injection": {},
+  "variants": [
+    {
+      "name": "高到着 200/s / interval=100ms",
+      "counters": {
+        "dispatched": 600,
+        "empty_polls": 0,
+        "polls": 9
+      },
+      "metrics": {
+        "empty_ratio": 0,
+        "latency_p50_ms": 335.664,
+        "latency_p95_ms": 417.594,
+        "latency_p99_ms": 449.11,
+        "queries_per_sec": 2.870687588673307
+      },
+      "latency": {
+        "count": 600,
+        "min_ns": 133052974,
+        "p50_ns": 335664915,
+        "p95_ns": 417594159,
+        "p99_ns": 449110400,
+        "max_ns": 457777844,
+        "mean_ns": 318075847
+      },
+      "accident": false
+    },
+    {
+      "name": "高到着 200/s / interval=250ms",
+      "counters": {
+        "dispatched": 600,
+        "empty_polls": 0,
+        "polls": 7
+      },
+      "metrics": {
+        "empty_ratio": 0,
+        "latency_p50_ms": 407.479,
+        "latency_p95_ms": 549.108,
+        "latency_p99_ms": 583.764,
+        "queries_per_sec": 2.1577973789550278
+      },
+      "latency": {
+        "count": 600,
+        "min_ns": 122992649,
+        "p50_ns": 407479284,
+        "p95_ns": 549108203,
+        "p99_ns": 583764155,
+        "max_ns": 601131357,
+        "mean_ns": 400472884
+      },
+      "accident": false
+    },
+    {
+      "name": "高到着 200/s / interval=500ms",
+      "counters": {
+        "dispatched": 600,
+        "empty_polls": 0,
+        "polls": 6
+      },
+      "metrics": {
+        "empty_ratio": 0,
+        "latency_p50_ms": 502.642,
+        "latency_p95_ms": 767.134,
+        "latency_p99_ms": 806.105,
+        "queries_per_sec": 1.6181474022950664
+      },
+      "latency": {
+        "count": 600,
+        "min_ns": 63505591,
+        "p50_ns": 502642940,
+        "p95_ns": 767134256,
+        "p99_ns": 806105894,
+        "max_ns": 819978426,
+        "mean_ns": 503707461
+      },
+      "accident": false
+    },
+    {
+      "name": "高到着 200/s / interval=1s",
+      "counters": {
+        "dispatched": 600,
+        "empty_polls": 0,
+        "polls": 4
+      },
+      "metrics": {
+        "empty_ratio": 0,
+        "latency_p50_ms": 1000.281,
+        "latency_p95_ms": 1661.278,
+        "latency_p99_ms": 1719.682,
+        "queries_per_sec": 0.8910846821389408
+      },
+      "latency": {
+        "count": 600,
+        "min_ns": 62130833,
+        "p50_ns": 1000281355,
+        "p95_ns": 1661278161,
+        "p99_ns": 1719682755,
+        "max_ns": 1737042960,
+        "mean_ns": 1027595425
+      },
+      "accident": false
+    },
+    {
+      "name": "低到着 10/s / interval=100ms（空振りの無駄）",
+      "counters": {
+        "dispatched": 30,
+        "empty_polls": 20,
+        "polls": 49
+      },
+      "metrics": {
+        "empty_ratio": 0.40816326530612246,
+        "latency_p50_ms": 50.879,
+        "latency_p95_ms": 104.127,
+        "latency_p99_ms": 109.395,
+        "queries_per_sec": 9.637614857718251
+      },
+      "latency": {
+        "count": 30,
+        "min_ns": 11416120,
+        "p50_ns": 50879376,
+        "p95_ns": 104127067,
+        "p99_ns": 109395106,
+        "max_ns": 109395106,
+        "mean_ns": 53632224
+      },
+      "accident": false
+    },
+    {
+      "name": "低到着 10/s / interval=250ms（空振りの無駄）",
+      "counters": {
+        "dispatched": 30,
+        "empty_polls": 7,
+        "polls": 20
+      },
+      "metrics": {
+        "empty_ratio": 0.35,
+        "latency_p50_ms": 141.574,
+        "latency_p95_ms": 242.331,
+        "latency_p99_ms": 253.57,
+        "queries_per_sec": 3.9108680232352455
+      },
+      "latency": {
+        "count": 30,
+        "min_ns": 12315774,
+        "p50_ns": 141574104,
+        "p95_ns": 242331688,
+        "p99_ns": 253570536,
+        "max_ns": 253570536,
+        "mean_ns": 132601869
+      },
+      "accident": false
+    },
+    {
+      "name": "低到着 10/s / interval=500ms（空振りの無駄）",
+      "counters": {
+        "dispatched": 30,
+        "empty_polls": 3,
+        "polls": 10
+      },
+      "metrics": {
+        "empty_ratio": 0.3,
+        "latency_p50_ms": 270.809,
+        "latency_p95_ms": 480.419,
+        "latency_p99_ms": 492.617,
+        "queries_per_sec": 1.9635375225133445
+      },
+      "latency": {
+        "count": 30,
+        "min_ns": 16531963,
+        "p50_ns": 270809781,
+        "p95_ns": 480419584,
+        "p99_ns": 492617817,
+        "max_ns": 492617817,
+        "mean_ns": 260652331
+      },
+      "accident": false
+    },
+    {
+      "name": "低到着 10/s / interval=1s（空振りの無駄）",
+      "counters": {
+        "dispatched": 30,
+        "empty_polls": 1,
+        "polls": 5
+      },
+      "metrics": {
+        "empty_ratio": 0.2,
+        "latency_p50_ms": 528.893,
+        "latency_p95_ms": 945.63,
+        "latency_p99_ms": 968.198,
+        "queries_per_sec": 0.9861348122011598
+      },
+      "latency": {
+        "count": 30,
+        "min_ns": 16497116,
+        "p50_ns": 528893688,
+        "p95_ns": 945630401,
+        "p99_ns": 968198264,
+        "max_ns": 968198264,
+        "mean_ns": 501121505
+      },
+      "accident": false
+    },
+    {
+      "name": "wake（低到着10/s・signal 型。due 到来で起こす）",
+      "desc": "ポーリングと違い空振りしない。疎な到着で低遅延・空振りゼロを狙う",
+      "counters": {
+        "dispatched": 30,
+        "empty_polls": 0,
+        "polls": 30
+      },
+      "metrics": {
+        "empty_ratio": 0,
+        "latency_p50_ms": 4.486,
+        "latency_p95_ms": 9.235,
+        "latency_p99_ms": 11.808,
+        "queries_per_sec": 10.362538737155953
+      },
+      "latency": {
+        "count": 30,
+        "min_ns": 3288674,
+        "p50_ns": 4486788,
+        "p95_ns": 9235269,
+        "p99_ns": 11808910,
+        "max_ns": 11808910,
+        "mean_ns": 4888506
+      },
+      "accident": false
+    },
+    {
+      "name": "★制約: batch 50 / interval 500ms（処理能力 100/s \u003c 到着 200/s）",
+      "desc": "batch/interval が到着レート未満だと、間隔と無関係に backlog が溜まる",
+      "counters": {
+        "dispatched": 600,
+        "polls": 13
+      },
+      "metrics": {
+        "empty_ratio": 0,
+        "latency_p50_ms": 2259.066,
+        "latency_p95_ms": 4705.792,
+        "latency_p99_ms": 4758.204,
+        "queries_per_sec": 1.7056215803265586
+      },
+      "latency": {
+        "count": 600,
+        "min_ns": 23127742,
+        "p50_ns": 2259066707,
+        "p95_ns": 4705792962,
+        "p99_ns": 4758204186,
+        "max_ns": 4767621494,
+        "mean_ns": 2394260688
+      },
+      "accident": true,
+      "notes": [
+        "処理能力 = batch/interval = 100/s。到着 200/s に追いつかず p95=4.705792962s まで発散",
+        "→ ポーリング間隔の前に、batch/interval ≥ 到着レート を満たすこと"
+      ]
+    }
+  ],
+  "verdict": "ポーリング間隔は「許容する dispatch 遅延」で決める（batch を十分にすれば p95 ≈ 間隔）。ただし先に batch/interval ≥ 到着レート を満たすこと（さもないと間隔と無関係に発散）。到着が低いなら速く引くのは空振りの無駄。jitter で山をずらし、wake で低遅延と低負荷を両立する。",
+  "scope": [
+    "MySQL 8.0 / 単一テナント・単一ワーカー（lease 前提）/ 命令を 3 秒に散らす",
+    "dispatch 遅延 = scheduled_for から claim までの時間。ロボット側の実行時間は含まない",
+    "claim は state 遷移（pending→dispatched）。複数ワーカーは対象外（1テナント1ワーカー）"
+  ],
+  "uncertainty": [
+    "最適間隔は到着レート・batch・DB の忙しさで動く。この数字はこのホストのもの",
+    "複数テナント同時のポーリングは未測定（jitter で山をずらす実装だけ）",
+    "wake は in-process の producer を仮定。別プロセス跨ぎの push は別（MySQL に LISTEN/NOTIFY は無い）",
+    "ロボット側の実行遅延・失敗・OUTCOME_UNKNOWN は cmd_result で観測する設計だが本実験の対象外"
+  ],
+  "artifacts": [
+    "internal/cadencelab: スケジュール/命令/実績のスキーマ（schema.sql）とポーリングワーカー",
+    "docs/scheduling.md: 設計・テナントワーカーの制約・最適間隔の決め方"
+  ],
+  "next": [
+    "なし（EXP-1..12）"
+  ]
+}
