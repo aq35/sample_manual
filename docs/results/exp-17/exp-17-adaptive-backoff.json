@@ -1,0 +1,73 @@
+{
+  "unit": "EXP-17",
+  "name": "adaptive-backoff",
+  "title": "適応的バックオフ: 空振りで間隔を伸ばし、仕事で詰める",
+  "meter_version": "expkit/2",
+  "hypothesis": "1) 固定 100ms ポーリングは、暇な間も一定間隔で空振りし続ける。 2) 適応的バックオフ（空振りで倍々、仕事で Min へ）は、暇な間の空振りを大きく減らす。 3) 仕事が来たときの遅延は、固定 100ms とほぼ同等に保てる（Min へ戻すので）。",
+  "started_at": "2026-09-06T23:55:47.813874196Z",
+  "ended_at": "2026-09-06T23:55:59.953523569Z",
+  "env": {
+    "captured_at": "2026-09-06T23:55:47.813912788Z",
+    "go_version": "go1.24.7",
+    "os": "linux",
+    "arch": "amd64",
+    "num_cpu": 4,
+    "gomaxprocs": 4,
+    "hostname": "vm",
+    "git_sha": "65f8b884a5ab7868d0cc6d0d3867340b736a036c",
+    "git_dirty": true,
+    "mysql_version": "8.0.46-0ubuntu0.24.04.4"
+  },
+  "workload": {
+    "arrival": "10/s（疎）",
+    "commands": 30,
+    "hold": "6s"
+  },
+  "injection": {},
+  "variants": [
+    {
+      "name": "固定 100ms ポーリング",
+      "counters": {
+        "dispatched": 30,
+        "empty_polls": 29,
+        "polls": 59
+      },
+      "metrics": {
+        "p95_ms": 82.142
+      },
+      "accident": true
+    },
+    {
+      "name": "適応的バックオフ（Min 100ms → Max 2s）",
+      "counters": {
+        "dispatched": 30,
+        "empty_polls": 4,
+        "polls": 34
+      },
+      "metrics": {
+        "p95_ms": 95.025
+      },
+      "accident": false,
+      "notes": [
+        "空振り 29 → 4",
+        "仕事が来たら Min へ戻すので、dispatch 遅延は固定 100ms と同等に保てる"
+      ]
+    }
+  ],
+  "verdict": "適応的バックオフは、暇な間の空振りの問い合わせを大きく減らす。仕事が来たら Min へ戻すので、dispatch 遅延は固定間隔とほぼ同等に保てる。低到着のテナントを多数抱えるとき、fan-out を畳む（EXP-14）と合わせて DB 負荷を下げられる。",
+  "scope": [
+    "MySQL 8.0 / 単一テナント / 命令 30 を 3 秒に散らし、その後 3 秒暇にする",
+    "空振り = 0 件だったポーリング。dispatch 遅延 = scheduled_for から claim まで"
+  ],
+  "uncertainty": [
+    "暇の長さ・Min/Max・到着パターンで効果は動く。この数字はこのホストのもの",
+    "仕事が『バックオフ中に来た』場合、最大 Max だけ遅れる。低遅延が要るなら wake（EXP-12）と併用",
+    "複数テナントを畳む（EXP-14）場合のバックオフは、担当集合ごとに1つ回す想定（未測定）"
+  ],
+  "artifacts": [
+    "internal/cadencelab: Adaptive バックオフ（空振りで倍々、仕事で Min へ）"
+  ],
+  "next": [
+    "なし"
+  ]
+}

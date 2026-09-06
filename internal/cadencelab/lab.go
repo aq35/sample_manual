@@ -41,15 +41,18 @@ func Setup(ctx context.Context, db *sql.DB) error {
 
 // Config は1回の測定条件。
 type Config struct {
-	Tenant   string
-	Commands int           // 命令の総数
-	Window   time.Duration // これらが due になる時間幅（到着レート = Commands/Window）
-	Interval time.Duration // ポーリング間隔
-	Batch    int           // 1回のポーリングで最大何件掴むか
-	Jitter   time.Duration // interval にかけるゆらぎ（複数テナントの同時ポーリングをずらす）
-	Wake     bool          // producer が「due が来た」と in-process で起こすか
-	HoldFor  time.Duration // 捌き終わってもこの時間までポーリングを続ける（空振りの無駄を測る）
-	Fence    int64
+	Tenant      string
+	Commands    int           // 命令の総数
+	Window      time.Duration // これらが due になる時間幅（到着レート = Commands/Window）
+	Interval    time.Duration // ポーリング間隔
+	Batch       int           // 1回のポーリングで最大何件掴むか
+	Jitter      time.Duration // interval にかけるゆらぎ（複数テナントの同時ポーリングをずらす）
+	Wake        bool          // producer が「due が来た」と in-process で起こすか
+	HoldFor     time.Duration // 捌き終わってもこの時間までポーリングを続ける（空振りの無駄を測る）
+	Adaptive    bool          // 適応的バックオフ: 空振りで間隔を伸ばし、仕事を見つけたら Min へ戻す
+	MinInterval time.Duration
+	MaxInterval time.Duration
+	Fence       int64
 }
 
 // Result は測定結果。
@@ -155,6 +158,15 @@ func Run(ctx context.Context, db *sql.DB, cfg Config) (Result, error) {
 	}
 	deadline := start.Add(hold)
 	interval := cfg.Interval
+	if cfg.Adaptive {
+		if cfg.MinInterval <= 0 {
+			cfg.MinInterval = 100 * time.Millisecond
+		}
+		if cfg.MaxInterval <= 0 {
+			cfg.MaxInterval = 2 * time.Second
+		}
+		interval = cfg.MinInterval
+	}
 	for time.Now().Before(deadline) && ctx.Err() == nil {
 		n, err := poll()
 		if err != nil {
@@ -173,6 +185,18 @@ func Run(ctx context.Context, db *sql.DB, cfg Config) (Result, error) {
 		if remaining == 0 {
 			if cfg.HoldFor == 0 || time.Now().After(deadline) {
 				break
+			}
+		}
+		// 適応的バックオフ: 空振りなら間隔を倍にして（上限 Max）、仕事を見つけたら Min へ戻す。
+		// TCP の輻輳制御と同じ。暇なテナントは自然に静かになる。
+		if cfg.Adaptive {
+			if n > 0 {
+				interval = cfg.MinInterval
+			} else {
+				interval *= 2
+				if interval > cfg.MaxInterval {
+					interval = cfg.MaxInterval
+				}
 			}
 		}
 		// 次のポーリングまで待つ。Wake なら「掴めた直後は間を置かず続ける」。

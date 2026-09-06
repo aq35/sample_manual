@@ -277,3 +277,47 @@ func maxi(a, b int) int {
 	}
 	return b
 }
+
+// PollQueryStats は畳んだポーリングの「1クエリ」のコストを測る。
+type PollQueryStats struct {
+	InSize  int
+	Rows    int64
+	Latency expkit.LatencyStats
+}
+
+// MeasureFoldQuery は owned テナントを IN で畳んだ SELECT を samples 回実行し、その所要を測る。
+// IN のサイズ（担当テナント数）を変えて、1クエリがどこから重くなるかを見る。
+func MeasureFoldQuery(ctx context.Context, db *sql.DB, owned []string, batch, samples int) (PollQueryStats, error) {
+	lat := expkit.NewLatency()
+	ph := strings.TrimSuffix(strings.Repeat("?,", len(owned)), ",")
+	query := `SELECT tenant_id, command_id FROM cmd_command
+	           WHERE tenant_id IN (` + ph + `) AND state = 'pending' AND scheduled_for <= ?
+	        ORDER BY scheduled_for LIMIT ?`
+	var rowCount int64
+	for s := 0; s < samples; s++ {
+		args := make([]any, 0, len(owned)+2)
+		for _, tn := range owned {
+			args = append(args, tn)
+		}
+		args = append(args, time.Now(), batch)
+		t0 := time.Now()
+		//smlint:allow loopquery 理由: 同じクエリを samples 回計測するのが目的
+		rows, err := db.QueryContext(ctx, query, args...)
+		if err != nil {
+			return PollQueryStats{}, err
+		}
+		var n int64
+		for rows.Next() {
+			var a, b string
+			if err := rows.Scan(&a, &b); err != nil {
+				_ = rows.Close()
+				return PollQueryStats{}, err
+			}
+			n++
+		}
+		_ = rows.Close()
+		lat.Record(time.Since(t0))
+		rowCount = n
+	}
+	return PollQueryStats{InSize: len(owned), Rows: rowCount, Latency: lat.Stats()}, nil
+}

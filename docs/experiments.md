@@ -124,6 +124,9 @@ files, _ := r.Save("...")
 | EXP-12 | ワーカーのポーリング頻度・スケジュール/命令/実績 | 済（[docs/scheduling.md](scheduling.md)） |
 | EXP-13 | DB 資格情報のローテーション（graceful pool swap） | 済（[docs/credential-rotation.md](credential-rotation.md)） |
 | EXP-14 | ポーリングの fan-out を畳む（テナント分離を保つ） | 済（[docs/fanout.md](fanout.md)） |
+| EXP-15 | テーブル分割・パーティションと UPDATE 競合 | 済（[docs/table-split.md](table-split.md)） |
+| EXP-16 | 担当テナント数（IN サイズ）の上限 | 済（[docs/owned-tenant-limit.md](owned-tenant-limit.md)） |
+| EXP-17 | 適応的バックオフ | 済（[docs/adaptive-backoff.md](adaptive-backoff.md)） |
 
 ## 健全性・移植
 

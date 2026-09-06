@@ -1,0 +1,116 @@
+{
+  "unit": "EXP-16",
+  "name": "owned-tenant-limit",
+  "title": "担当テナント数（IN サイズ）の上限: 畳んだ1クエリはどこから重くなるか",
+  "meter_version": "expkit/2",
+  "hypothesis": "1) 担当テナントを IN で畳んだ1クエリの所要は、IN の要素数（担当テナント数）とともに増える。 2) テナント 30 程度なら1クエリは十分速い（畳んで良い）。 3) IN が非常に大きい（数百〜千）と1クエリが重くなり、分けた方が速くなる領域が現れる。",
+  "started_at": "2026-09-06T23:54:36.40659753Z",
+  "ended_at": "2026-09-06T23:54:38.984733561Z",
+  "env": {
+    "captured_at": "2026-09-06T23:54:36.406638207Z",
+    "go_version": "go1.24.7",
+    "os": "linux",
+    "arch": "amd64",
+    "num_cpu": 4,
+    "gomaxprocs": 4,
+    "hostname": "vm",
+    "git_sha": "65f8b884a5ab7868d0cc6d0d3867340b736a036c",
+    "git_dirty": true,
+    "mysql_version": "8.0.46-0ubuntu0.24.04.4"
+  },
+  "workload": {
+    "max_tenants": 1000,
+    "samples_per_size": 50
+  },
+  "injection": {},
+  "variants": [
+    {
+      "name": "IN サイズ = 10 担当テナント",
+      "counters": {
+        "rows": 10
+      },
+      "metrics": {
+        "p50_ms": 0.44,
+        "p95_ms": 0.708,
+        "p99_ms": 0.752
+      },
+      "accident": false
+    },
+    {
+      "name": "IN サイズ = 30 担当テナント",
+      "counters": {
+        "rows": 30
+      },
+      "metrics": {
+        "p50_ms": 0.787,
+        "p95_ms": 0.868,
+        "p99_ms": 0.874
+      },
+      "accident": false
+    },
+    {
+      "name": "IN サイズ = 100 担当テナント",
+      "counters": {
+        "rows": 100
+      },
+      "metrics": {
+        "p50_ms": 2.325,
+        "p95_ms": 2.524,
+        "p99_ms": 2.922
+      },
+      "accident": false
+    },
+    {
+      "name": "IN サイズ = 300 担当テナント",
+      "counters": {
+        "rows": 300
+      },
+      "metrics": {
+        "p50_ms": 4.458,
+        "p95_ms": 4.78,
+        "p99_ms": 5.433
+      },
+      "accident": false
+    },
+    {
+      "name": "IN サイズ = 1000 担当テナント",
+      "counters": {
+        "rows": 500
+      },
+      "metrics": {
+        "p50_ms": 15.146,
+        "p95_ms": 16.594,
+        "p99_ms": 18.314
+      },
+      "accident": false
+    },
+    {
+      "name": "畳む vs 分ける（300 テナント）",
+      "metrics": {
+        "one_query_in300_p50_ms": 4.654,
+        "three_queries_in100_合計_p50_ms": 6.453
+      },
+      "accident": false,
+      "notes": [
+        "IN(300) 1クエリ p50=4.654378ms / IN(100)×3 合計 p50=6.453373ms",
+        "分けると往復が3回になる。IN が重くなる前は1クエリが有利、重くなると分割が効く"
+      ]
+    }
+  ],
+  "verdict": "担当テナントを IN で畳んだ1クエリの所要は IN サイズとともに増える。テナント 30 程度なら1クエリで十分速い（畳んで良い）。IN が非常に大きくなると、コンテナあたりの担当テナント数に上限を設けて分割する方が良い領域が出る。担当テナント数の上限は、この所要と接続予算（poolbudget）の両方から決める。",
+  "scope": [
+    "MySQL 8.0 / cmd_command の poll 索引 (tenant_id,state,scheduled_for) / 各サイズ 50 サンプル",
+    "1テナント1命令（due 済み）。IN の要素数だけを変えて1クエリの所要を測る"
+  ],
+  "uncertainty": [
+    "最適な上限は行数・索引・DB の忙しさで動く。この数字はこのホストのもの",
+    "IN が数千を超えるとプランナやパケットサイズの別の効き方が出る（未測定）",
+    "接続予算（poolbudget）との兼ね合いで、担当テナント数はコンテナ数とも連動する"
+  ],
+  "artifacts": [
+    "internal/fanoutlab: MeasureFoldQuery（IN サイズごとの1クエリ所要）"
+  ],
+  "next": [
+    "なし"
+  ]
+}
