@@ -159,6 +159,15 @@ files, _ := r.Save("...")
 | EXP-47 | 順序・冪等消費（版で単調適用・逆順/重複に強い） | 済（[docs/event-ordering.md](event-ordering.md)） |
 | EXP-48 | 保持期間の運用（日パーティションの DROP でロールフォワード） | 済（[docs/retention.md](retention.md)） |
 | EXP-49 | 一時 vs 恒久エラーの分類とリトライ（fail-fast） | 済（[docs/retry.md](retry.md)） |
+| EXP-50 | Go の変数・型ごとのメモリ単価（2GB に何件載るか） | 済（[docs/reference-numbers.md](reference-numbers.md)） |
+| EXP-51 | ループとアロケーションの正規化コスト（ns/op・allocs/op） | 済（[docs/reference-numbers.md](reference-numbers.md)） |
+
+## 設計の早見表・原則
+
+| 文書 | 内容 |
+| --- | --- |
+| [docs/reference-numbers.md](reference-numbers.md) | 正規化した数値の早見表（メモリ/ループ/DB往復/列幅/1vCPU2GB 理論値） |
+| [docs/design-principles.md](design-principles.md) | 関心ごと × 考え方 × どうあるべき の一覧（漏れチェックつき） |
 
 ## 実行時ガード
 

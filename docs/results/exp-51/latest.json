@@ -1,0 +1,10 @@
+{
+  "ended_at": "2026-09-07T12:37:44Z",
+  "git_dirty": true,
+  "git_sha": "d70dc1d452cce539909a5ddf235259a85006d381",
+  "json": "exp-51-loop-alloc-cost.json",
+  "md": "exp-51-loop-alloc-cost.md",
+  "meter_version": "expkit/2",
+  "name": "loop-alloc-cost",
+  "unit": "EXP-51"
+}

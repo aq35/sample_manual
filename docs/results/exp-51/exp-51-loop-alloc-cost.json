@@ -1,0 +1,177 @@
+{
+  "unit": "EXP-51",
+  "name": "loop-alloc-cost",
+  "title": "確保の仕方で ns/op・allocs/op が桁で変わることを正規化して測る",
+  "meter_version": "expkit/2",
+  "hypothesis": "1) append は事前確保（make(,0,n)）すると再確保コピーが消え、alloc が多数→1 に、ns も下がる。 2) 文字列連結は += が O(n^2) バイトで遅く alloc も多い。strings.Builder は速く alloc 少。 3) map は make(map,n) とサイズを伝えると rehash が減り速い。 4) int を any に入れる(boxing)と要素ごとに確保が増える。型つき slice は 0 に近い。 5) ループ本体の素コスト（要素を1回触る）は 1件 1ns 前後の下限。",
+  "started_at": "2026-09-07T12:37:29.276995863Z",
+  "ended_at": "2026-09-07T12:37:44.232297036Z",
+  "env": {
+    "captured_at": "2026-09-07T12:37:29.277059802Z",
+    "go_version": "go1.26.0",
+    "os": "linux",
+    "arch": "amd64",
+    "num_cpu": 4,
+    "gomaxprocs": 4,
+    "hostname": "vm",
+    "git_sha": "d70dc1d452cce539909a5ddf235259a85006d381",
+    "git_dirty": true
+  },
+  "workload": {},
+  "injection": {},
+  "variants": [
+    {
+      "name": "append 事前確保なし（再確保コピーが多発）",
+      "counters": {
+        "allocs_per_op": 19
+      },
+      "metrics": {
+        "bytes_per_op": 357626,
+        "ns_per_item": 15.0838,
+        "ns_per_op": 150838
+      },
+      "accident": true,
+      "notes": [
+        "nil から append。容量超過のたびに確保＋全コピー → allocs/op=19"
+      ]
+    },
+    {
+      "name": "append 事前確保 make(,0,n)（再確保なし）",
+      "counters": {
+        "allocs_per_op": 1
+      },
+      "metrics": {
+        "bytes_per_op": 81920,
+        "ns_per_item": 3.2768,
+        "ns_per_op": 32768
+      },
+      "accident": false,
+      "notes": [
+        "allocs/op=1（1回の確保だけ）"
+      ]
+    },
+    {
+      "name": "make(,n)＋添字代入（append チェックも無い）",
+      "counters": {
+        "allocs_per_op": 1
+      },
+      "metrics": {
+        "bytes_per_op": 81920,
+        "ns_per_item": 3.5188,
+        "ns_per_op": 35188
+      },
+      "accident": false
+    },
+    {
+      "name": "文字列連結 += （毎回新確保・O(n^2) バイト）",
+      "counters": {
+        "allocs_per_op": 10000
+      },
+      "metrics": {
+        "bytes_per_op": 53164067,
+        "ns_per_op": 29036919
+      },
+      "accident": true,
+      "notes": [
+        "+= は毎回新しい文字列を作る。n=10000 で alloc=10000"
+      ]
+    },
+    {
+      "name": "文字列連結 strings.Builder（内部バッファを伸ばす）",
+      "counters": {
+        "allocs_per_op": 16
+      },
+      "metrics": {
+        "bytes_per_op": 46584,
+        "ns_per_op": 68247
+      },
+      "accident": false,
+      "notes": [
+        "+= 比 425.5x 速い・alloc=16"
+      ]
+    },
+    {
+      "name": "map サイズ未指定（負荷率超過で rehash）",
+      "counters": {
+        "allocs_per_op": 79
+      },
+      "metrics": {
+        "bytes_per_op": 591483,
+        "ns_per_op": 802944
+      },
+      "accident": false
+    },
+    {
+      "name": "map make(map,n)（rehash を避ける）",
+      "counters": {
+        "allocs_per_op": 33
+      },
+      "metrics": {
+        "bytes_per_op": 295552,
+        "ns_per_op": 292083
+      },
+      "accident": false,
+      "notes": [
+        "サイズ指定で 2.7x 速い"
+      ]
+    },
+    {
+      "name": "any に int を積む（要素ごとに boxing 確保）",
+      "counters": {
+        "allocs_per_op": 9745
+      },
+      "metrics": {
+        "bytes_per_op": 241793,
+        "ns_per_op": 243800
+      },
+      "accident": true,
+      "notes": [
+        "allocs/op=9745（boxing が要素数ぶん増える）"
+      ]
+    },
+    {
+      "name": "型つき []int に積む（boxing 無し）",
+      "counters": {
+        "allocs_per_op": 1
+      },
+      "metrics": {
+        "bytes_per_op": 81920,
+        "ns_per_op": 27918
+      },
+      "accident": false
+    },
+    {
+      "name": "ループ本体の素コスト（要素を1回触るだけ・基準）",
+      "counters": {
+        "allocs_per_op": 0
+      },
+      "metrics": {
+        "ns_per_item": 0.6394,
+        "ns_per_op": 6394
+      },
+      "accident": false,
+      "notes": [
+        "1件 ≒ 0.64 ns。これがループの下限。DB 往復(0.1ms〜)は 1件でこの数千倍"
+      ]
+    }
+  ],
+  "verdict": "同じ結果でも確保の仕方で ns と allocs/op が桁で変わる。件数が読めるなら append は make(,0,n) で事前確保（再確保コピーを消す）。文字列連結は += でなく strings.Builder（+= は O(n^2) バイト）。map は make(map,n) でサイズを伝えて rehash を避ける。ホットパスで int を any に入れない（boxing が要素数ぶん確保を生む）。ループ本体の素コストは 1件数 ns で、実処理は DB 往復が支配的。『allocs/op を減らす』が GC 圧を下げる最短路。",
+  "scope": [
+    "純 Go（DB 不要）/ n=10000・testing.Benchmark（ns/op・B/op・allocs/op）/ このホストの CPU",
+    "ns は相対比較用（このサンドボックス CPU の絶対値は本番と違う）。alloc/バイトは環境非依存に近い",
+    "『1件 ns』はループ本体の下限。実処理は DB 往復（EXP-31: 0.1ms〜）が支配的"
+  ],
+  "uncertainty": [
+    "ns/op はマシン依存。桁（10x・O(n^2)）と allocs/op・B/op を主に読む",
+    "事前確保は件数が読めるときだけ。読めないなら append の増幅（2 倍成長）に任せてよい",
+    "strings.Builder は Grow(n) で更に確保を1回にできる（本実験は素の Builder）",
+    "boxing は any/interface・fmt.Sprint・reflect で起きる。ホットパスでは型つきを保つ"
+  ],
+  "artifacts": [
+    "internal/looplab: append/連結/map/boxing の比較関数",
+    "docs/reference-numbers.md: 正規化した早見表（ループ・確保の節）"
+  ],
+  "next": [
+    "（土台の実測はここまで。以降は正規化早見表 docs/reference-numbers.md へ集約）"
+  ]
+}
