@@ -128,6 +128,14 @@ files, _ := r.Save("...")
 | EXP-16 | 担当テナント数（IN サイズ）の上限 | 済（[docs/owned-tenant-limit.md](owned-tenant-limit.md)） |
 | EXP-17 | 適応的バックオフ | 済（[docs/adaptive-backoff.md](adaptive-backoff.md)） |
 | EXP-18 | 日付範囲検索は何件で重くなるか | 済（[docs/date-search.md](date-search.md)） |
+| EXP-19 | メモ列（失敗理由）を一覧行に同居させるか別表に分けるか | 済（[docs/column-split.md](column-split.md)） |
+| EXP-20 | 予定/実績を primary とレプリカで読み分ける | 済（[docs/read-replica.md](read-replica.md)） |
+
+## 実行時ガード
+
+| 文書 | 内容 |
+| --- | --- |
+| [docs/query-cost-gate.md](query-cost-gate.md) | 走査見込みで重いクエリを実行前に弾く（`repo.GuardedQuery` / `ErrTooCostly`） |
 
 ## 健全性・移植
 

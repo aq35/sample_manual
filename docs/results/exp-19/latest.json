@@ -1,0 +1,10 @@
+{
+  "ended_at": "2026-09-07T02:52:50Z",
+  "git_dirty": true,
+  "git_sha": "3f35d91961ef569a9142c589766e22c86ffa7e65",
+  "json": "exp-19-column-split.json",
+  "md": "exp-19-column-split.md",
+  "meter_version": "expkit/2",
+  "name": "column-split",
+  "unit": "EXP-19"
+}

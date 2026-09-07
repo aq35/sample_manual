@@ -29,6 +29,9 @@ type Options struct {
 	MaxRetries int
 	// MaxRows: 1回の取得で許す行数の上限（既定 1000）。超えたら ErrTooManyRows。
 	MaxRows int
+	// MaxScanRows: EXPLAIN の走査見込みの上限（既定 50000）。GuardedQuery/CheckCost で使う。
+	// 「返す行数」ではなく「走査する行数」の天井。索引が効かないクエリを実行前に弾く。
+	MaxScanRows int
 	// MaxLockHold: 排他ロックをこれより長く持っていたら警告する（既定 1分）。
 	// GET_LOCK は接続を1本占有するので、長く持つ用途には向かない（docs/locking.md 3.7）。
 	MaxLockHold time.Duration

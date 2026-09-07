@@ -1,0 +1,91 @@
+{
+  "unit": "EXP-19",
+  "name": "column-split",
+  "title": "メモ列（失敗理由）を一覧行に同居させるか別表に分けるか",
+  "meter_version": "expkit/2",
+  "hypothesis": "1) 同居のコストは『走査する行数 × 行の太さ』。1ページ(LIMIT 100)だけなら走査が少ないので差は小さい。 2) テナント全体を走査する集計では、太い行(メモ同居)の clustered index はページ数が多く、    狭い表より明確に遅い（メモを取らなくても）。 3) メモが要る画面では、分割版は『一覧＋id群のメモをバッチ取得』（DataLoader 相当）で足りる    （往復は増えるが1ページぶんだけ）。",
+  "started_at": "2026-09-07T02:50:58.406524102Z",
+  "ended_at": "2026-09-07T02:52:50.016306877Z",
+  "env": {
+    "captured_at": "2026-09-07T02:50:58.406561773Z",
+    "go_version": "go1.24.7",
+    "os": "linux",
+    "arch": "amd64",
+    "num_cpu": 4,
+    "gomaxprocs": 4,
+    "hostname": "vm",
+    "git_sha": "3f35d91961ef569a9142c589766e22c86ffa7e65",
+    "git_dirty": true,
+    "mysql_version": "8.0.46-0ubuntu0.24.04.4"
+  },
+  "workload": {
+    "detail_bytes": "約3KB",
+    "page_limit": 100,
+    "rows": 200000
+  },
+  "injection": {},
+  "variants": [
+    {
+      "name": "1ページ一覧(LIMIT 100・メモ取らない): 同居 vs 分割",
+      "metrics": {
+        "inline_p50_ms": 1.055,
+        "split_p50_ms": 0.774
+      },
+      "accident": false,
+      "notes": [
+        "同居 1.055689ms → 分割 774.75µs（走査が少ないので差は小さい）"
+      ]
+    },
+    {
+      "name": "全体走査の集計(COUNT・メモ取らない): 同居版（太い行）",
+      "metrics": {
+        "p50_ms": 967.327
+      },
+      "accident": true
+    },
+    {
+      "name": "全体走査の集計(COUNT・メモ取らない): 分割版（狭い表）",
+      "metrics": {
+        "p50_ms": 70.622
+      },
+      "accident": false,
+      "notes": [
+        "同居 967.327685ms → 分割 70.622654ms（約 13.7 倍。太い clustered index はページ数が多い）"
+      ]
+    },
+    {
+      "name": "メモが要る画面: 同居版（1クエリでメモも取る）",
+      "metrics": {
+        "p50_ms": 1.206
+      },
+      "accident": false
+    },
+    {
+      "name": "メモが要る画面: 分割版（一覧＋id群のメモをバッチ取得, DataLoader 相当）",
+      "metrics": {
+        "p50_ms": 2.408
+      },
+      "accident": false,
+      "notes": [
+        "メモが要るときは分割版でも 2.408299ms で足りる（2クエリでも1ページぶんだけ）"
+      ]
+    }
+  ],
+  "verdict": "失敗理由のような大きなメモを一覧行に同居させると、メモを取らない一覧でも行が太って遅くなる。メモを別表に分ければ一覧は狭い行だけを読むので速く、メモが要る画面では『一覧＋id群のメモをバッチ取得』（GraphQL の DataLoader 相当）で足りる。→ GraphQL でも、要求スカラーは投影し、メモ/理由は別表＋別リゾルバのバッチ取得にする。",
+  "scope": [
+    "MySQL 8.0 / 20万行 / 1ページ100件 / メモ約3KB",
+    "一覧は status で絞って id 順に LIMIT。メモ列は VARCHAR(2000)",
+    "分割版の一覧は狭い表、メモは別表（同じ (tenant_id, id)）"
+  ],
+  "uncertainty": [
+    "絶対値はバッファプールに載った状態のもの。ディスクから読む状況では差が広がりうる",
+    "メモのサイズ・1ページ件数で差は動く。TEXT/BLOB ではさらに差が出る（別ページ格納）",
+    "分割は書き込みが2表になる（一覧行とメモを両方入れる）。整合はトランザクションで取る"
+  ],
+  "artifacts": [
+    "internal/splitlab: 同居/分割の一覧・詳細取得（DataLoader 相当のバッチ取得）"
+  ],
+  "next": [
+    "なし"
+  ]
+}

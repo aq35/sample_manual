@@ -104,6 +104,12 @@ if [[ -n "${MYSQL_DSN:-}" ]]; then
       go test ./internal/kascontract/ -run TestContract -v -timeout 10m
   run "32-exp18-datesearch-${stamp}.txt" "㉜ EXP-18 日付範囲検索は何件で重くなるか" \
       go test ./internal/datelab/ -run TestEXP18 -v -timeout 20m
+  run "33-exp19-columnsplit-${stamp}.txt" "㉝ EXP-19 メモ列の縦分割（同居 vs 別表）" \
+      go test ./internal/splitlab/ -run TestEXP19 -v -timeout 20m
+  run "34-exp20-readreplica-${stamp}.txt" "㉞ EXP-20 予定/実績を primary とレプリカで読み分ける" \
+      go test ./internal/readrouter/ -run TestEXP20 -v -timeout 20m
+  run "35-costgate-${stamp}.txt" "㉟ クエリコストゲート（走査見込みで実行前に弾く）" \
+      go test ./internal/repo/ -run TestCostGate -v -timeout 20m
 fi
 
 # ---- MySQL が無くても走る（追加ぶん）----

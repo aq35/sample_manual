@@ -1,0 +1,73 @@
+{
+  "unit": "EXP-20",
+  "name": "read-your-writes-replica-lag",
+  "title": "予定/実績を primary とレプリカで読み分ける: 何が安全で何が壊れるか",
+  "meter_version": "expkit/2",
+  "hypothesis": "1) 書いた直後にレプリカ（ラグあり）から読むと、自分の書き込みが見えない（read-your-writes 違反）。 2) 同じ読みを primary（Strong）から読めば、必ず見える。 3) ラグが解消した後の『過去の値』は、レプリカから読んでも一致する（不変な過去はレプリカで安全）。 4) worker の dispatch ポーリングは Strong（primary）で行う。レプリカだと未反映で取りこぼす。",
+  "started_at": "2026-09-07T02:53:07.489650182Z",
+  "ended_at": "2026-09-07T02:53:08.001242305Z",
+  "env": {
+    "captured_at": "2026-09-07T02:53:07.489702202Z",
+    "go_version": "go1.24.7",
+    "os": "linux",
+    "arch": "amd64",
+    "num_cpu": 4,
+    "gomaxprocs": 4,
+    "hostname": "vm",
+    "git_sha": "3f35d91961ef569a9142c589766e22c86ffa7e65",
+    "git_dirty": true,
+    "mysql_version": "8.0.46-0ubuntu0.24.04.4"
+  },
+  "workload": {
+    "replica_lag": "300ms"
+  },
+  "injection": {},
+  "variants": [
+    {
+      "name": "書いた直後: Eventual（レプリカ・ラグ中）で読む",
+      "counters": {
+        "見えた": 0
+      },
+      "accident": true,
+      "notes": [
+        "自分の書き込みが見えない（read-your-writes 違反）。だから直後の読みは Strong にする"
+      ]
+    },
+    {
+      "name": "書いた直後: Strong（primary）で読む",
+      "counters": {
+        "見えた": 1
+      },
+      "accident": false,
+      "notes": [
+        "必ず見える（v=v1）"
+      ]
+    },
+    {
+      "name": "ラグ解消後: Eventual（レプリカ）で過去の値を読む",
+      "counters": {
+        "見えた": 1
+      },
+      "accident": false,
+      "notes": [
+        "不変な過去はレプリカで一致（v=v1）。履歴・レポートはここへ回す"
+      ]
+    }
+  ],
+  "verdict": "予定/実績の読みをレプリカへ回すと primary の負担は減るが、レプリカにはラグがある。書いた直後・read-your-writes・worker の dispatch ポーリングは primary（Strong）で行う。不変な過去（過去の実績・履歴・レポート・admin の横断）だけをレプリカ（Eventual）へ回す。優先度は低め: 30テナントでは primary に余裕があり、まず covering索引/有界化/キャッシュが効く。読み QPS が実測で primary を圧迫し始めたら、ラグ許容の読みだけをレプリカへ。",
+  "scope": [
+    "MySQL 8.0 / primary=workerdb, レプリカ相当=workerdb2 / ラグを 300ms で手動模擬",
+    "実レプリケーションではなく、遅延つきで replica へ適用して振る舞いを再現"
+  ],
+  "uncertainty": [
+    "実運用のラグは負荷で変動する。ラグ量の測定・監視は別途（Seconds_Behind_Master 等）",
+    "read-your-writes を厳密にやるなら、書き込み後しばらく Strong に固定する（セッションピン留め）",
+    "レプリカのフェイルオーバ・整合（GTID）は本実験外"
+  ],
+  "artifacts": [
+    "internal/readrouter: Freshness(Strong/Eventual) で primary/レプリカを振り分けるルータ"
+  ],
+  "next": [
+    "なし"
+  ]
+}
