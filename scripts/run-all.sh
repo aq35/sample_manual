@@ -110,6 +110,10 @@ if [[ -n "${MYSQL_DSN:-}" ]]; then
       go test ./internal/readrouter/ -run TestEXP20 -v -timeout 20m
   run "35-costgate-${stamp}.txt" "㉟ クエリコストゲート（走査見込みで実行前に弾く）" \
       go test ./internal/repo/ -run TestCostGate -v -timeout 20m
+  run "36-exp21-width-${stamp}.txt" "㊱ EXP-21 VARCHAR/TEXT の重さ（inline/off-page）" \
+      go test ./internal/widthlab/ -run TestEXP21 -v -timeout 20m
+  run "37-exp22-status-${stamp}.txt" "㊲ EXP-22 ステータスでテーブルを分けるべきか" \
+      go test ./internal/statuslab/ -run TestEXP22 -v -timeout 20m
 fi
 
 # ---- MySQL が無くても走る（追加ぶん）----

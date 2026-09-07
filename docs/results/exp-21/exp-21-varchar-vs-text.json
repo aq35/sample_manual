@@ -1,0 +1,102 @@
+{
+  "unit": "EXP-21",
+  "name": "varchar-vs-text",
+  "title": "太い列の重さは型名でなく inline/off-page で決まる・SELECT * の効き",
+  "meter_version": "expkit/2",
+  "hypothesis": "1) 3KB の memo は VARCHAR でも TEXT でも行に収まり inline に置かれる。だから memo を取らない    全体走査でも narrow より大幅に重い。『TEXT にしただけ』では軽くならない。 2) 24KB の TEXT は行に収まらず off-page になる。行(clustered index)は細いので、memo を取らない    走査は narrow 並みに軽い。→『軽さ』は型名でなくサイズ（inline か off-page か）で決まる。 3) その大きい TEXT を SELECT *（本体込み）で読むと、1行ごとに外へ本体を取りに行き非常に重い。 4) 別表に分ければサイズによらず舐める表は narrow 並みに軽い（EXP-19）。確実なのは分割。",
+  "started_at": "2026-09-07T04:11:47.692223132Z",
+  "ended_at": "2026-09-07T04:13:01.273928823Z",
+  "env": {
+    "captured_at": "2026-09-07T04:11:47.69228005Z",
+    "go_version": "go1.24.7",
+    "os": "linux",
+    "arch": "amd64",
+    "num_cpu": 4,
+    "gomaxprocs": 4,
+    "hostname": "vm",
+    "git_sha": "15074bf55bf89da01468cc003c11b00328a9cc05",
+    "git_dirty": true,
+    "mysql_version": "8.0.46-0ubuntu0.24.04.4"
+  },
+  "workload": {
+    "memo_big": "約24KB(off-page)",
+    "memo_small": "約3KB(inline)",
+    "range_rows": 5000,
+    "rows": 30000
+  },
+  "injection": {},
+  "variants": [
+    {
+      "name": "全体走査(COUNT・memo取らない): VARCHAR 3KB（inline・太い）",
+      "metrics": {
+        "p50_ms": 116.562
+      },
+      "accident": true
+    },
+    {
+      "name": "全体走査(COUNT・memo取らない): TEXT 3KB（これも inline・太い）",
+      "metrics": {
+        "p50_ms": 147.275
+      },
+      "accident": true,
+      "notes": [
+        "VARCHAR 3KB 116.562431ms / TEXT 3KB 147.275453ms（どちらも inline で narrow より大幅に重い。TEXT にしても軽くならない）"
+      ]
+    },
+    {
+      "name": "全体走査(COUNT・memo取らない): TEXT 24KB（off-page・行は細い）",
+      "metrics": {
+        "p50_ms": 10.997
+      },
+      "accident": false,
+      "notes": [
+        "TEXT 3KB(inline) 147.275453ms → TEXT 24KB(off-page) 10.997588ms（大きいほど外へ出て、舐めは軽い）"
+      ]
+    },
+    {
+      "name": "全体走査(COUNT・memo取らない): narrow（memo 無し・基準）",
+      "metrics": {
+        "p50_ms": 10.75
+      },
+      "accident": false
+    },
+    {
+      "name": "範囲読み TEXT 24KB: memo 取らない（SELECT id,status）",
+      "metrics": {
+        "p50_ms": 4.132
+      },
+      "accident": false,
+      "notes": [
+        "off-page なので本体に触らず軽い"
+      ]
+    },
+    {
+      "name": "範囲読み TEXT 24KB: memo も取る（SELECT * 相当）",
+      "metrics": {
+        "p50_ms": 170.344
+      },
+      "accident": true,
+      "notes": [
+        "取らない 4.132902ms → 取る 170.344066ms（1行ごとに 24KB を外へ取りに行く）"
+      ]
+    }
+  ],
+  "verdict": "『太い列が重い』の正体は VARCHAR か TEXT かではなく、値が行の中(inline)にあるか外(off-page)にあるか。3KB 程度なら TEXT でも行に載る（inline）ので、TEXT にしても舐めは軽くならない。十分大きい(24KB)TEXT は行の外に出て舐めは軽いが、SELECT * で読むと外を取りに行き重い。→ 確実なのは『別表に分ける（EXP-19）』。同居のまま軽くしたいなら、　 値を off-page になる大きさにでき、かつ普段の一覧で SELECT * しない場合に限る。まず SELECT * をやめる。",
+  "scope": [
+    "MySQL 8.0 / 3万行 / ROW_FORMAT=DYNAMIC / memo 3KB(inline)・24KB(off-page)",
+    "全体走査は status で絞る COUNT（status 索引は張らない＝行を順に読む）",
+    "範囲読みは id \u003c 5000 で 5000 行を舐め、drain で全行 Scan する"
+  ],
+  "uncertainty": [
+    "inline/off-page の境目は行フォーマットとページサイズで動く（DYNAMIC・16KB ページ前提）",
+    "絶対値はバッファプールに載った状態のもの。ディスクから読むと差はさらに広がる",
+    "VARCHAR も 8KB を超えるほど巨大だと off-page になりうる（今回の VARCHAR(2000)/3KB は inline）"
+  ],
+  "artifacts": [
+    "internal/widthlab: サイズ違いの memo を inline/off-page に作り分けた走査と範囲読み",
+    "docs/column-projection.md: VARCHAR/TEXT の使い分けと SELECT * の指針"
+  ],
+  "next": [
+    "なし"
+  ]
+}

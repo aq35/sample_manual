@@ -1,0 +1,10 @@
+{
+  "ended_at": "2026-09-07T04:18:29Z",
+  "git_dirty": true,
+  "git_sha": "15074bf55bf89da01468cc003c11b00328a9cc05",
+  "json": "exp-22-status-table-split.json",
+  "md": "exp-22-status-table-split.md",
+  "meter_version": "expkit/2",
+  "name": "status-table-split",
+  "unit": "EXP-22"
+}

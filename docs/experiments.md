@@ -130,6 +130,8 @@ files, _ := r.Save("...")
 | EXP-18 | 日付範囲検索は何件で重くなるか | 済（[docs/date-search.md](date-search.md)） |
 | EXP-19 | メモ列（失敗理由）を一覧行に同居させるか別表に分けるか | 済（[docs/column-split.md](column-split.md)） |
 | EXP-20 | 予定/実績を primary とレプリカで読み分ける | 済（[docs/read-replica.md](read-replica.md)） |
+| EXP-21 | 太い列の重さは inline/off-page で決まる・SELECT * の効き | 済（[docs/column-projection.md](column-projection.md)） |
+| EXP-22 | ステータスでテーブルを分けるべきか | 済（[docs/status-table-split.md](status-table-split.md)） |
 
 ## 実行時ガード
 
