@@ -102,6 +102,8 @@ if [[ -n "${MYSQL_DSN:-}" ]]; then
       go test ./internal/tenantworker/ -v -timeout 10m
   run "30-kascontract-${stamp}.txt" "㉚ KAS 契約（両engineで同一domain結果）" \
       go test ./internal/kascontract/ -run TestContract -v -timeout 10m
+  run "32-exp18-datesearch-${stamp}.txt" "㉜ EXP-18 日付範囲検索は何件で重くなるか" \
+      go test ./internal/datelab/ -run TestEXP18 -v -timeout 20m
 fi
 
 # ---- MySQL が無くても走る（追加ぶん）----

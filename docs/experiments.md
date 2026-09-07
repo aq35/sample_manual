@@ -127,6 +127,7 @@ files, _ := r.Save("...")
 | EXP-15 | テーブル分割・パーティションと UPDATE 競合 | 済（[docs/table-split.md](table-split.md)） |
 | EXP-16 | 担当テナント数（IN サイズ）の上限 | 済（[docs/owned-tenant-limit.md](owned-tenant-limit.md)） |
 | EXP-17 | 適応的バックオフ | 済（[docs/adaptive-backoff.md](adaptive-backoff.md)） |
+| EXP-18 | 日付範囲検索は何件で重くなるか | 済（[docs/date-search.md](date-search.md)） |
 
 ## 健全性・移植
 
