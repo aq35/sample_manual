@@ -1,0 +1,10 @@
+{
+  "ended_at": "2026-09-07T09:46:43Z",
+  "git_dirty": true,
+  "git_sha": "abeb03baf58322b57b5378c3c840f320d04cba6f",
+  "json": "exp-35-timezone-dst.json",
+  "md": "exp-35-timezone-dst.md",
+  "meter_version": "expkit/2",
+  "name": "timezone-dst",
+  "unit": "EXP-35"
+}

@@ -144,6 +144,9 @@ files, _ := r.Save("...")
 | EXP-32 | 無停止スキーマ変更（expand/contract） | 済（[docs/zero-downtime-migration.md](zero-downtime-migration.md)） |
 | EXP-33 | DB 切断/フェイルオーバへの耐性 | 済（[docs/db-resilience.md](db-resilience.md)） |
 | EXP-34 | ノイジーネイバー（テナント公平性） | 済（[docs/tenant-fairness.md](tenant-fairness.md)） |
+| EXP-35 | タイムゾーン/DST のスケジューリング | 済（[docs/timezone.md](timezone.md)） |
+| EXP-36 | クエリのタイムアウトとキャンセル伝播 | 済（[docs/query-timeout.md](query-timeout.md)） |
+| EXP-37 | 可観測性（メトリクスのカーディナリティ・コスト） | 済（[docs/observability.md](observability.md)） |
 
 ## 実行時ガード
 

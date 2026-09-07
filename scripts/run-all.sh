@@ -138,7 +138,15 @@ if [[ -n "${MYSQL_DSN:-}" ]]; then
       go test ./internal/resiliencelab/ -run TestEXP33 -v -timeout 20m
   run "49-exp34-fairness-${stamp}.txt" "㊾ EXP-34 テナント公平性" \
       go test ./internal/fairnesslab/ -run TestEXP34 -v -timeout 20m
+  run "50-exp35-timezone-${stamp}.txt" "㊿ EXP-35 タイムゾーン/DST" \
+      go test ./internal/tzlab/ -run TestEXP35 -v -timeout 20m
+  run "51-exp36-timeout-${stamp}.txt" "(51) EXP-36 クエリタイムアウト/キャンセル" \
+      go test ./internal/cancellab/ -run TestEXP36 -v -timeout 20m
 fi
+
+# ---- MySQL が無くても走る（追加ぶん・可観測性）----
+run "52-exp37-observability-${stamp}.txt" "(52) EXP-37 可観測性（カーディナリティ・コスト）" \
+    go test ./internal/metrics/ -run TestEXP37 -v -timeout 20m
 
 # ---- MySQL が無くても走る（追加ぶん）----
 run "31-config-${stamp}.txt" "㉛ config / tenantcache / secretcache / poolbudget" \

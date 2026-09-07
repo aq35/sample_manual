@@ -1,0 +1,10 @@
+{
+  "ended_at": "2026-09-07T09:50:06Z",
+  "git_dirty": true,
+  "git_sha": "abeb03baf58322b57b5378c3c840f320d04cba6f",
+  "json": "exp-36-context-cancel-kills-query.json",
+  "md": "exp-36-context-cancel-kills-query.md",
+  "meter_version": "expkit/2",
+  "name": "context-cancel-kills-query",
+  "unit": "EXP-36"
+}
