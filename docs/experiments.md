@@ -164,3 +164,10 @@ files, _ := r.Save("...")
 | `internal/kascontract` | EXP-10 の結果を domain 契約 + 言語非依存ベクタにしたもの |
 | [docs/secrets.md](secrets.md) | 有効期限つき秘密（SecretManager 相当）の扱い・テナント分離・排他 |
 | [docs/samber-io.md](samber-io.md) | samber/lo・mo の使いどころと層の線引き |
+
+## セキュリティ設計
+
+| 文書 | 内容 |
+| --- | --- |
+| [docs/security-layers.md](security-layers.md) | テナント分離の多層防御（Web / Worker の図）と、Web・Worker のセキュリティ指針 |
+| [docs/graphql.md](graphql.md) | gqlgen のセキュリティ（テナント分離・認可・複雑度・allowlist・レート制限） |
