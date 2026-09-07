@@ -155,6 +155,10 @@ files, _ := r.Save("...")
 | EXP-43 | 複数プロセス跨ぎの SSE fan-out（pub/sub・topic=テナント分離） | 済（[docs/sse-fan-in.md](sse-fan-in.md)） |
 | EXP-44 | トランザクショナル outbox（exactly-once の外部作用） | 済（[docs/outbox.md](outbox.md)） |
 | EXP-45 | poison / dead-letter（無限リトライしない） | 済（[docs/dead-letter.md](dead-letter.md)） |
+| EXP-46 | キャッシュ無効化（TTL / イベント失効 / stampede） | 済（[docs/cache.md](cache.md)） |
+| EXP-47 | 順序・冪等消費（版で単調適用・逆順/重複に強い） | 済（[docs/event-ordering.md](event-ordering.md)） |
+| EXP-48 | 保持期間の運用（日パーティションの DROP でロールフォワード） | 済（[docs/retention.md](retention.md)） |
+| EXP-49 | 一時 vs 恒久エラーの分類とリトライ（fail-fast） | 済（[docs/retry.md](retry.md)） |
 
 ## 実行時ガード
 

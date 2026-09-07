@@ -1,0 +1,10 @@
+{
+  "ended_at": "2026-09-07T12:11:07Z",
+  "git_dirty": true,
+  "git_sha": "174e88c41208142f36acc0506b357f8026582ff1",
+  "json": "exp-49-retry-classification.json",
+  "md": "exp-49-retry-classification.md",
+  "meter_version": "expkit/2",
+  "name": "retry-classification",
+  "unit": "EXP-49"
+}

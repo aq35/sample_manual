@@ -156,6 +156,10 @@ if [[ -n "${MYSQL_DSN:-}" ]]; then
       go test ./internal/outboxlab/ -run TestEXP44 -v -timeout 20m
   run "60-exp45-deadletter-${stamp}.txt" "(60) EXP-45 poison / dead-letter" \
       go test ./internal/dlqlab/ -run TestEXP45 -v -timeout 20m
+  run "61-exp48-retention-${stamp}.txt" "(61) EXP-48 保持期間の運用（パーティション DROP）" \
+      go test ./internal/retentionlab/ -run TestEXP48 -v -timeout 20m
+  run "62-exp49-retry-${stamp}.txt" "(62) EXP-49 一時 vs 恒久エラーの分類とリトライ" \
+      go test ./internal/retrylab/ -run TestEXP49 -v -timeout 20m
 fi
 
 # ---- MySQL が無くても走る（追加ぶん・可観測性/容量計算/サブスク配線）----
@@ -165,6 +169,10 @@ run "55-exp40-ssecapacity-${stamp}.txt" "(55) EXP-40 SSE 容量計算（hub あ�
     go test ./internal/ssecapacity/ -run TestEXP40 -v -timeout 20m
 run "56-exp41-gqlsub-${stamp}.txt" "(56) EXP-41 gqlgen サブスクリプション（hub 配線）" \
     go test ./internal/gql/ -run TestEXP41 -v -timeout 20m
+run "63-exp46-cache-${stamp}.txt" "(63) EXP-46 キャッシュ無効化（TTL/イベント失効/stampede）" \
+    go test ./internal/cachelab/ -run TestEXP46 -v -timeout 20m
+run "64-exp47-ordering-${stamp}.txt" "(64) EXP-47 順序・冪等消費（版で単調適用）" \
+    go test ./internal/orderlab/ -run TestEXP47 -v -timeout 20m
 
 # ---- MySQL が無くても走る（追加ぶん）----
 run "31-config-${stamp}.txt" "㉛ config / tenantcache / secretcache / poolbudget" \
