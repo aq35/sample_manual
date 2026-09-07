@@ -149,6 +149,8 @@ if [[ -n "${MYSQL_DSN:-}" ]]; then
 fi
 run "57-exp42-hub-isolation-${stamp}.txt" "(57) EXP-42 hub のテナント分離" \
     go test ./internal/ssehub/ -run TestEXP42 -v -timeout 20m
+run "58-exp43-pubsub-${stamp}.txt" "(58) EXP-43 pub/sub 跨ぎの SSE fan-out" \
+    go test ./internal/pubsub/ -run TestEXP43 -v -timeout 20m
 
 # ---- MySQL が無くても走る（追加ぶん・可観測性/容量計算/サブスク配線）----
 run "52-exp37-observability-${stamp}.txt" "(52) EXP-37 可観測性（カーディナリティ・コスト）" \

@@ -64,6 +64,14 @@ flowchart LR
 - **DB 読みはゲートウェイ数でなく poller 数に比例**（接続がいくら増えても DB は守られる）。
 - ゲートウェイ台数は「接続数 ÷ 1タスクの上限（~1万）」で決める。
 
+**この構成は EXP-43 で実測済み**（[internal/pubsub](../internal/pubsub) の Broker interface＋MemBroker、
+receipt は [docs/results/exp-43](results/exp-43/exp-43-pubsub-cross-process-sse.md)）:
+- 2段 fan-out（broker(topic=テナント) → 各ゲートウェイのローカル hub → 接続）。3ゲートウェイ×12接続でも
+  **DB 読みは poller（テナント数）ぶんだけ**（接続数×tick の素朴案より桁違いに少ない）。
+- **topic=テナント なので、プロセスを跨いでも A の publish は A の接続だけに届く**（混線ゼロ）。
+- `Broker` は interface。**実運用は Redis/NATS に差し替え**（Redis pub/sub は at-most-once。取りこぼしを
+  許さないなら Redis Streams / NATS JetStream の stream 型を使う）。MemBroker はその意味論の検証用。
+
 ## まとめ
 
 - **接続ごとに DB を引かせない**。テナント単位 poller＋hub で「接続数→更新数」に。
