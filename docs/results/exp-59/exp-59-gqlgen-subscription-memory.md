@@ -1,0 +1,88 @@
+# EXP-59 gqlgen subscription 1本あたりの実メモリを測る（推測 40KB の裏取り）
+
+| | |
+| --- | --- |
+| Experiment | EXP-59 / gqlgen-subscription-memory |
+| Starting SHA | `0a357bb66616` (作業ツリーに未コミットの変更あり) |
+| Meter version | `expkit/2` |
+| Hypothesis (frozen before result) | 1) Go 側の per-subscription（resolver goroutine＋out チャネル＋hub 相乗り）は数 KB。 2) 本物の WebSocket の end-to-end（クライアント＋サーバ両端・TLS 無し）は、両端の gorilla バッファぶん重く数十 KB。 3) hub 自体はテナント単位で数 KB（購読者数では増えない）＝メモリを食うのは接続側。 4) 現実のサーバ per-subscription ≒ Go側(数KB) ＋ 接続バッファ(EXP-31: ~34KB) ≒ 約40KB。 |
+| Environment | go1.26.0 linux/amd64 cpu=4 gomaxprocs=4 mysql= sha=0a357bb66616+dirty |
+| Started / Ended | 2026-09-07T23:13:38Z / 2026-09-07T23:13:40Z |
+
+## Results
+
+### server-side isolated: resolver＋hub の per-subscription（socket 無し） — OK
+
+| 数えたもの | 値 |
+| --- | --- |
+| active_tenants | 1 |
+| subscriptions | 5000 |
+
+| 測ったもの | 値 |
+| --- | --- |
+| KB_per_sub | 3.434 |
+| bytes_per_sub | 3516.006 |
+
+- 1テナント×5000購読者。Go側 ≒ 3.4KB/本
+
+### hub のサイズ: テナント1つ（poller＋hub）あたり — OK
+
+| 数えたもの | 値 |
+| --- | --- |
+| active | 500 |
+| tenants | 500 |
+
+| 測ったもの | 値 |
+| --- | --- |
+| KB_per_tenant | 16.432 |
+| bytes_per_tenant | 16826.368 |
+
+- hub＋poller ≒ 16.4KB/テナント。購読者数では増えない
+
+### 本物の WebSocket end-to-end（クライアント＋サーバ両端・TLS 無し） — OK
+
+| 数えたもの | 値 |
+| --- | --- |
+| subscriptions | 800 |
+
+| 測ったもの | 値 |
+| --- | --- |
+| KB_per_sub_loopback | 60.800 |
+| bytes_per_sub_loopback | 62259.200 |
+
+- 両端ぶん＝60.8KB。サーバ片側はこの約半分。TLS は別途 ~32KB(EXP-31)
+
+### 合成: 現実のサーバ per-subscription ≒ Go側 ＋ 接続バッファ(EXP-31) — OK
+
+| 測ったもの | 値 |
+| --- | --- |
+| KB_per_sub_estimated | 37.434 |
+
+- Go側 3.4KB ＋ 接続 ~34KB(EXP-31) ≒ 37.4KB。doc の ~40KB と整合
+
+## Verdict
+
+gqlgen subscription の Go 側 per-subscription（resolver goroutine＋チャネル＋hub 相乗り）は数 KB で、接続バッファ(EXP-31: ~34KB)を足すと現実のサーバ per-subscription ≒ 約40KB。concern-subscription-capacity.md の見積り（1本~40KB → 1vCPU/2GB で 1万〜1.5万本）は妥当。hub 自体はテナント単位で数 KB（購読者数では増えない）＝メモリを食うのは hub でなく接続側。
+
+## 適用範囲
+
+- 純 Go（DB 不要・fake loader）/ このホストの Go ランタイム / HeapInuse＋StackInuse の GC 後増分
+- ① socket 無しの Go 側コスト（resolver goroutine＋out chan＋hub 相乗り）
+- ③ 本物 ws は同一プロセスに client＋server 両端が乗る（TLS 無し）ので両端ぶん
+
+## 保証しない範囲・未検証
+
+- TLS バッファ(~32KB)は本実験に含まれない（本番の実接続で乗る・EXP-31）。合成で足して評価
+- ③のループバックは client＋server 両端ぶん。サーバ単体はおよそ半分
+- gqlgen のバージョン・バッファ設定で単価は動く。オーダー（数KB＋接続34KB＝約40KB）で使う
+- 本番相当の 1vCPU/2GB 実機で N 本張って RSS を測るのが最終確認（ここは Go ヒープの内訳）
+
+## 再利用できる成果物
+
+- internal/subcaplab: gqlgen subscription の per-subscription メモリ実測
+- docs/concern-subscription-capacity.md: 単価の裏取り（~40KB）
+
+## 次の実験
+
+- （容量見積りの裏取り）
+

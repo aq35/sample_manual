@@ -185,6 +185,8 @@ run "63-exp46-cache-${stamp}.txt" "(63) EXP-46 キャッシュ無効化（TTL/�
     go test ./internal/cachelab/ -run TestEXP46 -v -timeout 20m
 run "64-exp47-ordering-${stamp}.txt" "(64) EXP-47 順序・冪等消費（版で単調適用）" \
     go test ./internal/orderlab/ -run TestEXP47 -v -timeout 20m
+run "74-exp59-submem-${stamp}.txt" "(74) EXP-59 gqlgen subscription の実メモリ単価" \
+    go test ./internal/subcaplab/ -run TestEXP59 -v -timeout 20m
 run "65-exp50-memcost-${stamp}.txt" "(65) EXP-50 型ごとのメモリ単価" \
     go test ./internal/memlab/ -run TestEXP50 -v -timeout 20m
 run "66-exp51-loopcost-${stamp}.txt" "(66) EXP-51 ループとアロケーションのコスト" \

@@ -23,7 +23,8 @@ flowchart LR
 - **接続バッファ（TLS 込み）** が主役：1本 ~34KB（[EXP-31](capacity.md)）。
 - **goroutine**：接続読み取り＋購読で 1〜2本、1本 ~2KB（[EXP-50](reference-numbers.md)）。
 - **hub のチャネル**：購読者ごとの受け口、数KB。
-- 合わせて **1本 ≒ 約 40KB** と見積もる（gqlgen の goroutine/チャネルぶんを載せた保守値）。
+- 合わせて **1本 ≒ 約 40KB**。**実測([EXP-59](../internal/subcaplab))**: gqlgen の Go 側（resolver goroutine＋
+  チャネル＋hub 相乗り）は **~3.4KB/本**、接続バッファ ~34KB(EXP-31) を足して **≒37KB**——見積り ~40KB と整合。
 
 ---
 
@@ -89,6 +90,8 @@ hub ≒ アクティブテナント数 × (poller goroutine ~2KB ＋ 最新ス�
 
 → **hub は数 MB。メモリを食っているのは hub でなく「接続そのもの」**（1.5万本 × 40KB ≒ 600MB）。
 「hub のサイズが心配」より「**接続の本数**」を見るのが正しい。
+**実測([EXP-59](../internal/subcaplab))**: hub＋poller は **~16KB/テナント**（購読者数では増えない）。
+1000テナントでも ~16MB＝接続（600MB）に比べれば誤差。
 
 ---
 
@@ -149,5 +152,6 @@ flowchart LR
 裏づけ: [capacity](capacity.md)(EXP-31) / [sse-fan-in](sse-fan-in.md)(EXP-38/40) / [subscription-design](subscription-design.md)(EXP-52) /
 [reference-numbers](reference-numbers.md)(EXP-50) / [worked-examples](worked-examples.md)。
 
-> 注: 1本あたり ~40KB は接続コスト実測（EXP-31/50）に gqlgen の goroutine/チャネルを載せた**見積り**。
-> gqlgen 固有の per-subscription メモリは未実測なので、**本番相当の実機で測って置き換える**こと。
+> 注: 1本あたり ~40KB は、gqlgen の Go 側 per-subscription を実測（[EXP-59](../internal/subcaplab): ~3.4KB）し、
+> 接続バッファ ~34KB(EXP-31) を足した値。TLS バッファは実機の実接続で乗る（EXP-59 は Go ヒープの内訳・
+> TLS 無し）ので、**最終確認は本番相当の 1vCPU/2GB 実機で N 本張って RSS を測る**こと。

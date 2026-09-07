@@ -168,6 +168,7 @@ files, _ := r.Save("...")
 | EXP-56 | bulk INSERT の正規化（単発/tx/prepared/multi-row） | 済（[docs/bulk-insert.md](bulk-insert.md)） |
 | EXP-57 | utf8mb4 と index 長・照合（3072B 上限・_ci/_bin） | 済（[docs/charset.md](charset.md)） |
 | EXP-58 | 共有ワーカーのテナントスコープ強制（越境の実測・cross-leak） | 済（[docs/tenant-scope.md](tenant-scope.md)） |
+| EXP-59 | gqlgen subscription 1本あたりの実メモリ（容量見積りの裏取り） | 済（[docs/concern-subscription-capacity.md](concern-subscription-capacity.md)） |
 
 ## 設計の早見表・原則
 
