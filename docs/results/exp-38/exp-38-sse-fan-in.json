@@ -1,0 +1,122 @@
+{
+  "unit": "EXP-38",
+  "name": "sse-fan-in",
+  "title": "同一テナントで多数が SSE 購読するときの DB ファンインとアプリ側の対応",
+  "meter_version": "expkit/2",
+  "hypothesis": "1) 300 接続が各自ポーリングすると、更新1回につき DB 読みが 300 回（ファンイン）。 2) テナントに1つの poller が1回引き hub で配ると、更新1回につき DB 読みは 1 回。 3) 一斉接続の初期スナップショットは singleflight で畳める（同時 in-flight を1つに。300 同時→ごく少数回）。 4) 遅い購読者は有界バッファで落とし、他 299 人の配信をブロックしない。",
+  "started_at": "2026-09-07T10:28:45.936181667Z",
+  "ended_at": "2026-09-07T10:28:47.189941003Z",
+  "env": {
+    "captured_at": "2026-09-07T10:28:45.936244153Z",
+    "go_version": "go1.26.0",
+    "os": "linux",
+    "arch": "amd64",
+    "num_cpu": 4,
+    "gomaxprocs": 4,
+    "hostname": "vm",
+    "git_sha": "256f744385c5756b09d646a65d7e0a0417960e6b",
+    "git_dirty": true,
+    "mysql_version": "8.0.46-0ubuntu0.24.04.4"
+  },
+  "workload": {},
+  "injection": {},
+  "variants": [
+    {
+      "name": "素朴: 300 接続が各自ポーリング（更新10回）",
+      "counters": {
+        "db_reads": 3000
+      },
+      "accident": true,
+      "notes": [
+        "更新10回 × 300接続 = 3000 回の DB 読み（同じテナントに集中）"
+      ]
+    },
+    {
+      "name": "hub: テナントに1つの poller＋fan-out（更新10回）",
+      "counters": {
+        "db_reads": 10,
+        "min_received": 10
+      },
+      "accident": false,
+      "notes": [
+        "素朴 3000 回 → hub 10 回（更新回数と同じ）。全員が受信"
+      ]
+    },
+    {
+      "name": "stampede: 300 が一斉に初期取得 → singleflight でごく少数の DB 読みに畳む",
+      "counters": {
+        "db_reads": 2
+      },
+      "accident": false,
+      "notes": [
+        "300 同時要求が 2 回の DB 読みに畳まれた（in-flight が重なったぶんを1つに）"
+      ]
+    },
+    {
+      "name": "遅い購読者: 有界バッファで落とし、速い購読者は全部受け取る",
+      "counters": {
+        "dropped_total": 96,
+        "fast_received": 100
+      },
+      "accident": false,
+      "notes": [
+        "速い購読者は 100/100 受信、遅い方は落とされた（96 件）。全体は止まらない"
+      ]
+    },
+    {
+      "name": "hub 上限: fan-out コスト（購読者 300・in-memory）",
+      "metrics": {
+        "broadcasts_per_sec": 168419.5398104494,
+        "per_broadcast_us": 5.937553333333334,
+        "per_sub_ns": 19.791844444444443
+      },
+      "accident": false,
+      "notes": [
+        "1配信 5.9µs（1購読者あたり 19.7ns）"
+      ]
+    },
+    {
+      "name": "hub 上限: fan-out コスト（購読者 1000・in-memory）",
+      "metrics": {
+        "broadcasts_per_sec": 31155.193124655365,
+        "per_broadcast_us": 32.09737766666667,
+        "per_sub_ns": 32.09737766666667
+      },
+      "accident": false,
+      "notes": [
+        "1配信 32.0µs（1購読者あたり 32.0ns）"
+      ]
+    },
+    {
+      "name": "hub 上限: fan-out コスト（購読者 5000・in-memory）",
+      "metrics": {
+        "broadcasts_per_sec": 8553.480656336284,
+        "per_broadcast_us": 116.91147033333333,
+        "per_sub_ns": 23.382294066666667
+      },
+      "accident": false,
+      "notes": [
+        "1配信 116.9µs（1購読者あたり 23.3ns）"
+      ]
+    }
+  ],
+  "verdict": "同一テナントで多数が購読するとき、接続ごとに DB を引かせない。テナントに1つの poller が1回引き、in-memory hub で全員へ配る（300→1）。一斉接続の初期取得は singleflight で1回に畳む。遅い購読者は有界バッファで落として全体を止めない（最新版はまた来るので、差分でなく版/スナップショットを配る設計にする）。SSE 接続に DB 接続を1:1で持たせない（EXP-31）。",
+  "scope": [
+    "MySQL 8.0 / 同一テナント 300 購読者・更新10回 / hub は in-memory fan-out・有界バッファ",
+    "DB 読み回数を数える（Load を呼ぶたび +1）。hub は poller 1本ぶんだけ引く",
+    "singleflight は golang.org/x/sync。stampede は 300 goroutine 同時要求で再現"
+  ],
+  "uncertainty": [
+    "実運用の SSE は接続ごとに goroutine とバッファを持つ（メモリは EXP-31）。ここは DB ファンインに集中",
+    "更新の押し出し方（毎回 push か coalesce か）は頻度次第。高頻度なら間引き/最新版のみ配る",
+    "複数プロセスに購読者が分かれると、各プロセスに poller が要る（プロセス数ぶんの DB 読み）。それでも接続数ではなくプロセス数で頭打ち。プロセス跨ぎの通知は pub/sub が要る（MySQL に LISTEN/NOTIFY は無い）",
+    "落とした更新は『最新版がまた来る』前提の設計（差分でなく版/スナップショット配信）"
+  ],
+  "artifacts": [
+    "internal/ssehub: テナント単位 poller＋fan-out hub・singleflight・有界バッファ",
+    "docs/sse-fan-in.md: 多数購読時の DB ファンイン対策"
+  ],
+  "next": [
+    "なし"
+  ]
+}

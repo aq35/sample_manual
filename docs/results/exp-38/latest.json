@@ -1,0 +1,10 @@
+{
+  "ended_at": "2026-09-07T10:28:47Z",
+  "git_dirty": true,
+  "git_sha": "256f744385c5756b09d646a65d7e0a0417960e6b",
+  "json": "exp-38-sse-fan-in.json",
+  "md": "exp-38-sse-fan-in.md",
+  "meter_version": "expkit/2",
+  "name": "sse-fan-in",
+  "unit": "EXP-38"
+}
