@@ -72,3 +72,18 @@ func TestRecommendPerContainer(t *testing.T) {
 	}
 	t.Logf("10 コンテナに収める per-container = %d 本", per)
 }
+
+func TestGuard(t *testing.T) {
+	// 1000 上限・予約100 → 使える900。worker 2×20 + web 40×20 = 840 ≤ 900 → OK
+	if err := poolbudget.Guard(1000, 100,
+		poolbudget.Role{Name: "worker", Containers: 2, PerContainer: 20},
+		poolbudget.Role{Name: "web", Containers: 40, PerContainer: 20}); err != nil {
+		t.Errorf("収まるはず: %v", err)
+	}
+	// web を 50 台に増やすと 1040 > 900 → エラー
+	if err := poolbudget.Guard(1000, 100,
+		poolbudget.Role{Name: "worker", Containers: 2, PerContainer: 20},
+		poolbudget.Role{Name: "web", Containers: 50, PerContainer: 20}); err == nil {
+		t.Error("予算オーバーを検出できていない")
+	}
+}

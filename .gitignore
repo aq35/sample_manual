@@ -4,6 +4,7 @@
 /loadsim
 /proxylab
 /fphash
+/web
 /*lab
 # 実験の一時ファイル
 *.test

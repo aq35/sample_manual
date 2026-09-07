@@ -107,3 +107,29 @@ func (p Plan) Report() string {
 	w("備考               : 収まる = 遅延が良い ではない。スループットの膝は EXP-5 で実測する")
 	return b.String()
 }
+
+// Role は接続予算の中での役割ごとの取り分。
+type Role struct {
+	Name         string
+	Containers   int
+	PerContainer int
+}
+
+// Guard は「全役割の接続要求が予算に収まるか」を起動時に確かめる。
+// 収まらなければ error（fail-fast）。web と worker を別プロセスにしても、
+// 合計が DB の予算を超えないことをここで担保する。
+func Guard(dbMax, reserved int, roles ...Role) error {
+	budget := dbMax - reserved
+	total := 0
+	var parts []string
+	for _, r := range roles {
+		d := r.Containers * r.PerContainer
+		total += d
+		parts = append(parts, fmt.Sprintf("%s=%d×%d=%d", r.Name, r.Containers, r.PerContainer, d))
+	}
+	if total > budget {
+		return fmt.Errorf("接続予算オーバー: 要求 %d > 予算 %d（max %d - 予約 %d）[%s]",
+			total, budget, dbMax, reserved, strings.Join(parts, " "))
+	}
+	return nil
+}

@@ -28,6 +28,7 @@ AI に設計をレビューさせるときは、**§7 のチェックリスト�
 | §4.1 の表の再現 | `go run ./cmd/loadsim` |
 | 事故を再現して止まることを確かめる実験（EXP-1〜11） | [`docs/experiments.md`](docs/experiments.md) |
 | リポジトリ層・排他制御・SQLite 移植・バックアップ | [`docs/repository-layer.md`](docs/repository-layer.md) / [`docs/locking.md`](docs/locking.md) / [`docs/sqlite.md`](docs/sqlite.md) / [`docs/backup-restore.md`](docs/backup-restore.md) |
+| Worker/Web 分離・統合ワーカー・接続予算 | [`docs/web-worker-split.md`](docs/web-worker-split.md)（`internal/tenantworker` / `cmd/web`） |
 | 他プロジェクトのレビュー | `.claude/skills/go-mysql-worker-review/SKILL.md`（+ `go-mysql-repository-review`） |
 
 ---
