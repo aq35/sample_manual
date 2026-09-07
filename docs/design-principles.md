@@ -20,6 +20,7 @@
 | エラー分類 | 何でも retry は恒久エラーを隠して DB を叩く | 恒久(1062等)は fail-fast、一時(1213/1205/接続断)だけ backoff | [EXP-49](retry.md) |
 | 順序・重複 | 再送・並行で逆順/重複が届く | キーごとに版を持ち「新しい版だけ適用」（単調・冪等） | [EXP-47](event-ordering.md) |
 | マイグレーション途中落ち | DDL の途中でクラッシュしうる | expand/contract で常に前方後方互換。途中状態でも動く | [EXP-6](migration-crash.md)/[EXP-32](zero-downtime-migration.md) |
+| 分離レベル | 既定 RR は再読安定＋gap ロックで phantom 防止 | まず RR。競合が問題で phantom を版/一意で守れれば RC | [EXP-55](isolation.md) |
 
 ## B. 性能・クエリ
 
@@ -34,6 +35,9 @@
 | ステータス別表 | 状態でテーブルを分けるべきか | まず status index。分割は書き込み競合を測ってから | [EXP-22](status-table-split.md) |
 | メモリ単価 | 「2GB あるから無限」ではない | 1件の単価 × 件数が予算内か。単価の 2〜3 倍を安全率 | [EXP-50](reference-numbers.md) |
 | ループ・確保 | 同じ結果でも確保の仕方で ns/alloc が桁違い | 事前確保・Builder・map サイズ指定・boxing 回避 | [EXP-51](reference-numbers.md) |
+| 主キー設計 | InnoDB の表は主キーの B-tree。ランダムは肥大 | 連番 BIGINT が既定。UUID は BINARY(16)＋時刻順 | [EXP-54](primary-key.md) |
+| bulk 書き込み | 往復とコミット数で件/秒が桁違い | multi-row＋1 tx（往復 N→N/chunk・70x） | [EXP-56](bulk-insert.md) |
+| charset/index 長 | utf8mb4 は 4B/字。索引はバイト長で決まる | 長い列は prefix 索引。ASCII 列に utf8mb4 を乱用しない | [EXP-57](charset.md) |
 
 ## C. 容量・スケール
 
@@ -95,21 +99,28 @@
 
 ## 漏れチェック
 
-**埋まっている**（上表・EXP-0〜51 の 52 本、すべて receipt つき）:
+**埋まっている**（上表・EXP-0〜57 の 58 本、すべて receipt つき）:
 正しさ / 性能・クエリ / メモリ・確保 / 容量・スケール / リアルタイム配信 / セキュリティ /
-回復性・障害 / 運用・保守 — 主要な関心はカバー済み。
+回復性・障害 / 運用・保守、および**スキーマ設計の土台**（主キー・分離レベル・bulk・charset）
+— 主要な関心はカバー済み。
 
-**まだ開いている（未実験・今後の候補）**:
+直近で埋めたもの（設計質問→実験化）:
+
+| 関心 | 実験 |
+| --- | --- |
+| hub 内の複数ロボットのキャッシュ破棄（粒度） | [EXP-52](subscription-design.md) |
+| hub の途中失権（長寿命接続の re-auth） | [EXP-53](subscription-design.md) |
+| 状態 × タスク状態の購読設計 | [subscription-design.md](subscription-design.md) §3（[EXP-41/47/14/40/25] が裏づけ） |
+| PK 設計（BIGINT vs UUID）の index 肥大 | [EXP-54](primary-key.md) |
+| トランザクション分離レベル（RR/RC）とファントム | [EXP-55](isolation.md) |
+| bulk INSERT の正規化 | [EXP-56](bulk-insert.md) |
+| charset/collation（utf8mb4）と index 長 | [EXP-57](charset.md) |
+
+**まだ開いている（今後の候補）**:
 
 | 候補 | なぜ要るか | 既存で近いもの |
 | --- | --- | --- |
-| hub 内の複数ロボットのキャッシュ破棄 | 1 hub に複数対象がいるとき、どの粒度で失効させるか | [EXP-46](cache.md)＋[EXP-42](sse-fan-in.md)（別途要実験） |
-| hub のセキュリティ全体像 | 接続時認可・購読スコープ・切断など hub 固有の面 | [EXP-42](sse-fan-in.md)/[EXP-24](security-layers.md)（別途要整理） |
-| 状態 × タスク状態の購読設計 | 2 種類の状態を1つの購読で返すか分けるか | [EXP-47](event-ordering.md)/[EXP-41](graphql.md)（別途要設計） |
-| PK 設計（BIGINT vs UUID）の index 肥大 | ランダム PK は B-tree を分断し書き込みが重い | 未実験 |
-| トランザクション分離レベル（RR/RC）とファントム | 既定 RR の挙動・ロック範囲を測っていない | [EXP-2](fencing.md) が近い |
-| bulk INSERT の正規化（単発 vs まとめ vs LOAD） | seed で使っているが単価を測っていない | [EXP-51](reference-numbers.md) が近い |
-| charset/collation（utf8mb4）と index 長制限 | 多言語で index 長・照合コストが効く | 未実験 |
-
-> このうち上の3つ（hub キャッシュ破棄・hub セキュリティ・状態×タスクの購読設計）は
-> 直近の設計質問。考え方は既存実験から答えられるが、証明が要るものは実験を足す。
+| 生成列/JSON 列の索引 | JSON 属性に索引を張る設計（生成列＋index） | [EXP-57](charset.md)（ハッシュ生成列に触れた） |
+| 全文検索（FULLTEXT）vs LIKE | 部分一致検索のコストと索引 | [EXP-18](date-search.md) が近い |
+| レプリケーション遅延の実挙動 | primary/replica の lag と読み分け | [EXP-20](read-replica.md)/[EXP-30](redundancy.md) が近い |
+| コネクション確立コスト（TLS ハンドシェイク） | プール枯渇時の新規接続コスト | [EXP-5](pool-saturation.md) が近い |

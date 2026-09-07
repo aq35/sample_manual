@@ -163,6 +163,10 @@ files, _ := r.Save("...")
 | EXP-51 | ループとアロケーションの正規化コスト（ns/op・allocs/op） | 済（[docs/reference-numbers.md](reference-numbers.md)） |
 | EXP-52 | hub のキャッシュ破棄の粒度（丸ごと vs 版で差分・400x） | 済（[docs/subscription-design.md](subscription-design.md)） |
 | EXP-53 | 長寿命接続の途中失権（定期 re-authorization） | 済（[docs/subscription-design.md](subscription-design.md)） |
+| EXP-54 | 主キー設計（連番 BIGINT vs ランダム UUID の肥大） | 済（[docs/primary-key.md](primary-key.md)） |
+| EXP-55 | トランザクション分離レベル（RR vs RC・gap ロック） | 済（[docs/isolation.md](isolation.md)） |
+| EXP-56 | bulk INSERT の正規化（単発/tx/prepared/multi-row） | 済（[docs/bulk-insert.md](bulk-insert.md)） |
+| EXP-57 | utf8mb4 と index 長・照合（3072B 上限・_ci/_bin） | 済（[docs/charset.md](charset.md)） |
 
 ## 設計の早見表・原則
 

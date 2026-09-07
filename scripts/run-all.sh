@@ -162,6 +162,14 @@ if [[ -n "${MYSQL_DSN:-}" ]]; then
       go test ./internal/retrylab/ -run TestEXP49 -v -timeout 20m
   run "67-exp52-hubcache-${stamp}.txt" "(67) EXP-52 hub のキャッシュ破棄の粒度" \
       go test ./internal/hubcachelab/ -run TestEXP52 -v -timeout 20m
+  run "69-exp54-pk-${stamp}.txt" "(69) EXP-54 主キー設計（連番 vs UUID）" \
+      go test ./internal/pklab/ -run TestEXP54 -v -timeout 20m
+  run "70-exp55-isolation-${stamp}.txt" "(70) EXP-55 分離レベル（RR vs RC）" \
+      go test ./internal/isolationlab/ -run TestEXP55 -v -timeout 20m
+  run "71-exp56-bulk-${stamp}.txt" "(71) EXP-56 bulk INSERT の正規化" \
+      go test ./internal/bulklab/ -run TestEXP56 -v -timeout 20m
+  run "72-exp57-charset-${stamp}.txt" "(72) EXP-57 utf8mb4 と index 長・照合" \
+      go test ./internal/charsetlab/ -run TestEXP57 -v -timeout 20m
 fi
 
 # ---- MySQL が無くても走る（追加ぶん・可観測性/容量計算/サブスク配線）----

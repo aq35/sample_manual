@@ -1,0 +1,10 @@
+{
+  "ended_at": "2026-09-07T13:10:54Z",
+  "git_dirty": true,
+  "git_sha": "81eda7f21f28fa0afdc00d5761a668b46d0c59a6",
+  "json": "exp-56-bulk-insert.json",
+  "md": "exp-56-bulk-insert.md",
+  "meter_version": "expkit/2",
+  "name": "bulk-insert",
+  "unit": "EXP-56"
+}
