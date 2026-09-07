@@ -26,6 +26,7 @@ import (
 	"github.com/aq35/sample_manual/internal/fakesvc"
 	"github.com/aq35/sample_manual/internal/lease"
 	"github.com/aq35/sample_manual/internal/model"
+	"github.com/aq35/sample_manual/internal/poolbudget"
 	"github.com/aq35/sample_manual/internal/store"
 )
 
@@ -37,6 +38,9 @@ func main() {
 		duration  = flag.Duration("duration", 60*time.Second, "動かす時間")
 		container = flag.String("container", "container-1", "このプロセスの識別子（リースの持ち主名）")
 		maxOpen   = flag.Int("max-open", 20, "MaxOpenConns（コンテナ数 × これ ≤ DB 予算, §5.1）")
+		dbMax     = flag.Int("db-max", 1000, "DB の max_connections（接続予算ガード用）")
+		reserved  = flag.Int("db-reserved", 100, "予約する接続（admin/migration/監視）")
+		replicas  = flag.Int("worker-replicas", 2, "このワーカーの最大レプリカ数（予算計算用）")
 	)
 	flag.Parse()
 
@@ -44,6 +48,13 @@ func main() {
 
 	if *dsn == "" {
 		log.Error("MYSQL_DSN が未設定。scripts/mysql-up.sh を参照")
+		os.Exit(1)
+	}
+
+	// ★接続予算ガード（EXP-5 / poolbudget）: レプリカ数 × プール が DB 予算に収まるか。
+	if err := poolbudget.Guard(*dbMax, *reserved,
+		poolbudget.Role{Name: "worker", Containers: *replicas, PerContainer: *maxOpen}); err != nil {
+		log.Error("接続予算オーバー（worker のレプリカ×プールが DB 上限を超える）", "err", err)
 		os.Exit(1)
 	}
 

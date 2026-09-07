@@ -50,6 +50,23 @@ go test ./internal/repo/       -run TestEXP6 -v   # マイグレーション途�
 
 `MYSQL_DSN` が未設定のときは、DB を使うテストは skip される（CI で壊れない）。
 
+## 実験の全体像（EXP-1〜17）と設計判断
+
+事故を再現し、防止策で止まることを before/after で測り、結果を `docs/results/exp-N/` に実行 SHA つきで残している。一覧と各文書は [`docs/experiments.md`](docs/experiments.md)。
+
+| 実験 | 何を確かめたか |
+| --- | --- |
+| EXP-1〜3 | 外部 effect crash・lease/fencing・graceful shutdown |
+| EXP-4〜7 | backpressure・接続プール飽和・migration crash・実行計画の偏り |
+| EXP-8〜9 | SQL 検査の fuzz・`go/analysis` による保守性検査 |
+| EXP-10〜11 | SQLite 移植契約・バックアップ/復元/破損 |
+| EXP-12〜14 | ポーリング頻度・DB資格情報のローテーション・fan-out を畳む |
+| EXP-15〜17 | テーブル分割と競合・担当テナント数の上限・適応的バックオフ |
+
+**設計判断（30 テナント・接続 1000 を具体に）**: [`docs/web-worker-split.md`](docs/web-worker-split.md)
+（Worker/Web 分離・統合ワーカー・接続予算）、[`docs/scheduling.md`](docs/scheduling.md)（スケジュール/命令/実績とワーカー頻度）、
+[`docs/fanout.md`](docs/fanout.md)（テナント分離を保って fan-out を畳む）、[`docs/table-split.md`](docs/table-split.md)（テーブル分割と競合）。
+
 ## どこに何があるか
 
 | 場所 | 中身 | 資料の対応 |
@@ -64,7 +81,17 @@ go test ./internal/repo/       -run TestEXP6 -v   # マイグレーション途�
 | `internal/mysqlfacts/` | MySQL の挙動確認（§9 の未検証項目） | §9 |
 | `internal/repo/` | **リポジトリ層**。テナント束縛・誤更新の防止・キーセットページ送り・実行計画の検査 | [repository-layer.md](docs/repository-layer.md) |
 | `internal/repo/repotest/` | 実行計画と問い合わせ回数をテストで縛る道具（他プロジェクトへ移植可） | 同上 |
-| `cmd/worker/` | 全部を動かすデモ。途中で事故を起こす | — |
+| `internal/repo/` ほか | リポジトリ層（テナント束縛・誤更新防止・ページ送り・実行計画） | [repository-layer.md](docs/repository-layer.md) |
+| `internal/lint/` + `cmd/sqllint/` | 保守性の静的検査（EXP-9）。層をまたぐ import の禁止（layerimport）も | [static-analysis.md](docs/static-analysis.md) |
+| `internal/kascontract/` | ドライバ戻り値を domain 結果へ正規化。両 engine で同一（EXP-10） | [kas-adoption.md](docs/kas-adoption.md) |
+| `internal/config/` | 環境変数を1箇所で。必須は fail-fast・任意は既定・秘密は期限つき | [secrets.md](docs/secrets.md) |
+| `internal/tenantcache/` `secretcache/` | テナント隔離メモリ／期限つき秘密（singleflight） | [secrets.md](docs/secrets.md) |
+| `internal/poolbudget/` | 接続予算（コンテナ×プール ≤ 上限）と起動時ガード | [pool-saturation.md](docs/pool-saturation.md) |
+| `internal/tenantworker/` | 統合ワーカー（lease×fanout×backoff×fence×独立観測） | [web-worker-split.md](docs/web-worker-split.md) |
+| `internal/appx/` | app 層の小物（Ternary 等・samber/lo 基盤） | [samber-io.md](docs/samber-io.md) |
+| `cmd/worker/` | 状態同期のデモ。途中で事故を起こす。接続予算ガード付き | — |
+| `cmd/dispatcher/` | 統合ワーカーを単体で動かす（命令の配信） | [web-worker-split.md](docs/web-worker-split.md) |
+| `cmd/web/` | Web プロセス（Worker と別・別プール・予算ガード・graceful） | [web-worker-split.md](docs/web-worker-split.md) |
 | `cmd/loadsim/` | 書き方3種のトランザクション数を比較 | §4.1 |
 
 ## 何が確かめられたか（要点）

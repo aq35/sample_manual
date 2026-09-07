@@ -86,7 +86,27 @@ if [[ -n "${MYSQL_DSN:-}" ]]; then
       go test ./internal/planlab/ -run TestEXP7 -v -timeout 20m
   run "22-exp11-backup-${stamp}.txt" "㉒ EXP-11 バックアップ・復元・破損" \
       go test ./internal/backuplab/ -run TestEXP11 -v -timeout 20m
+  run "23-exp12-cadence-${stamp}.txt" "㉓ EXP-12 ワーカーのポーリング頻度" \
+      go test ./internal/cadencelab/ -run TestEXP12 -v -timeout 20m
+  run "24-exp13-credrotate-${stamp}.txt" "㉔ EXP-13 DB資格情報のローテーション" \
+      go test ./internal/credlab/ -run TestEXP13 -v -timeout 20m
+  run "25-exp14-fanout-${stamp}.txt" "㉕ EXP-14 fan-out を畳む" \
+      go test ./internal/fanoutlab/ -run TestEXP14 -v -timeout 20m
+  run "26-exp15-contention-${stamp}.txt" "㉖ EXP-15 テーブル分割と競合" \
+      go test ./internal/contentionlab/ -run TestEXP15 -v -timeout 20m
+  run "27-exp16-inlimit-${stamp}.txt" "㉗ EXP-16 担当テナント数の上限" \
+      go test ./internal/fanoutlab/ -run TestEXP16 -v -timeout 20m
+  run "28-exp17-backoff-${stamp}.txt" "㉘ EXP-17 適応的バックオフ" \
+      go test ./internal/cadencelab/ -run TestEXP17 -v -timeout 20m
+  run "29-tenantworker-${stamp}.txt" "㉙ 統合ワーカー（lease×fanout×backoff）" \
+      go test ./internal/tenantworker/ -v -timeout 10m
+  run "30-kascontract-${stamp}.txt" "㉚ KAS 契約（両engineで同一domain結果）" \
+      go test ./internal/kascontract/ -run TestContract -v -timeout 10m
 fi
+
+# ---- MySQL が無くても走る（追加ぶん）----
+run "31-config-${stamp}.txt" "㉛ config / tenantcache / secretcache / poolbudget" \
+    go test ./internal/config/ ./internal/tenantcache/ ./internal/secretcache/ ./internal/poolbudget/ ./internal/appx/ ./internal/moio/ -v -timeout 10m
 
 # ---- postflight: 「テストが exit 0」だけを成功条件にしない ----
 # tests exit 0 AND MySQL alive AND read/write probe AND 接続が baseline へ戻る
