@@ -1,0 +1,111 @@
+{
+  "unit": "EXP-40",
+  "name": "sse-capacity-calc",
+  "title": "SSE は何人まで（hub あり・なし）を実測係数から計算",
+  "meter_version": "expkit/2",
+  "hypothesis": "1) hub ありの天井はメモリ/fd（1接続 ~34KB）。DB 読みは接続数に無関係（テナント数 / 間隔）。 2) hub なしの DB 読みは接続数に比例（接続数 / 間隔）＝すぐ DB 予算を食う。 3) だから hub なしは数百〜低い千で頭打ち、hub ありは 1タスク 1万超＋横に線形。",
+  "started_at": "2026-09-07T10:49:09.370949896Z",
+  "ended_at": "2026-09-07T10:49:09.379547929Z",
+  "env": {
+    "captured_at": "2026-09-07T10:49:09.371042599Z",
+    "go_version": "go1.26.0",
+    "os": "linux",
+    "arch": "amd64",
+    "num_cpu": 4,
+    "gomaxprocs": 4,
+    "hostname": "vm",
+    "git_sha": "4ee03b5c73be60b6fdedbb729731610d4e989ece",
+    "git_dirty": true
+  },
+  "workload": {},
+  "injection": {},
+  "variants": [
+    {
+      "name": "既定: 30テナント・1万接続・1秒",
+      "counters": {
+        "nohub_max_conns": 2000,
+        "per_task_conn_cap": 15034,
+        "tasks_needed": 1
+      },
+      "metrics": {
+        "hub_db_reads_per_sec": 30,
+        "nohub_db_reads_per_sec": 10000
+      },
+      "accident": false,
+      "notes": [
+        "hub あり: 1タスク 15034 接続（memory律速）× 1 タスク / DB 読み 30/秒（接続数に無関係）",
+        "hub なし: DB 読み 10000/秒 → 予算内=いいえ、予算で許される最大 2000 接続"
+      ]
+    },
+    {
+      "name": "間隔を緩める: 30テナント・1万接続・5秒",
+      "counters": {
+        "nohub_max_conns": 10000,
+        "per_task_conn_cap": 15034,
+        "tasks_needed": 1
+      },
+      "metrics": {
+        "hub_db_reads_per_sec": 6,
+        "nohub_db_reads_per_sec": 2000
+      },
+      "accident": false,
+      "notes": [
+        "hub あり: 1タスク 15034 接続（memory律速）× 1 タスク / DB 読み 6/秒（接続数に無関係）",
+        "hub なし: DB 読み 2000/秒 → 予算内=はい、予算で許される最大 10000 接続"
+      ]
+    },
+    {
+      "name": "大規模: 500テナント・10万接続・1秒",
+      "counters": {
+        "nohub_max_conns": 2000,
+        "per_task_conn_cap": 15034,
+        "tasks_needed": 7
+      },
+      "metrics": {
+        "hub_db_reads_per_sec": 500,
+        "nohub_db_reads_per_sec": 100000
+      },
+      "accident": false,
+      "notes": [
+        "hub あり: 1タスク 15034 接続（memory律速）× 7 タスク / DB 読み 500/秒（接続数に無関係）",
+        "hub なし: DB 読み 100000/秒 → 予算内=いいえ、予算で許される最大 2000 接続"
+      ]
+    },
+    {
+      "name": "小規模: 30テナント・300接続・1秒",
+      "counters": {
+        "nohub_max_conns": 2000,
+        "per_task_conn_cap": 15034,
+        "tasks_needed": 1
+      },
+      "metrics": {
+        "hub_db_reads_per_sec": 30,
+        "nohub_db_reads_per_sec": 300
+      },
+      "accident": false,
+      "notes": [
+        "hub あり: 1タスク 15034 接続（memory律速）× 1 タスク / DB 読み 30/秒（接続数に無関係）",
+        "hub なし: DB 読み 300/秒 → 予算内=はい、予算で許される最大 2000 接続"
+      ]
+    }
+  ],
+  "verdict": "hub なしは DB 律速で数百〜低い千（接続数ぶん DB を食う）。hub ありはメモリ/fd 律速で 1タスク1万〜1.5万・DB は平ら（テナント数/間隔）で横に線形。SSE をやるなら hub 必須、が数字で出る。実値（間隔・テナント数・接続数・スペック・DB 予算）を Inputs に入れれば即再計算できる。",
+  "scope": [
+    "純計算（DB 不要）/ 係数: 1接続 34KB(EXP-31)・安全率 0.4・予約 800MB・fd 60000・SSE の DB 予算 2000/秒",
+    "hub あり: 天井 = min(メモリ由来, fd)。DB 読み = テナント数/間隔",
+    "hub なし: DB 読み = 接続数/間隔。最大接続 = DB 予算 × 間隔"
+  ],
+  "uncertainty": [
+    "係数は実測ベースだが環境で動く（TLS 実装・GC・行の太さ）。実 RSS は上下する",
+    "DB 予算 2000/秒は保守的な例。実際は DB の余力と実クエリとの取り合いで決める（EXP-5）",
+    "fan-out CPU は無視（EXP-38）。ソケット書込み・帯域は別途（更新頻度が高いと効く）",
+    "複数タスクに分かれると poller はタスク（プロセス）ごとに要る → プロセス跨ぎは pub/sub（EXP-38）"
+  ],
+  "artifacts": [
+    "internal/ssecapacity: SSE 容量計算機（実値を差し替えて再計算できる）",
+    "docs/sse-fan-in.md: hub あり・なしの何人まで"
+  ],
+  "next": [
+    "なし"
+  ]
+}

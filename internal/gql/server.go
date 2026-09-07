@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/99designs/gqlgen/graphql/handler"
@@ -15,6 +16,7 @@ import (
 
 	"github.com/aq35/sample_manual/internal/model"
 	"github.com/aq35/sample_manual/internal/repo"
+	"github.com/aq35/sample_manual/internal/ssehub"
 )
 
 // ServerConfig は GraphQL サーバのベストプラクティス設定。
@@ -29,6 +31,8 @@ type ServerConfig struct {
 	AllowList *AllowList
 	// RateLimiter: 非 nil ならテナント単位のレート制限（EXP-26）。
 	RateLimiter *RateLimiter
+	// Events: 非 nil なら subscription（robotVersion）を有効化。テナント単位 hub（EXP-38/39）。
+	Events *ssehub.Registry
 }
 
 // DefaultServerConfig は本番向けの既定（内観オフ・複雑度上限あり）。
@@ -38,7 +42,7 @@ func DefaultServerConfig() ServerConfig {
 
 // NewServer は best-practice を適用した gqlgen ハンドラを作る。
 func NewServer(db *repo.DB, cfg ServerConfig) *handler.Server {
-	r := &Resolver{DB: db, MaxPageSize: cfg.MaxPageSize}
+	r := &Resolver{DB: db, MaxPageSize: cfg.MaxPageSize, Events: cfg.Events}
 
 	c := Config{Resolvers: r}
 	// @auth ディレクティブ（フィールドの必要ロールを解決前に検査する）。
@@ -57,6 +61,10 @@ func NewServer(db *repo.DB, cfg ServerConfig) *handler.Server {
 
 	srv := handler.New(NewExecutableSchema(c))
 	srv.AddTransport(transport.POST{})
+	// subscription（robotVersion）用。WebSocket でストリームを流す。
+	if cfg.Events != nil {
+		srv.AddTransport(transport.Websocket{KeepAlivePingInterval: 15 * time.Second})
+	}
 	// パース済みクエリをキャッシュ（同じクエリの再パースを避ける）。
 	srv.SetQueryCache(lru.New[*ast.QueryDocument](1000))
 

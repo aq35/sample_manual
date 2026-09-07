@@ -39,6 +39,9 @@ type SendCommandInput struct {
 	IdempotencyKey string  `json:"idempotencyKey"`
 }
 
+type Subscription struct {
+}
+
 // ロボットの状態。文字列でなく列挙（model.Status に対応）。
 type RobotStatus string
 

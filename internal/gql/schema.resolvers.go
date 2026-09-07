@@ -140,6 +140,46 @@ func (r *robotResolver) Commands(ctx context.Context, obj *Robot, first *int) ([
 	return commandsForRobot(ctx, sc, obj.ID, n) // ローダ無し＝N+1
 }
 
+// RobotVersion is the resolver for the robotVersion field.
+//
+// gqlgen のサブスクリプションは「チャネルを返す」だけ。接続ごとに DB を引かず、テナント単位の
+// hub（ssehub.Registry）に相乗りする（EXP-38/39）。ctx が切れたら購読解除する（漏れ防止）。
+func (r *subscriptionResolver) RobotVersion(ctx context.Context) (<-chan int, error) {
+	t, err := tenantFrom(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if r.Events == nil {
+		return nil, userErr("subscription unavailable")
+	}
+	src, initial, release := r.Events.Subscribe(string(t))
+	out := make(chan int, 1)
+	go func() {
+		defer release() // 切断で hub から購読解除（最後の1人なら poller も止まる）
+		defer close(out)
+		if initial >= 0 {
+			select {
+			case out <- int(initial): // 初期スナップショット（hub キャッシュ。DB は引かない）
+			case <-ctx.Done():
+				return
+			}
+		}
+		for {
+			select {
+			case v := <-src:
+				select {
+				case out <- int(v):
+				case <-ctx.Done():
+					return
+				}
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+	return out, nil
+}
+
 // Mutation returns MutationResolver implementation.
 func (r *Resolver) Mutation() MutationResolver { return &mutationResolver{r} }
 
@@ -149,8 +189,12 @@ func (r *Resolver) Query() QueryResolver { return &queryResolver{r} }
 // Robot returns RobotResolver implementation.
 func (r *Resolver) Robot() RobotResolver { return &robotResolver{r} }
 
+// Subscription returns SubscriptionResolver implementation.
+func (r *Resolver) Subscription() SubscriptionResolver { return &subscriptionResolver{r} }
+
 type (
-	mutationResolver struct{ *Resolver }
-	queryResolver    struct{ *Resolver }
-	robotResolver    struct{ *Resolver }
+	mutationResolver     struct{ *Resolver }
+	queryResolver        struct{ *Resolver }
+	robotResolver        struct{ *Resolver }
+	subscriptionResolver struct{ *Resolver }
 )

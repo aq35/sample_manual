@@ -67,3 +67,8 @@ type Mutation {
   "ロボットに命令を送る。入力検証→行レベル認可（この robot を操作してよいか・EXP-28）→冪等な発行（EXP-27）。"
   sendCommand(input: SendCommandInput!): Command!
 }
+
+type Subscription {
+  "テナントの版が変わるたびに流す。接続ごとに DB を引かず、テナント単位の hub から配る（EXP-38/39）。"
+  robotVersion: Int!
+}

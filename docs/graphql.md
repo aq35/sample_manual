@@ -120,6 +120,45 @@ type Robot {
   （`internal/gql/errors.go`）で公開印を付けたものだけ通し、それ以外は "internal error" に
   一般化する（`{extensions:{code:"USER_ERROR"}}` が付く）。
 
+## サブスクリプション（gqlgen で hub を作る・EXP-41）
+
+gqlgen の subscription リゾルバは **「チャネルを返すだけ」**。ここで**接続ごとに DB を引かせない**
+のが肝。テナント単位の hub（[ssehub.Registry](../internal/ssehub/registry.go)）に相乗りさせ、
+版が変わったら全接続へ流す（[EXP-38](sse-fan-in.md)/[EXP-39](sse-fan-in.md)）。
+
+```graphql
+type Subscription {
+  robotVersion: Int!   # テナントの版が変わるたびに流す
+}
+```
+```go
+func (r *subscriptionResolver) RobotVersion(ctx context.Context) (<-chan int, error) {
+    t, err := tenantFrom(ctx)              // テナントは ctx から（subscription でも引数から取らない）
+    if err != nil { return nil, err }
+    src, initial, release := r.Events.Subscribe(string(t)) // テナント hub に相乗り（DB は引かない）
+    out := make(chan int, 1)
+    go func() {
+        defer release()                    // ctx 切断で購読解除（最後の1人なら poller も止まる）
+        defer close(out)
+        if initial >= 0 { out <- int(initial) }  // 初期スナップショットは hub キャッシュから
+        for {
+            select {
+            case v := <-src: select { case out <- int(v): case <-ctx.Done(): return }
+            case <-ctx.Done(): return
+            }
+        }
+    }()
+    return out, nil
+}
+```
+- **トランスポートは `NewServer` で `transport.Websocket{}` を足す**（`ServerConfig.Events` を渡すと有効化）。
+  ブラウザは WebSocket、または graphql-sse。
+- 実測（EXP-41）: 版 0→5→9 が購読チャネルへ流れ、**ctx 切断でチャネルが閉じ購読解除**（active 1→0）。
+  接続ごとの DB 読みは無い（hub の poller の分だけ）。
+- **何人まで／何タスク要るか**は [EXP-40](sse-fan-in.md) の計算機で。hub ありは**メモリ/fd 律速**
+  （1 vCPU/2GB で ~1.5万接続/タスク・DB は平ら）。それを超える or 隔離したいときだけ SSE 層を分けて
+  pub/sub（[EXP-38](sse-fan-in.md)）。
+
 ## 書き込み（mutation）
 
 ### 10. 冪等な書き込みと入力検証（EXP-27）

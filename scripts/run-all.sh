@@ -148,9 +148,13 @@ if [[ -n "${MYSQL_DSN:-}" ]]; then
       go test ./internal/ssehub/ -run TestEXP39 -v -timeout 20m
 fi
 
-# ---- MySQL が無くても走る（追加ぶん・可観測性）----
+# ---- MySQL が無くても走る（追加ぶん・可観測性/容量計算/サブスク配線）----
 run "52-exp37-observability-${stamp}.txt" "(52) EXP-37 可観測性（カーディナリティ・コスト）" \
     go test ./internal/metrics/ -run TestEXP37 -v -timeout 20m
+run "55-exp40-ssecapacity-${stamp}.txt" "(55) EXP-40 SSE 容量計算（hub あり/なし）" \
+    go test ./internal/ssecapacity/ -run TestEXP40 -v -timeout 20m
+run "56-exp41-gqlsub-${stamp}.txt" "(56) EXP-41 gqlgen サブスクリプション（hub 配線）" \
+    go test ./internal/gql/ -run TestEXP41 -v -timeout 20m
 
 # ---- MySQL が無くても走る（追加ぶん）----
 run "31-config-${stamp}.txt" "㉛ config / tenantcache / secretcache / poolbudget" \

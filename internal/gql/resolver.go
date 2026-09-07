@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/aq35/sample_manual/internal/repo"
+	"github.com/aq35/sample_manual/internal/ssehub"
 )
 
 // Resolver は依存の注入口。テナント束縛済みの *repo.DB だけを持つ。
@@ -14,6 +15,10 @@ type Resolver struct {
 	// MaxPageSize は robots(first) の上限。クライアントがいくつ要求してもこれで頭打ちにする
 	// （無制限一覧を作らせない・DoS 対策）。0 なら defaultMaxPageSize。
 	MaxPageSize int
+
+	// Events はサブスクリプション用のテナント単位 hub（nil なら subscription は使えない）。
+	// 接続ごとに DB を引かず、ここに相乗りする（EXP-38/39）。
+	Events *ssehub.Registry
 }
 
 const defaultMaxPageSize = 100

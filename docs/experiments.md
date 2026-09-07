@@ -149,6 +149,8 @@ files, _ := r.Save("...")
 | EXP-37 | 可観測性（メトリクスのカーディナリティ・コスト） | 済（[docs/observability.md](observability.md)） |
 | EXP-38 | 多数が同一テナントで SSE 購読するとき（DB ファンイン対策・hub 上限） | 済（[docs/sse-fan-in.md](sse-fan-in.md)） |
 | EXP-39 | 動く SSE エンドポイント（poller＋fan-out＋レジストリ・1コンテナ） | 済（[docs/sse-fan-in.md](sse-fan-in.md)） |
+| EXP-40 | SSE は何人まで（hub あり/なしの容量計算機） | 済（[docs/sse-fan-in.md](sse-fan-in.md)） |
+| EXP-41 | gqlgen サブスクリプションを hub で作る | 済（[docs/graphql.md](graphql.md)） |
 
 ## 実行時ガード
 
