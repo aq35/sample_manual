@@ -1,195 +1,211 @@
-# Worker / Web 単体の実寸サンプル（メモリ・CPU の圧迫）
+# Worker / Web 単体の実寸サンプル（メモリ・CPU はどこで埋まる？）
 
-[早見表](reference-numbers.md)の単価に**具体的な数字を代入**した worked example。
-1 vCPU / 2GB のタスクに Worker 単体・Web 単体を載せたとき、メモリと CPU が
-どう埋まるかを計算と図で見る。**律速が Worker=DB・Web=CPU** で違うのがポイント（[EXP-31](capacity.md)）。
+[早見表](reference-numbers.md)の数字だけだとイメージしづらいので、**実際に 1 台のサーバー
+（1 vCPU / 2GB）に載せたら、メモリと CPU がどこで埋まるか**を、たとえ話つきで見ていく。
 
-> CPU の「1 vCPU = 1000ms/秒」は、1秒あたり使える CPU 時間の予算。メモリは 2GB = 2048MB。
-> ランタイム基準値と1リクエストの CPU ms は**仮定**（最後は実機で測る）。単価の出典は
-> [EXP-50](../internal/memlab)（メモリ）/[EXP-31](capacity.md)（接続・往復）/[EXP-51](../internal/looplab)（確保）。
+先に結論だけ言うと——
+
+- **Worker（裏で回り続ける処理）**は、メモリも CPU もスカスカに余る。詰まるのは **DB との往復**。
+- **Web（画面から叩かれる API）**は、メモリは余るが **CPU が先に埋まる**。
+
+同じサーバーでも「先に一杯になる場所」が違う。だから**設計の打ち手も変わる**、という話。
+
+### まず2つの「財布」を頭に置く
+
+| 資源 | たとえ | 中身 |
+| --- | --- | --- |
+| **CPU** | 1秒ごとに配られる **1,000 ミリ秒ぶんの作業枠** | 「JSON を組む」「行を処理する」など**計算**に使う。DB の返事待ちの間は使わない（IO 待ち＝枠が空く） |
+| **メモリ** | **2,048 MB の箱** | 常駐プロセス自身・接続・処理中のデータが場所を取る。足すだけ。超えたら OOM |
+
+この2つの財布に、Worker と Web がそれぞれ何を入れていくかを足し算するだけ。単価は
+[EXP-50](../internal/memlab)（メモリ）/[EXP-31](capacity.md)（接続・DB往復）から。
+
+> 注: ランタイムの基準メモリや「1リクエスト＝何ミリ秒 CPU」は**仮定**。最後は実機で測って
+> 置き換える（[EXP-31](capacity.md)）。ここでは桁と「どこが先に埋まるか」を掴むのが目的。
 
 ---
 
-## 1. Worker 単体サンプル
+## 1. Worker 単体 — 「1,000 台のロボットを見張る常駐プロセス」
 
-### 構成（具体値）
+やっていることは単純で、**1秒ごとに「状態が変わったロボットだけ」を DB から拾って処理する**。
 
-| 項目 | 値 |
+| 前提 | 値 |
 | --- | --- |
-| 担当 | 50 テナント × 20 台 = **1,000 台** |
-| 関連表 | 4つ（state / task / lease / history） |
-| ポーリング | 1 秒ごと・テナント単位に coalesce（[EXP-14](fanout.md)/[EXP-52](subscription-design.md)）→ **50 クエリ/秒** |
-| 状態遷移 | 1台 5 秒に1回 → **200 変更/秒** |
-| DB プール | **8 本** |
-| 処理 goroutine | 16 本 |
-
-### 構造
+| 見張る台数 | 50 テナント × 20 台 = **1,000 台** |
+| 見に行く頻度 | 1 秒ごと（テナント単位にまとめて＝**50 クエリ/秒**・[EXP-14](fanout.md)） |
+| 実際に変わる量 | 1 台 5 秒に1回 → **200 台/秒** |
+| DB 接続の本数 | **8 本**（プール） |
 
 ```mermaid
 flowchart LR
-  T["ticker 1s"] --> P["poller x50 tenant<br/>delta: ver &gt; last"]
-  subgraph W["Worker task (1 vCPU / 2GB)"]
-    P --> POOL[("DB pool 8")]
-    P --> G["worker goroutine x16"]
+  T["1秒ごとの合図"] --> P["poller: 変わった行だけ拾う<br/>ver &gt; last"]
+  subgraph W["Worker 1台 (1 vCPU / 2GB)"]
+    P --> POOL[("DB接続プール 8本")]
+    P --> G["処理 goroutine 16本"]
     G --> POOL
-    G --> O["outbox / dispatch"]
+    G --> O["外部へ通知 / outbox"]
   end
   POOL --> DB[("MySQL")]
-  O --> EXT["external effect"]
+  O --> EXT["外部サービス"]
 ```
 
-### メモリ圧迫の計算
+### メモリの箱（2,048MB）に何が入る？
 
-```
-Go runtime + GC 基準:            ~300 MB        （ヒープ＋GC 余白の仮定）
-DB プール 8本 × ~64KB(読みバッファ等): ~0.5 MB
-処理 goroutine 16 × 2KB(EXP-50):  ~0.03 MB
-処理中の行 200 × (48B + payload ~200B)(EXP-50): ~0.05 MB
-作業ヒープ(DataLoader map 等):    ~20 MB         （仮定）
-------------------------------------------------
-使用 ≒ 320 MB  →  空き headroom ≒ 1,728 MB（84% 空き）
-```
+| 入るもの | 量 | なぜその量か |
+| --- | --- | --- |
+| プロセス自身（Go ランタイム＋GC 余白） | ~300 MB | 常駐プロセスの土台。ほぼ固定 |
+| DB 接続 8 本 | ~0.5 MB | 1 接続あたり数十 KB の読みバッファ程度 |
+| 処理 goroutine 16 本 | ~0.03 MB | 1 本 2KB（[EXP-50](reference-numbers.md)）。誤差レベル |
+| 処理中の行 200 件 | ~0.05 MB | 1 行 ≒ 250B（構造体48B＋文字列）。誤差レベル |
+| 作業用メモリ（まとめ引きの map 等） | ~20 MB | ざっくり見積り |
+| **合計** | **≒ 320 MB** | **箱の 16%。残り 1.7GB は空き** |
 
 ```mermaid
 pie showData
   title Worker memory (MB of 2048)
-  "Go runtime+GC" : 300
-  "DB pool + buffers" : 10
-  "in-flight rows + work heap" : 20
-  "free headroom" : 1718
+  "process + runtime 300" : 300
+  "everything else 20" : 20
+  "free 1728" : 1728
 ```
 
-### CPU 圧迫の計算
+**読み方**：ほぼ「プロセス自身」だけで、仕事のデータは誤差。**メモリはまったく問題にならない**。
 
-```
-delta クエリ 50/秒 × ~0.2ms(パース/scan): ~10 ms/秒
-行処理 200/秒 × ~0.3ms:                    ~60 ms/秒
-dispatch 200/秒 × ~0.2ms:                  ~40 ms/秒
-------------------------------------------------
-CPU 使用 ≒ 110 ms/秒 ＝ 1 vCPU の ~11%（残りは DB 往復の IO 待ち）
+### CPU の財布（1,000ms/秒）はどれくらい使う？
 
-DB 往復の天井: プール8 × (1 / 0.5ms RTT) = 16,000 ops/秒  ≫ 必要 200/秒
-```
+| 使い道 | 計算 | CPU |
+| --- | --- | --- |
+| 変更を拾うクエリ | 50 回/秒 × 0.2ms | ~10 ms |
+| 拾った行の処理 | 200 件/秒 × 0.3ms | ~60 ms |
+| 外部通知の組み立て | 200 件/秒 × 0.2ms | ~40 ms |
+| **合計** | | **≒ 110 ms（財布の 11%）** |
 
 ```mermaid
 pie showData
   title Worker CPU (ms per sec of 1000)
-  "delta query" : 10
-  "row processing" : 60
-  "dispatch" : 40
-  "idle / IO wait" : 890
+  "work 110" : 110
+  "idle / waiting for DB 890" : 890
 ```
 
-> **Worker 単体の結論**: メモリ ~16%・CPU ~11% で**どちらも大きく余る**。律速は
-> **DB プール本数 × 往復遅延**（今回は 16,000 ops/秒の天井に対し 200/秒で余裕）。
-> 足りなくなったら**縦（vCPU 増）でなく横（Worker レプリカ増）**。ただし合計接続が
-> DB 予算を超えないよう [poolbudget](../internal/poolbudget) で確認（[EXP-30](redundancy.md)）。
-> **やってはいけない**: 1台ずつポーリング（1,000×4=**40,000 クエリ/秒**で天井超過・[EXP-31](capacity.md)）。
+**読み方**：CPU も1割ほどしか使わない。残りは**「DB の返事待ち」で空いている**。
+
+### では何が limit なのか → **DB との往復**
+
+```
+DB 往復の上限 = 接続8本 × (1秒 ÷ 0.5ms) = 16,000 回/秒
+今回必要なのは       50 + 200 ≒ 250 回/秒
+→ 上限の 1.5% しか使っていない。まだ 60 倍は捌ける
+```
+
+> **まとめ（Worker）**: メモリ 16%・CPU 11%・DB 1.5%。**全部スカスカ**。増やしたければ
+> サーバーを大きくする（縦）より**台数を増やす（横）**＋ [poolbudget](../internal/poolbudget) で
+> DB の総接続だけ確認すればいい（[EXP-30](redundancy.md)）。
+> **失敗パターン**: 1 台ずつ個別に見に行くと 1,000台×4表 = **40,000 クエリ/秒**で DB 上限を突破する
+> （だから「まとめて拾う」・[EXP-31](capacity.md)）。
 
 ---
 
-## 2. Web 単体サンプル
+## 2. Web 単体 — 「画面から叩かれる API ＋ ライブ配信」
 
-### 構成（具体値）
+3種類の仕事をする：**一覧を返す(Query)・更新する(Mutation)・状態をリアルタイム配信する(SSE)**。
 
-| 項目 | 値 |
+| 前提 | 値 |
 | --- | --- |
-| SSE 購読 | **2,000 接続**（TLS）・50 テナントに分散（40/テナント） |
-| Query | **100 rps**（一覧 50 件・keyset） |
-| Mutation | 20 rps（冪等） |
-| hub | poller **50 本**（アクティブテナント単位・[EXP-38](sse-fan-in.md)） |
-| DB プール | **20 本**（共有・小さめ） |
-| fan-out 元 | 200 変更/秒 → 各 40 購読者へ配信 |
-
-### 構造
+| ライブ配信の同時接続 | **2,000 本**（SSE・TLS） |
+| 一覧の呼ばれ方 | **100 回/秒**（50 件ずつ） |
+| 更新の呼ばれ方 | 20 回/秒 |
+| DB 接続の本数 | **20 本**（共有） |
+| 配信のもと | 200 変更/秒 →（40 人へ配る） |
 
 ```mermaid
 flowchart LR
-  C["clients"] -->|"TLS / Query 100rps"| H["HTTP / GraphQL handler"]
-  C -->|"SSE 2000"| S["subscribe goroutine x2000"]
-  subgraph WEB["Web task (1 vCPU / 2GB)"]
-    H --> POOL[("DB pool 20")]
-    S --> HUB["hub: poller x50<br/>delta snapshot"]
+  C["利用者たち"] -->|"一覧 100回/秒"| H["API ハンドラ"]
+  C -->|"ライブ配信 2000本"| S["配信 goroutine 2000本"]
+  subgraph WEB["Web 1台 (1 vCPU / 2GB)"]
+    H --> POOL[("DB接続プール 20本")]
+    S --> HUB["hub: 変更をまとめて配る"]
     HUB --> POOL
   end
   POOL --> DB[("MySQL")]
 ```
 
-### メモリ圧迫の計算
+### メモリの箱（2,048MB）に何が入る？
 
-```
-Go runtime + GC 基準:                 ~400 MB
-SSE 2,000 接続 × 34KB(TLS込み・EXP-31): ~68 MB
-hub poller 50 × (2KB + snapshot 5KB): ~0.35 MB
-DB プール 20 × ~64KB:                  ~1.3 MB
-リクエスト処理中(100rps×20ms≒2並行):   ~0.03 MB（narrow なら無視）
-------------------------------------------------
-使用 ≒ 470 MB  →  空き headroom ≒ 1,578 MB（77% 空き）
-※ SSE は 1万〜1.5万本まで伸ばせる（EXP-40）。2,000 は余裕
-```
+| 入るもの | 量 | なぜその量か |
+| --- | --- | --- |
+| プロセス自身（ランタイム＋GC） | ~400 MB | 常駐の土台 |
+| ライブ配信 2,000 本 | **~68 MB** | 1 本 ≒ 34KB（TLS のバッファ込み・[EXP-31](capacity.md)）。**ここが接続ぶんの主役** |
+| hub（配信をまとめる仕組み） | ~0.4 MB | テナントごとに1つ。誤差 |
+| DB 接続 20 本 | ~1.3 MB | 誤差 |
+| **合計** | **≒ 470 MB** | **箱の 23%。残り 1.5GB は空き** |
 
 ```mermaid
 pie showData
   title Web memory (MB of 2048)
-  "Go runtime+GC" : 400
-  "SSE 2000 conn (34KB)" : 68
-  "hub + DB pool" : 2
-  "free headroom" : 1578
+  "process + runtime 400" : 400
+  "live connections 2000 x 34KB = 68" : 68
+  "hub + DB pool 2" : 2
+  "free 1578" : 1578
 ```
 
-### CPU 圧迫の計算
+**読み方**：接続を 2,000 本抱えても **68MB**。メモリ的には **1万〜1.5万本まで伸ばせる**（[EXP-40](capacity.md)）。
+つまり**メモリはまだ余裕**。
 
-```
-Query 100rps × ~5ms(JSON+TLS+scan):     500 ms/秒
-SSE fan-out 200変更/秒 × 40購読者 = 8,000 push/秒 × ~0.03ms: 240 ms/秒
-Mutation 20rps × ~3ms:                    60 ms/秒
-------------------------------------------------
-CPU 使用 ≒ 800 ms/秒 ＝ 1 vCPU の ~80%  ← 先に頭打ちになるのはここ
-```
+### CPU の財布（1,000ms/秒）はどれくらい使う？
+
+| 使い道 | 計算 | CPU |
+| --- | --- | --- |
+| 一覧を返す（JSON 整形・TLS・DB scan） | 100 回/秒 × 5ms | **500 ms** |
+| ライブ配信の fan-out | 200 変更 × 40 人 = 8,000 送信/秒 × 0.03ms | **240 ms** |
+| 更新 | 20 回/秒 × 3ms | 60 ms |
+| **合計** | | **≒ 800 ms（財布の 80%）** |
 
 ```mermaid
 pie showData
   title Web CPU (ms per sec of 1000)
-  "Query 100rps" : 500
-  "SSE fan-out" : 240
-  "Mutation 20rps" : 60
-  "spare" : 200
+  "list queries 500" : 500
+  "live fan-out 240" : 240
+  "mutations 60" : 60
+  "spare 200" : 200
 ```
 
-> **Web 単体の結論**: メモリ ~24% で**余る**が、**CPU が ~80% で先に頭打ち**（Query の
-> JSON/TLS と fan-out が主。[EXP-31](capacity.md) の「Web=CPU 律速」）。ピークで飽和したら
-> **横に割る**（5,000 SSE × 複数タスク・[EXP-30](redundancy.md)）。
-> DB プール 20 は同時クエリの天井（[EXP-5](pool-saturation.md) の膝）——Query 100rps は
-> ~2 並行で収まるが、遅いクエリが増えると 20 で頭打ち。
-> **やってはいけない**: SSE 1本に DB 接続を 1:1（2,000 接続で DB 枯渇・[EXP-38](sse-fan-in.md)）／
-> 一覧で `SELECT *` の太い列（50 行 × 24KB × 同時数でメモリ膨張・[EXP-21](column-projection.md)）。
+**読み方**：**CPU が 80% まで埋まっている**。メモリはガラガラなのに、**先に音を上げるのは CPU の方**。
+
+### では何が limit なのか → **CPU（と、詰まると DB 接続20本）**
+
+> **まとめ（Web）**: メモリ 23%（余裕）だが CPU 80%（もう一杯に近い）。ピークで振り切れたら
+> **1 台で頑張らず横に割る**（例: 5,000 本 × 複数台・[EXP-30](redundancy.md)）。
+> **失敗パターン**: ①ライブ配信 1 本に DB 接続を1本ずつ持たせる → 2,000 接続で DB が枯れる
+> （だから hub で共有・[EXP-38](sse-fan-in.md)）。②一覧で `SELECT *` して太い列まで取る →
+> 50 行 × 24KB × 同時数でメモリが一気に膨らむ（[EXP-21](column-projection.md)）。
 
 ---
 
-## まとめ：律速が違う
+## まとめ：同じサーバーでも「先に埋まる場所」が逆
 
-| | メモリ使用 | CPU 使用 | 律速 | 増やし方 |
-| --- | --- | --- | --- | --- |
-| **Worker 単体** | ~320MB（16%） | ~110ms/s（11%） | **DB プール × 往復遅延** | 横（レプリカ）＋ batch |
-| **Web 単体** | ~470MB（24%） | ~800ms/s（**80%**） | **CPU**（＋DB プール） | 横（レプリカ）・SSE は hub |
+| | メモリ | CPU | DB往復 | 先に詰まるのは | 増やし方 |
+| --- | --- | --- | --- | --- | --- |
+| **Worker** | 16% | 11% | 1.5% | **DB との往復** | 横に台数 ＋ まとめ引き |
+| **Web** | 23% | **80%** | — | **CPU** | 横に台数 ＋ 配信は hub |
 
 ```mermaid
 flowchart TB
-  subgraph WK["Worker: DB が先に天井"]
-    W1["CPU 11%"] -.余裕.-> W2["メモリ 16%"] -.余裕.-> W3["DB 往復が律速"]
+  subgraph WK["Worker はここが先に埋まる"]
+    direction LR
+    W1["CPU 余裕"] --> W2["メモリ 余裕"] --> W3["DB往復が limit"]
   end
-  subgraph WB["Web: CPU が先に天井"]
-    B1["メモリ 24%"] -.余裕.-> B2["CPU 80%"] -->|"先に飽和"| B3["横に割る"]
+  subgraph WB["Web はここが先に埋まる"]
+    direction LR
+    B1["メモリ 余裕"] --> B2["CPU 80% で limit"]
   end
 ```
 
-- **同じ 1 vCPU/2GB でも、Worker と Web で埋まる資源が逆**。Worker はメモリも CPU も余り DB 待ち、
-  Web は CPU が先に埋まる。だから**1タスクに Worker と Web を相乗りさせない**（[EXP-29](web-worker-split.md)）。
-- 数字は当たり付け。**ランタイム基準値・1リクエストの CPU ms は実機で測って置き換える**（[EXP-31](capacity.md)）。
-- 計算式そのものは [reference-numbers.md](reference-numbers.md) の「スケーリング公式」を使う。
+- **Worker は DB 待ち・Web は CPU 待ち**。埋まる場所が逆だから、**1 台に相乗りさせると
+  互いの足を引っ張る**（Web の CPU 消費が Worker のポーリングを遅らせる等）。だから分ける（[EXP-29](web-worker-split.md)）。
+- ここの数字は**当たりを付けるため**のもの。実際は**実機で「1リクエスト何ミリ秒 CPU か」を測って
+  差し替える**（[EXP-31](capacity.md)）。計算のやり方自体は [reference-numbers.md](reference-numbers.md) の公式に。
 
 ## 保証しない範囲・未検証
 
-- Go runtime+GC の基準値（300〜400MB）と1リクエストの CPU ms（5ms 等）は仮定。実機で要測定。
-- fan-out の CPU は「変更×購読者×直列化」の概算。実際はシリアライズ方式・payload で上下。
-- SSE 34KB/接続は TLS バッファ込みの現実値（[EXP-31](capacity.md)）。実装・バッファ設定で変わる。
+- プロセスの基準メモリ（300〜400MB）と「1リクエスト＝5ms CPU」などは仮定。実機で要測定。
+- 配信の CPU は「変更数 × 配信人数 × 直列化」の概算。実際はデータ量・実装で上下する。
+- 1 接続 34KB は TLS バッファ込みの現実値（[EXP-31](capacity.md)）。バッファ設定で変わる。
