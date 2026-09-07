@@ -1,0 +1,10 @@
+{
+  "ended_at": "2026-09-07T12:51:28Z",
+  "git_dirty": true,
+  "git_sha": "fd59624975cda45ac21b63777587a9dd278797c9",
+  "json": "exp-53-mid-stream-revocation.json",
+  "md": "exp-53-mid-stream-revocation.md",
+  "meter_version": "expkit/2",
+  "name": "mid-stream-revocation",
+  "unit": "EXP-53"
+}

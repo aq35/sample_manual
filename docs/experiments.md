@@ -161,13 +161,17 @@ files, _ := r.Save("...")
 | EXP-49 | 一時 vs 恒久エラーの分類とリトライ（fail-fast） | 済（[docs/retry.md](retry.md)） |
 | EXP-50 | Go の変数・型ごとのメモリ単価（2GB に何件載るか） | 済（[docs/reference-numbers.md](reference-numbers.md)） |
 | EXP-51 | ループとアロケーションの正規化コスト（ns/op・allocs/op） | 済（[docs/reference-numbers.md](reference-numbers.md)） |
+| EXP-52 | hub のキャッシュ破棄の粒度（丸ごと vs 版で差分・400x） | 済（[docs/subscription-design.md](subscription-design.md)） |
+| EXP-53 | 長寿命接続の途中失権（定期 re-authorization） | 済（[docs/subscription-design.md](subscription-design.md)） |
 
 ## 設計の早見表・原則
 
 | 文書 | 内容 |
 | --- | --- |
 | [docs/reference-numbers.md](reference-numbers.md) | 正規化した数値の早見表（メモリ/ループ/DB往復/列幅/1vCPU2GB 理論値） |
+| [docs/why-necessary.md](why-necessary.md) | なぜ必要か（標準ワーカー/標準Web のメモリ・ストレージ計算 → 破綻 → 設計） |
 | [docs/design-principles.md](design-principles.md) | 関心ごと × 考え方 × どうあるべき の一覧（漏れチェックつき） |
+| [docs/subscription-design.md](subscription-design.md) | hub の破棄粒度・途中失権・状態×タスクの購読設計 |
 
 ## 実行時ガード
 

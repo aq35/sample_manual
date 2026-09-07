@@ -160,6 +160,8 @@ if [[ -n "${MYSQL_DSN:-}" ]]; then
       go test ./internal/retentionlab/ -run TestEXP48 -v -timeout 20m
   run "62-exp49-retry-${stamp}.txt" "(62) EXP-49 一時 vs 恒久エラーの分類とリトライ" \
       go test ./internal/retrylab/ -run TestEXP49 -v -timeout 20m
+  run "67-exp52-hubcache-${stamp}.txt" "(67) EXP-52 hub のキャッシュ破棄の粒度" \
+      go test ./internal/hubcachelab/ -run TestEXP52 -v -timeout 20m
 fi
 
 # ---- MySQL が無くても走る（追加ぶん・可観測性/容量計算/サブスク配線）----
@@ -177,6 +179,8 @@ run "65-exp50-memcost-${stamp}.txt" "(65) EXP-50 型ごとのメモリ単価" \
     go test ./internal/memlab/ -run TestEXP50 -v -timeout 20m
 run "66-exp51-loopcost-${stamp}.txt" "(66) EXP-51 ループとアロケーションのコスト" \
     go test ./internal/looplab/ -run TestEXP51 -v -timeout 20m
+run "68-exp53-revauth-${stamp}.txt" "(68) EXP-53 長寿命接続の途中失権" \
+    go test ./internal/revauthlab/ -run TestEXP53 -v -timeout 20m
 
 # ---- MySQL が無くても走る（追加ぶん）----
 run "31-config-${stamp}.txt" "㉛ config / tenantcache / secretcache / poolbudget" \
