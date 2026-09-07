@@ -147,6 +147,8 @@ if [[ -n "${MYSQL_DSN:-}" ]]; then
   run "54-exp39-sse-endpoint-${stamp}.txt" "(54) EXP-39 動く SSE エンドポイント" \
       go test ./internal/ssehub/ -run TestEXP39 -v -timeout 20m
 fi
+run "57-exp42-hub-isolation-${stamp}.txt" "(57) EXP-42 hub のテナント分離" \
+    go test ./internal/ssehub/ -run TestEXP42 -v -timeout 20m
 
 # ---- MySQL が無くても走る（追加ぶん・可観測性/容量計算/サブスク配線）----
 run "52-exp37-observability-${stamp}.txt" "(52) EXP-37 可観測性（カーディナリティ・コスト）" \

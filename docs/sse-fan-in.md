@@ -91,6 +91,20 @@ receipt は [docs/results/exp-39](results/exp-39/exp-39-sse-endpoint.md)）。
   15秒ごとの `: ping`（idle 切断防止＋死活）。テナントは**認証から**（URL に置かない）。
 - 初期スナップショットは **poller のキャッシュ**から配る（接続ごとの DB 読みは無い）。
 
+## テナント分離（EXP-42）
+
+hub は**テナントごとに別 hub＋別 poller**（Registry のキーがテナント）。だから A の購読者に B の
+イベントは構造上流れない。実測（[docs/results/exp-42](results/exp-42/exp-42-hub-tenant-isolation.md)）:
+
+- A の版だけ動かすと **A の購読者だけが受信、B はゼロ**（逆も）。値の範囲で混線を検出して
+  **cross_leaks=0**。
+- poller の `load` はテナント引数で**自テナントだけ読む**（fold の担当限定と同じ原理・[EXP-14](fanout.md)）。
+- **A の購読者が全員抜けても B の poller は残る**（active 2→1→0）＝テナントは独立に増減する。
+- singleflight もテナントキーで畳むので跨がない（上記 stampede）。
+
+分離は hub 層で構造的に担保され、**テナントの出所を認証済み ctx から取る**（[EXP-24](graphql.md)/
+[EXP-41](graphql.md)）ことと合わせて、SSE でもテナント境界が守られる（[docs/security-layers.md](security-layers.md)）。
+
 ## 保証しない範囲・未検証
 
 - fan-out の実測は in-memory コスト。実 SSE のソケット書き込み・TLS・接続メモリは [EXP-31](capacity.md)。

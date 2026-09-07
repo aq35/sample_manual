@@ -1,0 +1,10 @@
+{
+  "ended_at": "2026-09-07T11:13:04Z",
+  "git_dirty": true,
+  "git_sha": "79951f6a8015bf5e69ff3ae8da7d30886e6076fb",
+  "json": "exp-42-hub-tenant-isolation.json",
+  "md": "exp-42-hub-tenant-isolation.md",
+  "meter_version": "expkit/2",
+  "name": "hub-tenant-isolation",
+  "unit": "EXP-42"
+}

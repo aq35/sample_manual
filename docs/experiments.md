@@ -151,6 +151,7 @@ files, _ := r.Save("...")
 | EXP-39 | 動く SSE エンドポイント（poller＋fan-out＋レジストリ・1コンテナ） | 済（[docs/sse-fan-in.md](sse-fan-in.md)） |
 | EXP-40 | SSE は何人まで（hub あり/なしの容量計算機） | 済（[docs/sse-fan-in.md](sse-fan-in.md)） |
 | EXP-41 | gqlgen サブスクリプションを hub で作る | 済（[docs/graphql.md](graphql.md)） |
+| EXP-42 | hub のテナント分離（混線ゼロ・poller 独立） | 済（[docs/sse-fan-in.md](sse-fan-in.md)） |
 
 ## 実行時ガード
 
