@@ -1,0 +1,10 @@
+{
+  "ended_at": "2026-09-07T09:39:59Z",
+  "git_dirty": true,
+  "git_sha": "4bb77e776e25115315b4e4cf827524040bc75221",
+  "json": "exp-33-db-failover-resilience.json",
+  "md": "exp-33-db-failover-resilience.md",
+  "meter_version": "expkit/2",
+  "name": "db-failover-resilience",
+  "unit": "EXP-33"
+}

@@ -141,6 +141,9 @@ files, _ := r.Save("...")
 | EXP-29 | Web と Worker の接続プール分離（共有 vs 分離） | 済（[docs/web-worker-split.md](web-worker-split.md)） |
 | EXP-30 | 冗長化（複数レプリカ）でアプリはどうあるべきか | 済（[docs/redundancy.md](redundancy.md)） |
 | EXP-31 | 1 vCPU/2GB タスクの容量（SSE 本数・Worker 処理量） | 済（[docs/capacity.md](capacity.md)） |
+| EXP-32 | 無停止スキーマ変更（expand/contract） | 済（[docs/zero-downtime-migration.md](zero-downtime-migration.md)） |
+| EXP-33 | DB 切断/フェイルオーバへの耐性 | 済（[docs/db-resilience.md](db-resilience.md)） |
+| EXP-34 | ノイジーネイバー（テナント公平性） | 済（[docs/tenant-fairness.md](tenant-fairness.md)） |
 
 ## 実行時ガード
 

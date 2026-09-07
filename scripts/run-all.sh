@@ -132,6 +132,12 @@ if [[ -n "${MYSQL_DSN:-}" ]]; then
       go test ./internal/redundancylab/ -run TestEXP30 -v -timeout 20m
   run "46-exp31-capacity-${stamp}.txt" "㊻ EXP-31 1タスクの容量（SSE・Worker）" \
       go test ./internal/capacitylab/ -run TestEXP31 -v -timeout 20m
+  run "47-exp32-migration-${stamp}.txt" "㊼ EXP-32 無停止スキーマ変更（expand/contract）" \
+      go test ./internal/deploylab/ -run TestEXP32 -v -timeout 20m
+  run "48-exp33-resilience-${stamp}.txt" "㊽ EXP-33 DB 切断への耐性" \
+      go test ./internal/resiliencelab/ -run TestEXP33 -v -timeout 20m
+  run "49-exp34-fairness-${stamp}.txt" "㊾ EXP-34 テナント公平性" \
+      go test ./internal/fairnesslab/ -run TestEXP34 -v -timeout 20m
 fi
 
 # ---- MySQL が無くても走る（追加ぶん）----
