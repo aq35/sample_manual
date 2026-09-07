@@ -4,6 +4,9 @@
 サンドボックス CPU のもので本番と違う。バイト・alloc・走査行数は環境に依りにくい）。
 出典の receipt を各節に付けた。スケーリングは末尾の公式で。
 
+> 具体的なイメージが欲しいときは、この単価に数字を代入した **[Worker/Web 単体の実寸サンプル
+> （メモリ・CPU の圧迫を計算＋図で）](worked-examples.md)** を先に見ると分かりやすい。
+
 ---
 
 ## 1. Go のメモリ単価（[EXP-50](../internal/memlab) / [receipt](results/exp-50/exp-50-memory-unit-cost.md)）

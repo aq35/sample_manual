@@ -173,6 +173,7 @@ files, _ := r.Save("...")
 | 文書 | 内容 |
 | --- | --- |
 | [docs/reference-numbers.md](reference-numbers.md) | 正規化した数値の早見表（メモリ/ループ/DB往復/列幅/1vCPU2GB 理論値） |
+| [docs/worked-examples.md](worked-examples.md) | Worker/Web 単体の実寸サンプル（メモリ・CPU 圧迫の計算＋mermaid 図） |
 | [docs/why-necessary.md](why-necessary.md) | なぜ必要か（標準ワーカー/標準Web のメモリ・ストレージ計算 → 破綻 → 設計） |
 | [docs/design-principles.md](design-principles.md) | 関心ごと × 考え方 × どうあるべき の一覧（漏れチェックつき） |
 | [docs/subscription-design.md](subscription-design.md) | hub の破棄粒度・途中失権・状態×タスクの購読設計 |
