@@ -64,7 +64,7 @@ func (rl *RateLimiter) Allow(key string) bool {
 
 // --- gqlgen 拡張として差し込む（テナントが context に載った後の operation 段で効く）---
 
-func (rl *RateLimiter) ExtensionName() string                  { return "TenantRateLimit" }
+func (rl *RateLimiter) ExtensionName() string                   { return "TenantRateLimit" }
 func (rl *RateLimiter) Validate(graphql.ExecutableSchema) error { return nil }
 
 // InterceptOperation はテナント単位でレート制限し、超過時は実行させずにエラーを返す。

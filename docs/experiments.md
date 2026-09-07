@@ -136,6 +136,8 @@ files, _ := r.Save("...")
 | EXP-24 | gqlgen のセキュリティ（テナント分離・複雑度 DoS・内観・エラー秘匿） | 済（[docs/graphql.md](graphql.md)） |
 | EXP-25 | gqlgen の認可（@auth ディレクティブ・フィールド単位ロール） | 済（[docs/graphql.md](graphql.md)） |
 | EXP-26 | gqlgen の受付制御（永続化クエリ allowlist・レート制限） | 済（[docs/graphql.md](graphql.md)） |
+| EXP-27 | gqlgen mutation の冪等性・入力検証 | 済（[docs/graphql.md](graphql.md)） |
+| EXP-28 | gqlgen の行レベル認可（この対象を操作してよいか） | 済（[docs/graphql.md](graphql.md)） |
 
 ## 実行時ガード
 

@@ -86,6 +86,8 @@ func NewServer(db *repo.DB, cfg ServerConfig) *handler.Server {
 			gqlErr.Message = "unauthenticated"
 		case errors.Is(e, repo.ErrTooManyRows) || errors.Is(e, repo.ErrTooCostly):
 			gqlErr.Message = "request too large"
+		case isPublic(gqlErr):
+			// クライアント起因（入力不正・認可拒否・受付拒否）はそのまま見せてよい。
 		default:
 			// 内部エラーは詳細を隠す（ログには別途出す前提）。
 			gqlErr.Message = "internal error"

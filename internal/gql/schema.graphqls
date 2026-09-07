@@ -54,3 +54,16 @@ type Query {
   "ID 1件取得。テナント境界を跨げないことを保証する（EXP-24）。"
   robot(id: ID!): Robot
 }
+
+"命令送信の入力。冪等キーは必須（二重発行を防ぐ・EXP-27）。"
+input SendCommandInput {
+  robotId: ID!
+  type: String!
+  payload: String
+  idempotencyKey: String!
+}
+
+type Mutation {
+  "ロボットに命令を送る。入力検証→行レベル認可（この robot を操作してよいか・EXP-28）→冪等な発行（EXP-27）。"
+  sendCommand(input: SendCommandInput!): Command!
+}

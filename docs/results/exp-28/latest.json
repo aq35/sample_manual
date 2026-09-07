@@ -1,0 +1,10 @@
+{
+  "ended_at": "2026-09-07T07:57:08Z",
+  "git_dirty": true,
+  "git_sha": "b582002fec96333ed26e96246faf14cebb24346a",
+  "json": "exp-28-gqlgen-row-level-authz.json",
+  "md": "exp-28-gqlgen-row-level-authz.md",
+  "meter_version": "expkit/2",
+  "name": "gqlgen-row-level-authz",
+  "unit": "EXP-28"
+}

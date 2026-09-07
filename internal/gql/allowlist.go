@@ -46,7 +46,7 @@ func (a *AllowList) Validate(graphql.ExecutableSchema) error { return nil }
 // 無ければ実行させない（パース・実行の前段で弾く）。
 func (a *AllowList) MutateOperationContext(ctx context.Context, oc *graphql.OperationContext) *gqlerror.Error {
 	if _, ok := a.hashes[HashQuery(oc.RawQuery)]; !ok {
-		return gqlerror.Errorf("query not allowed（未登録のクエリ・allowlist 外）")
+		return userErr("query not allowed（未登録のクエリ・allowlist 外）")
 	}
 	return nil
 }

@@ -9,6 +9,34 @@ import (
 	"context"
 )
 
+// SendCommand is the resolver for the sendCommand field.
+//
+// 書き込みの順序: 入力検証（EXP-27）→ 行レベル認可（EXP-28）→ 冪等な発行（EXP-27）。
+func (r *mutationResolver) SendCommand(ctx context.Context, input SendCommandInput) (*Command, error) {
+	// ① 入力検証（DB に触れる前に、クライアント起因のエラーとして弾く）
+	if err := validateSendCommand(input); err != nil {
+		return nil, err
+	}
+	sc, err := r.scope(ctx)
+	if err != nil {
+		return nil, err
+	}
+	// ② 行レベル認可: この主体が、この robot を操作してよいか
+	principal, ok := principalFrom(ctx)
+	if !ok {
+		return nil, ErrNoTenant // 主体不明（未認証）
+	}
+	allowed, err := canOperate(ctx, sc, principal, input.RobotID)
+	if err != nil {
+		return nil, err
+	}
+	if !allowed {
+		return nil, userErr("forbidden: この robot を操作する権限がない")
+	}
+	// ③ 冪等な発行（同じ idempotencyKey の再送は既存を返す）
+	return sendCommand(ctx, sc, input)
+}
+
 // Robots is the resolver for the robots field.
 func (r *queryResolver) Robots(ctx context.Context, first int, after *string) (*RobotConnection, error) {
 	sc, err := r.scope(ctx)
@@ -112,6 +140,9 @@ func (r *robotResolver) Commands(ctx context.Context, obj *Robot, first *int) ([
 	return commandsForRobot(ctx, sc, obj.ID, n) // ローダ無し＝N+1
 }
 
+// Mutation returns MutationResolver implementation.
+func (r *Resolver) Mutation() MutationResolver { return &mutationResolver{r} }
+
 // Query returns QueryResolver implementation.
 func (r *Resolver) Query() QueryResolver { return &queryResolver{r} }
 
@@ -119,6 +150,7 @@ func (r *Resolver) Query() QueryResolver { return &queryResolver{r} }
 func (r *Resolver) Robot() RobotResolver { return &robotResolver{r} }
 
 type (
-	queryResolver struct{ *Resolver }
-	robotResolver struct{ *Resolver }
+	mutationResolver struct{ *Resolver }
+	queryResolver    struct{ *Resolver }
+	robotResolver    struct{ *Resolver }
 )

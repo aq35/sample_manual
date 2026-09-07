@@ -40,6 +40,12 @@ CREATE TABLE IF NOT EXISTS cmd_command (
   PRIMARY KEY (tenant_id, command_id),
   KEY by_robot (tenant_id, robot_id, scheduled_for),
   UNIQUE KEY uq_idem (tenant_id, idem_key)
+) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS robot_operator (
+  tenant_id VARCHAR(32) NOT NULL,
+  operator  VARCHAR(64) NOT NULL,
+  robot_id  VARCHAR(32) NOT NULL,
+  PRIMARY KEY (tenant_id, operator, robot_id)
 ) ENGINE=InnoDB;`
 
 // Setup は robot_profile（repo.Migrate）と robot_state / cmd_command を用意する。
@@ -61,7 +67,7 @@ func Setup(ctx context.Context, db *repo.DB) error {
 // Seed は tenant に robots 台、各ロボットに cmdsPer 件の命令を入れる。
 func Seed(ctx context.Context, db *repo.DB, tenant string, robots, cmdsPer int) error {
 	sqldb := db.SQL()
-	for _, t := range []string{"robot_state", "robot_profile", "cmd_command"} {
+	for _, t := range []string{"robot_state", "robot_profile", "cmd_command", "robot_operator"} {
 		if _, err := sqldb.ExecContext(ctx, "DELETE FROM "+t+" WHERE tenant_id=?", tenant); err != nil {
 			return err
 		}
@@ -94,8 +100,8 @@ func Seed(ctx context.Context, db *repo.DB, tenant string, robots, cmdsPer int) 
 			return err
 		}
 	}
-	// cmd_command
-	for i := 0; i < robots; i++ {
+	// cmd_command（cmdsPer が 0 なら命令は入れない）
+	for i := 0; cmdsPer > 0 && i < robots; i++ {
 		rid := fmt.Sprintf("r%04d", i)
 		var b strings.Builder
 		b.WriteString("INSERT INTO cmd_command (tenant_id, command_id, robot_id, type, state, idem_key, scheduled_for) VALUES ")
@@ -114,6 +120,22 @@ func Seed(ctx context.Context, db *repo.DB, tenant string, robots, cmdsPer int) 
 		}
 	}
 	return nil
+}
+
+// GrantOperator は operator に robot_id の操作権限を1つ与える（行レベル認可の grant）。
+func GrantOperator(ctx context.Context, db *repo.DB, tenant, operator, robotID string) error {
+	_, err := db.SQL().ExecContext(ctx,
+		"INSERT IGNORE INTO robot_operator (tenant_id, operator, robot_id) VALUES (?,?,?)",
+		tenant, operator, robotID)
+	return err
+}
+
+// CountCommandsByIdem は冪等キーで作られた命令の行数（冪等性テスト用）。
+func CountCommandsByIdem(ctx context.Context, db *repo.DB, tenant, idemKey string) (int, error) {
+	var n int
+	err := db.SQL().QueryRowContext(ctx,
+		"SELECT COUNT(*) FROM cmd_command WHERE tenant_id=? AND idem_key=?", tenant, idemKey).Scan(&n)
+	return n, err
 }
 
 // SeedOne は1台だけ足す（テナント分離テストで「B だけに在る id」を作る用）。

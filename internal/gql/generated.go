@@ -29,6 +29,7 @@ func NewExecutableSchema(cfg Config) graphql.ExecutableSchema {
 type Config = graphql.Config[ResolverRoot, DirectiveRoot, ComplexityRoot]
 
 type ResolverRoot interface {
+	Mutation() MutationResolver
 	Query() QueryResolver
 	Robot() RobotResolver
 }
@@ -43,6 +44,10 @@ type ComplexityRoot struct {
 		ScheduledFor func(childComplexity int) int
 		State        func(childComplexity int) int
 		Type         func(childComplexity int) int
+	}
+
+	Mutation struct {
+		SendCommand func(childComplexity int, input SendCommandInput) int
 	}
 
 	Query struct {
@@ -71,6 +76,9 @@ type ComplexityRoot struct {
 
 // region    ************************** generated!.gotpl **************************
 
+type MutationResolver interface {
+	SendCommand(ctx context.Context, input SendCommandInput) (*Command, error)
+}
 type QueryResolver interface {
 	Robots(ctx context.Context, first int, after *string) (*RobotConnection, error)
 	Robot(ctx context.Context, id string) (*Robot, error)
@@ -124,6 +132,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Command.Type(childComplexity), true
+
+	case "Mutation.sendCommand":
+		if e.ComplexityRoot.Mutation.SendCommand == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_sendCommand_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.SendCommand(childComplexity, args["input"].(SendCommandInput)), true
 
 	case "Query.robot":
 		if e.ComplexityRoot.Query.Robot == nil {
@@ -222,7 +242,9 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 	opCtx := graphql.GetOperationContext(ctx)
 	ec := newExecutionContext(opCtx, e, make(chan graphql.DeferredResult))
-	inputUnmarshalMap := graphql.BuildUnmarshalerMap()
+	inputUnmarshalMap := graphql.BuildUnmarshalerMap(
+		ec.unmarshalInputSendCommandInput,
+	)
 	first := true
 
 	switch opCtx.Operation.Operation {
@@ -255,6 +277,21 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 			}
 
 			return &response
+		}
+	case ast.Mutation:
+		return func(ctx context.Context) *graphql.Response {
+			if !first {
+				return nil
+			}
+			first = false
+			ctx = graphql.WithUnmarshalerMap(ctx, inputUnmarshalMap)
+			data := ec._Mutation(ctx, opCtx.Operation.SelectionSet)
+			var buf bytes.Buffer
+			data.MarshalGQL(&buf)
+
+			return &graphql.Response{
+				Data: buf.Bytes(),
+			}
 		}
 
 	default:
@@ -477,6 +514,20 @@ func (ec *executionContext) dir_auth_args(ctx context.Context, rawArgs map[strin
 	return args, nil
 }
 
+func (ec *executionContext) field_Mutation_sendCommand_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input",
+		func(ctx context.Context, v any) (SendCommandInput, error) {
+			return ec.unmarshalNSendCommandInput2githubᚗcomᚋaq35ᚋsample_manualᚋinternalᚋgqlᚐSendCommandInput(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg0
+	return args, nil
+}
+
 func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -691,6 +742,50 @@ func (ec *executionContext) _Command_scheduledFor(ctx context.Context, field gra
 }
 func (ec *executionContext) fieldContext_Command_scheduledFor(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("Command", field, false, false, errors.New("field of type Time does not have child fields"))
+}
+
+func (ec *executionContext) _Mutation_sendCommand(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_sendCommand(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().SendCommand(ctx, fc.Args["input"].(SendCommandInput))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *Command) graphql.Marshaler {
+			return ec.marshalNCommand2ᚖgithubᚗcomᚋaq35ᚋsample_manualᚋinternalᚋgqlᚐCommand(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_sendCommand(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Command(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_sendCommand_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
 }
 
 func (ec *executionContext) _Query_robots(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -2194,6 +2289,57 @@ func (ec *executionContext) fieldContext___Type_isOneOf(_ context.Context, field
 
 // region    **************************** input.gotpl *****************************
 
+func (ec *executionContext) unmarshalInputSendCommandInput(ctx context.Context, obj any) (SendCommandInput, error) {
+	var it SendCommandInput
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"robotId", "type", "payload", "idempotencyKey"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "robotId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("robotId"))
+			data, err := ec.unmarshalNID2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.RobotID = data
+		case "type":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("type"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Type = data
+		case "payload":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("payload"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Payload = data
+		case "idempotencyKey":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("idempotencyKey"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.IdempotencyKey = data
+		}
+	}
+	return it, nil
+}
+
 // endregion **************************** input.gotpl *****************************
 
 // region    ************************** interface.gotpl ***************************
@@ -2231,6 +2377,54 @@ func (ec *executionContext) _Command(ctx context.Context, sel ast.SelectionSet, 
 			}
 		case "scheduledFor":
 			out.Values[i] = ec._Command_scheduledFor(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferLabelToView), math.MaxInt32)))
+
+	ec.ProcessDeferredGroup(graphql.DeferredGroup{
+		Defers:   deferLabelToView,
+		Path:     graphql.GetPath(ctx),
+		FieldSet: deferredFieldSet,
+		Context:  ctx,
+	})
+
+	return out
+}
+
+var mutationImplementors = []string{"Mutation"}
+
+func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, mutationImplementors)
+	ctx = graphql.WithFieldContext(ctx, &graphql.FieldContext{
+		Object: "Mutation",
+	})
+
+	out := graphql.NewFieldSet(fields)
+	deferredFieldSet := graphql.NewFieldSet(nil)
+	deferLabelToView := make(map[string]*graphql.FieldSetView)
+	for i, field := range fields {
+		innerCtx := graphql.WithRootFieldContext(ctx, &graphql.RootFieldContext{
+			Object: field.Name,
+			Field:  field,
+		})
+
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Mutation")
+		case "sendCommand":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_sendCommand(ctx, field)
+			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -2997,6 +3191,16 @@ func (ec *executionContext) marshalNCommand2ᚕgithubᚗcomᚋaq35ᚋsample_manu
 	return ret
 }
 
+func (ec *executionContext) marshalNCommand2ᚖgithubᚗcomᚋaq35ᚋsample_manualᚋinternalᚋgqlᚐCommand(ctx context.Context, sel ast.SelectionSet, v *Command) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._Command(ctx, sel, v)
+}
+
 func (ec *executionContext) unmarshalNID2string(ctx context.Context, v any) (string, error) {
 	res, err := graphql.UnmarshalID(v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -3077,6 +3281,11 @@ func (ec *executionContext) unmarshalNRole2githubᚗcomᚋaq35ᚋsample_manual�
 
 func (ec *executionContext) marshalNRole2githubᚗcomᚋaq35ᚋsample_manualᚋinternalᚋgqlᚐRole(ctx context.Context, sel ast.SelectionSet, v Role) graphql.Marshaler {
 	return v
+}
+
+func (ec *executionContext) unmarshalNSendCommandInput2githubᚗcomᚋaq35ᚋsample_manualᚋinternalᚋgqlᚐSendCommandInput(ctx context.Context, v any) (SendCommandInput, error) {
+	res, err := ec.unmarshalInputSendCommandInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) unmarshalNString2string(ctx context.Context, v any) (string, error) {

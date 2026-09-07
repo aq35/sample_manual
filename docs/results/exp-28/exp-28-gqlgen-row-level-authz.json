@@ -1,0 +1,72 @@
+{
+  "unit": "EXP-28",
+  "name": "gqlgen-row-level-authz",
+  "title": "行レベル認可: この robot を操作してよいか（対象×主体）",
+  "meter_version": "expkit/2",
+  "hypothesis": "1) grant のある (u-op, r0000) は操作できる。 2) 同じテナント内でも grant の無い robot（u-op, r0001）は拒否。 3) grant を持たない別主体（u-other, r0000）は、他人が操作できる robot でも拒否。 4) 拒否時は命令を書き込まない（行を作らない）。",
+  "started_at": "2026-09-07T07:57:08.721011618Z",
+  "ended_at": "2026-09-07T07:57:08.735870454Z",
+  "env": {
+    "captured_at": "2026-09-07T07:57:08.721076958Z",
+    "go_version": "go1.26.0",
+    "os": "linux",
+    "arch": "amd64",
+    "num_cpu": 4,
+    "gomaxprocs": 4,
+    "hostname": "vm",
+    "git_sha": "b582002fec96333ed26e96246faf14cebb24346a",
+    "git_dirty": true,
+    "mysql_version": "8.0.46-0ubuntu0.24.04.4"
+  },
+  "workload": {},
+  "injection": {},
+  "variants": [
+    {
+      "name": "grant あり (u-op, r0000) → 操作できる",
+      "counters": {
+        "ok": 1
+      },
+      "accident": false
+    },
+    {
+      "name": "grant 無しの robot (u-op, r0001) → 拒否・行を作らない",
+      "counters": {
+        "rejected": 1,
+        "rows": 0
+      },
+      "accident": true,
+      "notes": [
+        "error: [{\"message\":\"forbidden: この robot を操作する権限がない\",\"path\":[\"sendCommand\"],\"locations\":[{\"line\":1,\"column\":35}],\"extensions\":{\"code\":\"USER_ERROR\"}}]"
+      ]
+    },
+    {
+      "name": "別主体 (u-other, r0000) → 他人が操作できる robot でも拒否",
+      "counters": {
+        "rejected": 1,
+        "rows": 0
+      },
+      "accident": true,
+      "notes": [
+        "error: [{\"message\":\"forbidden: この robot を操作する権限がない\",\"path\":[\"sendCommand\"],\"locations\":[{\"line\":1,\"column\":35}],\"extensions\":{\"code\":\"USER_ERROR\"}}]"
+      ]
+    }
+  ],
+  "verdict": "行レベル認可は『この主体がこの対象を操作してよいか』を、対象と主体を見てリゾルバで判定する。フィールド単位の @auth では表せない（行に依る）。主体は context から取り、拒否時は書き込まない。",
+  "scope": [
+    "MySQL 8.0 / gqlgen v0.17 / robot_operator (tenant_id, operator, robot_id) が grant",
+    "主体（operator）は context（X-User→principal）から。引数から取らない",
+    "行レベルは対象×主体に依るのでリゾルバで判定（@auth ディレクティブでは表せない）"
+  ],
+  "uncertainty": [
+    "ここは『操作(mutation)』の行レベル認可。読み取り側の行フィルタは別途（一覧に混ぜない）",
+    "grant の管理（誰がいつ付与・失効するか）は本実験外",
+    "ADMIN のバイパス等のポリシーは要件次第。ここでは grant 必須で統一"
+  ],
+  "artifacts": [
+    "internal/gql: canOperate（robot_operator による行レベル認可）と sendCommand リゾルバ",
+    "docs/graphql.md: 行レベル認可（対象×主体）"
+  ],
+  "next": [
+    "なし"
+  ]
+}

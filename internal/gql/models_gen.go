@@ -18,6 +18,9 @@ type Command struct {
 	ScheduledFor time.Time `json:"scheduledFor"`
 }
 
+type Mutation struct {
+}
+
 type Query struct {
 }
 
@@ -26,6 +29,14 @@ type RobotConnection struct {
 	Robots    []Robot `json:"robots"`
 	EndCursor *string `json:"endCursor,omitempty"`
 	HasNext   bool    `json:"hasNext"`
+}
+
+// 命令送信の入力。冪等キーは必須（二重発行を防ぐ・EXP-27）。
+type SendCommandInput struct {
+	RobotID        string  `json:"robotId"`
+	Type           string  `json:"type"`
+	Payload        *string `json:"payload,omitempty"`
+	IdempotencyKey string  `json:"idempotencyKey"`
 }
 
 // ロボットの状態。文字列でなく列挙（model.Status に対応）。
