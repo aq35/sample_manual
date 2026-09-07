@@ -1,0 +1,44 @@
+scalar Time
+
+"ロボットの状態。文字列でなく列挙（model.Status に対応）。"
+enum RobotStatus {
+  UNKNOWN
+  IDLE
+  RUNNING
+  ERROR
+  OFFLINE
+}
+
+"ロボット。name は robot_profile（めったに変わらない別表）、状態は robot_state。"
+type Robot {
+  id: ID!
+  "別表 robot_profile から。要求されたときだけ引く（射影・EXP-19）。"
+  name: String!
+  status: RobotStatus!
+  battery: Int!
+  online: Boolean!
+  "そのロボットの直近の命令。ネスト解決＝N+1 の温床。DataLoader で畳む（EXP-23）。"
+  commands(first: Int = 20): [Command!]!
+}
+
+"命令（cmd_command）。"
+type Command {
+  id: ID!
+  type: String!
+  state: String!
+  scheduledFor: Time!
+}
+
+"keyset ページングの1ページ。first は必須で、サーバ側で上限を掛ける（DoS 対策・EXP-24）。"
+type RobotConnection {
+  robots: [Robot!]!
+  endCursor: ID
+  hasNext: Boolean!
+}
+
+type Query {
+  "テナント内のロボットを keyset で返す。first は必須・上限つき（無制限一覧を作らせない）。"
+  robots(first: Int!, after: ID): RobotConnection!
+  "ID 1件取得。テナント境界を跨げないことを保証する（EXP-24）。"
+  robot(id: ID!): Robot
+}

@@ -1,0 +1,43 @@
+# gqlgen 設定。生成物は internal/gql（package gql）へ置く。
+schema:
+  - internal/gql/schema.graphqls
+
+exec:
+  filename: internal/gql/generated.go
+  package: gql
+
+model:
+  filename: internal/gql/models_gen.go
+  package: gql
+
+resolver:
+  layout: follow-schema
+  dir: internal/gql
+  package: gql
+  filename_template: "{name}.resolvers.go"
+
+# 三項演算子/ポインタスライスは避けたい。要素はポインタにしない。
+omit_slice_element_pointers: true
+# 解決関数に必ず ctx を渡す（nocontext 方針と揃える）。
+call_argument_directives_with_null: false
+
+models:
+  ID:
+    model:
+      - github.com/99designs/gqlgen/graphql.ID
+  Int:
+    model:
+      - github.com/99designs/gqlgen/graphql.Int
+      - github.com/99designs/gqlgen/graphql.Int64
+  Time:
+    model:
+      - github.com/99designs/gqlgen/graphql.Time
+  # Robot は自前モデルに束縛し、name / commands はフィールドリゾルバにする
+  # （要求されたときだけ引く＝射影と DataLoader を効かせる）。
+  Robot:
+    model: github.com/aq35/sample_manual/internal/gql.Robot
+    fields:
+      name:
+        resolver: true
+      commands:
+        resolver: true

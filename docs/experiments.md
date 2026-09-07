@@ -132,6 +132,8 @@ files, _ := r.Save("...")
 | EXP-20 | 予定/実績を primary とレプリカで読み分ける | 済（[docs/read-replica.md](read-replica.md)） |
 | EXP-21 | 太い列の重さは inline/off-page で決まる・SELECT * の効き | 済（[docs/column-projection.md](column-projection.md)） |
 | EXP-22 | ステータスでテーブルを分けるべきか | 済（[docs/status-table-split.md](status-table-split.md)） |
+| EXP-23 | gqlgen のパフォーマンス（N+1・DataLoader・射影・ページ上限） | 済（[docs/graphql.md](graphql.md)） |
+| EXP-24 | gqlgen のセキュリティ（テナント分離・複雑度 DoS・内観・エラー秘匿） | 済（[docs/graphql.md](graphql.md)） |
 
 ## 実行時ガード
 

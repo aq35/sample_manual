@@ -1,0 +1,88 @@
+{
+  "unit": "EXP-24",
+  "name": "gqlgen-security",
+  "title": "gqlgen のテナント分離・複雑度 DoS・内観・エラー秘匿",
+  "meter_version": "expkit/2",
+  "hypothesis": "1) テナントは主体から決める（context）。スキーマに tenant 引数が無く、詐称できない。 2) 他テナントだけの id を問い合わせても、:tenant で弾かれ null（存在も漏らさない）。 3) 複雑度上限を超える深い/広いクエリは、DB に触れる前に弾かれる（クエリ数 0）。 4) 本番は内観オフ（__schema は拒否）。内部エラーは一般化して client に漏らさない。",
+  "started_at": "2026-09-07T05:22:23.0534167Z",
+  "ended_at": "2026-09-07T05:22:23.063285968Z",
+  "env": {
+    "captured_at": "2026-09-07T05:22:23.05345524Z",
+    "go_version": "go1.26.0",
+    "os": "linux",
+    "arch": "amd64",
+    "num_cpu": 4,
+    "gomaxprocs": 4,
+    "hostname": "vm",
+    "git_sha": "068530920c27deb70f8eee2b34437ba5adfa6fe2",
+    "git_dirty": true,
+    "mysql_version": "8.0.46-0ubuntu0.24.04.4"
+  },
+  "workload": {},
+  "injection": {},
+  "variants": [
+    {
+      "name": "テナント分離: A から B だけの id を引く → null",
+      "counters": {
+        "leaked": 0,
+        "own_visible": 1
+      },
+      "accident": false,
+      "notes": [
+        "他テナントの id は :tenant で弾かれ、存在も漏れない"
+      ]
+    },
+    {
+      "name": "認証なし → unauthenticated（テナント未設定では何も返さない）",
+      "accident": false,
+      "notes": [
+        "error: [{\"message\":\"unauthenticated\",\"path\":[\"robots\"],\"locations\":[{\"line\":1,\"column\":3}]}]"
+      ]
+    },
+    {
+      "name": "複雑度 DoS: 上限超クエリは実行前に拒否（DB クエリ 0）",
+      "counters": {
+        "db_queries": 0
+      },
+      "accident": false,
+      "notes": [
+        "error: [{\"message\":\"internal error\",\"extensions\":{\"code\":\"COMPLEXITY_LIMIT_EXCEEDED\"}}] / DB クエリ=0"
+      ]
+    },
+    {
+      "name": "内観: 本番オフは拒否 / 開発オンは通る",
+      "accident": false,
+      "notes": [
+        "オフ: [{\"message\":\"internal error\",\"path\":[\"__schema\"],\"locations\":[{\"line\":1,\"column\":3}]}] / オン: queryType=Query"
+      ]
+    },
+    {
+      "name": "エラー秘匿: 内部エラー文を client に出さない",
+      "counters": {
+        "masked": 1
+      },
+      "accident": false,
+      "notes": [
+        "client には unauthenticated だけ。内部の理由文は出さない"
+      ]
+    }
+  ],
+  "verdict": "テナントは主体から決め（引数から取らない）、全 DB アクセスをテナント束縛 Scope に通す。深い/広いクエリは複雑度上限で実行前に弾き、本番は内観オフ・内部エラーは秘匿する。",
+  "scope": [
+    "MySQL 8.0 / gqlgen v0.17 / 複雑度上限=200 / 内観=本番オフ",
+    "テナントは X-Tenant（実運用は JWT 等）→ context。スキーマに tenant 引数は無い",
+    "複雑度は commands/robots に first 比例で計上（server.go）"
+  ],
+  "uncertainty": [
+    "複雑度の適正値は本番のクエリ形状で決める。ここは 200 の例",
+    "認可（このテナント内で誰が何を見られるか）は本実験外。ここはテナント境界のみ",
+    "永続化クエリ（allowlist）でさらに攻撃面を狭められる（本実験外）"
+  ],
+  "artifacts": [
+    "internal/gql: テナント束縛 Scope・複雑度上限・内観トグル・エラー秘匿",
+    "docs/graphql.md: gqlgen ベストプラクティス（セキュリティ）"
+  ],
+  "next": [
+    "なし"
+  ]
+}

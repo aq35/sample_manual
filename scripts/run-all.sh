@@ -114,6 +114,10 @@ if [[ -n "${MYSQL_DSN:-}" ]]; then
       go test ./internal/widthlab/ -run TestEXP21 -v -timeout 20m
   run "37-exp22-status-${stamp}.txt" "㊲ EXP-22 ステータスでテーブルを分けるべきか" \
       go test ./internal/statuslab/ -run TestEXP22 -v -timeout 20m
+  run "38-exp23-gqlperf-${stamp}.txt" "㊳ EXP-23 gqlgen パフォーマンス（N+1/DataLoader）" \
+      go test ./internal/gqllab/ -run TestEXP23 -v -timeout 20m
+  run "39-exp24-gqlsec-${stamp}.txt" "㊴ EXP-24 gqlgen セキュリティ（テナント分離・複雑度）" \
+      go test ./internal/gqllab/ -run TestEXP24 -v -timeout 20m
 fi
 
 # ---- MySQL が無くても走る（追加ぶん）----

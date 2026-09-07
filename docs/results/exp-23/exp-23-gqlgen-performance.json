@@ -1,0 +1,99 @@
+{
+  "unit": "EXP-23",
+  "name": "gqlgen-performance",
+  "title": "gqlgen の N+1 と DataLoader・射影・ページ上限",
+  "meter_version": "expkit/2",
+  "hypothesis": "1) 一覧の各要素で子（commands）を解決すると、DataLoader が無ければ N+1（robots 1 + 台数ぶん）。 2) DataLoader を入れると、子の取得は robot_id をまとめた1クエリに畳まれる（robots 1 + commands 1）。 3) 射影: name（別表 robot_profile）を要求しなければ、その解決関数は呼ばれず profile を引かない。 4) robots(first) はサーバ側で上限が掛かる（10万件要求しても MaxPageSize で頭打ち）。",
+  "started_at": "2026-09-07T05:19:24.065472458Z",
+  "ended_at": "2026-09-07T05:19:24.214826112Z",
+  "env": {
+    "captured_at": "2026-09-07T05:19:24.065538024Z",
+    "go_version": "go1.26.0",
+    "os": "linux",
+    "arch": "amd64",
+    "num_cpu": 4,
+    "gomaxprocs": 4,
+    "hostname": "vm",
+    "git_sha": "068530920c27deb70f8eee2b34437ba5adfa6fe2",
+    "git_dirty": true,
+    "mysql_version": "8.0.46-0ubuntu0.24.04.4"
+  },
+  "workload": {
+    "cmds_per_robot": 10,
+    "robots": 150
+  },
+  "injection": {},
+  "variants": [
+    {
+      "name": "N+1: ローダ無し（各ロボットで commands を1クエリずつ）",
+      "counters": {
+        "db_queries": 51
+      },
+      "metrics": {
+        "latency_ms": 116.586
+      },
+      "accident": true,
+      "notes": [
+        "robots 1 + 各台の commands = 1 + 台数ぶんのクエリ"
+      ]
+    },
+    {
+      "name": "DataLoader: robot_id をまとめて1クエリ",
+      "counters": {
+        "db_queries": 2
+      },
+      "metrics": {
+        "latency_ms": 15.015
+      },
+      "accident": false,
+      "notes": [
+        "ローダ無し 51 クエリ → 有り 2 クエリ"
+      ]
+    },
+    {
+      "name": "射影: name を要求しない（profile を引かない）",
+      "counters": {
+        "db_queries": 1
+      },
+      "accident": false
+    },
+    {
+      "name": "射影: name を要求する（別表 robot_profile を引く）",
+      "counters": {
+        "db_queries": 51
+      },
+      "accident": false,
+      "notes": [
+        "name 無し 1 クエリ → 有り 51 クエリ（要求時だけ別表を引く）"
+      ]
+    },
+    {
+      "name": "ページ上限: first=100000 要求 → MaxPageSize で頭打ち",
+      "counters": {
+        "returned": 100
+      },
+      "accident": false,
+      "notes": [
+        "要求 10万 → 返却 100（無制限一覧を作らせない）"
+      ]
+    }
+  ],
+  "verdict": "一覧の子フィールド（commands）は DataLoader で畳む（N+1 → 1）。name のような別表は要求時だけ引く（射影）。robots(first) はサーバ側で必ず上限を掛け、無制限一覧を作らせない。",
+  "scope": [
+    "MySQL 8.0 / 1テナント 50台・各10命令 / gqlgen v0.17 / DataLoader=dataloadgen",
+    "クエリ数は repo.Stats().Queries の差分（SELECT の回数）",
+    "commands は cmd_command を robot_id で引く（by_robot 索引）"
+  ],
+  "uncertainty": [
+    "絶対レイテンシはローカルのもの。ネットワーク往復や N が増えると N+1 の差はさらに開く",
+    "DataLoader の待ち窓（WithWait）や並行度で畳まれ方は動く",
+    "name はここでは素朴解決。実務では name も別ローダで畳める"
+  ],
+  "artifacts": [
+    "internal/gql: gqlgen サーバ（リゾルバ・DataLoader・複雑度・射影・ページ上限）",
+    "docs/graphql.md: gqlgen ベストプラクティス（パフォーマンス）"
+  ],
+  "next": [
+    "EXP-24 セキュリティ（テナント分離・複雑度 DoS）"
+  ]
+}
