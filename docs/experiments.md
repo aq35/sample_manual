@@ -180,6 +180,7 @@ files, _ := r.Save("...")
 | [docs/glossary.md](glossary.md) | 用語集（律速・冪等・fan-out 等を平易な説明＋英語＋たとえで） |
 | [docs/checklist.md](checklist.md) | 作る・レビューするときのやることリスト（全網羅・表・記事リンク付き） |
 | [docs/worker-tenancy.md](worker-tenancy.md) | Worker をテナント単位か共有か（トレードオフ・セキュリティ重視の結論） |
+| [docs/domain-themes.md](domain-themes.md) | 適用テーマ候補と具体テーブル設計（マルチテナント越境禁止のDDL雛形） |
 | [docs/subscription-design.md](subscription-design.md) | hub の破棄粒度・途中失権・状態×タスクの購読設計 |
 
 ## 実行時ガード
