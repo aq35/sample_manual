@@ -177,6 +177,8 @@ files, _ := r.Save("...")
 | [docs/why-necessary.md](why-necessary.md) | なぜ必要か（標準ワーカー/標準Web のメモリ・ストレージ計算 → 破綻 → 設計） |
 | [docs/design-principles.md](design-principles.md) | 関心ごと × 考え方 × どうあるべき の一覧（漏れチェックつき） |
 | [docs/glossary.md](glossary.md) | 用語集（律速・冪等・fan-out 等を平易な説明＋英語＋たとえで） |
+| [docs/checklist.md](checklist.md) | 作る・レビューするときのやることリスト（全網羅・表・記事リンク付き） |
+| [docs/worker-tenancy.md](worker-tenancy.md) | Worker をテナント単位か共有か（トレードオフ・セキュリティ重視の結論） |
 | [docs/subscription-design.md](subscription-design.md) | hub の破棄粒度・途中失権・状態×タスクの購読設計 |
 
 ## 実行時ガード
