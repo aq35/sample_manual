@@ -140,6 +140,7 @@ files, _ := r.Save("...")
 | EXP-28 | gqlgen の行レベル認可（この対象を操作してよいか） | 済（[docs/graphql.md](graphql.md)） |
 | EXP-29 | Web と Worker の接続プール分離（共有 vs 分離） | 済（[docs/web-worker-split.md](web-worker-split.md)） |
 | EXP-30 | 冗長化（複数レプリカ）でアプリはどうあるべきか | 済（[docs/redundancy.md](redundancy.md)） |
+| EXP-31 | 1 vCPU/2GB タスクの容量（SSE 本数・Worker 処理量） | 済（[docs/capacity.md](capacity.md)） |
 
 ## 実行時ガード
 

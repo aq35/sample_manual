@@ -130,6 +130,8 @@ if [[ -n "${MYSQL_DSN:-}" ]]; then
       go test ./internal/procseplab/ -run TestEXP29 -v -timeout 20m
   run "45-exp30-redundancy-${stamp}.txt" "㊺ EXP-30 冗長化とアプリ構造" \
       go test ./internal/redundancylab/ -run TestEXP30 -v -timeout 20m
+  run "46-exp31-capacity-${stamp}.txt" "㊻ EXP-31 1タスクの容量（SSE・Worker）" \
+      go test ./internal/capacitylab/ -run TestEXP31 -v -timeout 20m
 fi
 
 # ---- MySQL が無くても走る（追加ぶん）----

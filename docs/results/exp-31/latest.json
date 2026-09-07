@@ -1,0 +1,10 @@
+{
+  "ended_at": "2026-09-07T08:39:11Z",
+  "git_dirty": true,
+  "git_sha": "7801e7b8f2948fd68d54d606139e341e4e6441de",
+  "json": "exp-31-task-capacity.json",
+  "md": "exp-31-task-capacity.md",
+  "meter_version": "expkit/2",
+  "name": "task-capacity",
+  "unit": "EXP-31"
+}
