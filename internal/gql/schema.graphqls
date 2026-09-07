@@ -1,5 +1,15 @@
 scalar Time
 
+"テナント内のロール。VIEWER < OPERATOR < ADMIN の順で強い。"
+enum Role {
+  VIEWER
+  OPERATOR
+  ADMIN
+}
+
+"フィールドに必要なロールを宣言する。解決の前に検査し、足りなければ拒否する（EXP-25）。"
+directive @auth(requires: Role!) on FIELD_DEFINITION
+
 "ロボットの状態。文字列でなく列挙（model.Status に対応）。"
 enum RobotStatus {
   UNKNOWN
@@ -17,6 +27,8 @@ type Robot {
   status: RobotStatus!
   battery: Int!
   online: Boolean!
+  "製造シリアル（機微）。ADMIN だけが読める（EXP-25・認可）。権限が無ければ null＋エラー。"
+  serial: String @auth(requires: ADMIN)
   "そのロボットの直近の命令。ネスト解決＝N+1 の温床。DataLoader で畳む（EXP-23）。"
   commands(first: Int = 20): [Command!]!
 }

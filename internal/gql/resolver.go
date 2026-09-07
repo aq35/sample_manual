@@ -1,6 +1,10 @@
 package gql
 
-import "github.com/aq35/sample_manual/internal/repo"
+import (
+	"context"
+
+	"github.com/aq35/sample_manual/internal/repo"
+)
 
 // Resolver は依存の注入口。テナント束縛済みの *repo.DB だけを持つ。
 // リゾルバは context のテナントで db.Tenant(t) を作り、その Scope 経由でしか DB を触らない。
@@ -19,4 +23,14 @@ func (r *Resolver) maxPage() int {
 		return r.MaxPageSize
 	}
 	return defaultMaxPageSize
+}
+
+// scope は context の検証済みテナントから Scope を作る。ここが全リゾルバの DB 入口。
+// （resolver ファイルでなくここに置く: gqlgen は resolver ファイルからヘルパを追い出すため）
+func (r *Resolver) scope(ctx context.Context) (*repo.Scope, error) {
+	t, err := tenantFrom(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return r.DB.Tenant(t), nil
 }

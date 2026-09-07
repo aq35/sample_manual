@@ -7,50 +7,7 @@ package gql
 
 import (
 	"context"
-
-	"github.com/aq35/sample_manual/internal/repo"
 )
-
-// Name is the resolver for the name field.
-//
-// 射影（EXP-19/21）: name は別表 robot_profile。要求されたときだけ引く。
-// 一覧で name を要求しなければ、この解決関数は呼ばれず profile を触らない。
-func (r *robotResolver) Name(ctx context.Context, obj *Robot) (string, error) {
-	sc, err := r.scope(ctx)
-	if err != nil {
-		return "", err
-	}
-	return nameOf(ctx, sc, obj.ID)
-}
-
-// Commands is the resolver for the commands field.
-//
-// N+1 の温床（EXP-23）: ロボットごとに呼ばれる。ローダがあればバッチ（1クエリ）、
-// 無ければ素朴に1台ずつ引く（N+1）。実験でこの差を測る。
-func (r *robotResolver) Commands(ctx context.Context, obj *Robot, first *int) ([]Command, error) {
-	sc, err := r.scope(ctx)
-	if err != nil {
-		return nil, err
-	}
-	n := 20
-	if first != nil {
-		n = *first
-	}
-	if n > loaderMax {
-		n = loaderMax
-	}
-	if l, ok := loadersFrom(ctx); ok {
-		cmds, err := l.Commands.Load(ctx, obj.ID) // バッチに参加（1クエリに畳まれる）
-		if err != nil {
-			return nil, err
-		}
-		if len(cmds) > n {
-			cmds = cmds[:n]
-		}
-		return cmds, nil
-	}
-	return commandsForRobot(ctx, sc, obj.ID, n) // ローダ無し＝N+1
-}
 
 // Robots is the resolver for the robots field.
 func (r *queryResolver) Robots(ctx context.Context, first int, after *string) (*RobotConnection, error) {
@@ -97,20 +54,71 @@ func (r *queryResolver) Robot(ctx context.Context, id string) (*Robot, error) {
 	return getRobot(ctx, sc, id)
 }
 
+// Name is the resolver for the name field.
+//
+// 射影（EXP-19/21）: name は別表 robot_profile。要求されたときだけ引く。
+// 一覧で name を要求しなければ、この解決関数は呼ばれず profile を触らない。
+func (r *robotResolver) Name(ctx context.Context, obj *Robot) (string, error) {
+	sc, err := r.scope(ctx)
+	if err != nil {
+		return "", err
+	}
+	return nameOf(ctx, sc, obj.ID)
+}
+
+// Serial is the resolver for the serial field.
+//
+// 認可（EXP-25）: このフィールドは @auth(requires: ADMIN)。@auth ディレクティブが
+// この解決関数の「前に」ロールを検査するので、ここに来る時点で ADMIN は保証済み。
+// 値自体は別表 robot_profile から引く。
+func (r *robotResolver) Serial(ctx context.Context, obj *Robot) (*string, error) {
+	sc, err := r.scope(ctx)
+	if err != nil {
+		return nil, err
+	}
+	s, err := serialOf(ctx, sc, obj.ID)
+	if err != nil {
+		return nil, err
+	}
+	return &s, nil
+}
+
+// Commands is the resolver for the commands field.
+//
+// N+1 の温床（EXP-23）: ロボットごとに呼ばれる。ローダがあればバッチ（1クエリ）、
+// 無ければ素朴に1台ずつ引く（N+1）。実験でこの差を測る。
+func (r *robotResolver) Commands(ctx context.Context, obj *Robot, first *int) ([]Command, error) {
+	sc, err := r.scope(ctx)
+	if err != nil {
+		return nil, err
+	}
+	n := 20
+	if first != nil {
+		n = *first
+	}
+	if n > loaderMax {
+		n = loaderMax
+	}
+	if l, ok := loadersFrom(ctx); ok {
+		cmds, err := l.Commands.Load(ctx, obj.ID) // バッチに参加（1クエリに畳まれる）
+		if err != nil {
+			return nil, err
+		}
+		if len(cmds) > n {
+			cmds = cmds[:n]
+		}
+		return cmds, nil
+	}
+	return commandsForRobot(ctx, sc, obj.ID, n) // ローダ無し＝N+1
+}
+
 // Query returns QueryResolver implementation.
 func (r *Resolver) Query() QueryResolver { return &queryResolver{r} }
 
 // Robot returns RobotResolver implementation.
 func (r *Resolver) Robot() RobotResolver { return &robotResolver{r} }
 
-type queryResolver struct{ *Resolver }
-type robotResolver struct{ *Resolver }
-
-// scope は context の検証済みテナントから Scope を作る。ここが全リゾルバの DB 入口。
-func (r *Resolver) scope(ctx context.Context) (*repo.Scope, error) {
-	t, err := tenantFrom(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return r.DB.Tenant(t), nil
-}
+type (
+	queryResolver struct{ *Resolver }
+	robotResolver struct{ *Resolver }
+)

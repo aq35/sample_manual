@@ -1,0 +1,75 @@
+{
+  "unit": "EXP-25",
+  "name": "gqlgen-authorization",
+  "title": "@auth ディレクティブでフィールド単位の認可（テナント内ロール）",
+  "meter_version": "expkit/2",
+  "hypothesis": "1) serial は @auth(requires: ADMIN)。ADMIN は取得でき、VIEWER/OPERATOR は拒否され null＋エラー。 2) ロールも主体（context）から決める。GraphQL 引数に role を置かない（詐称不能）。 3) @auth は解決関数の前に走るので、拒否時は serial 用の DB クエリを発行しない。 4) 拒否は serial だけを null にし、id/name など他フィールドは返る（nullable フィールド）。",
+  "started_at": "2026-09-07T07:44:59.901005893Z",
+  "ended_at": "2026-09-07T07:44:59.91494971Z",
+  "env": {
+    "captured_at": "2026-09-07T07:44:59.901076015Z",
+    "go_version": "go1.26.0",
+    "os": "linux",
+    "arch": "amd64",
+    "num_cpu": 4,
+    "gomaxprocs": 4,
+    "hostname": "vm",
+    "git_sha": "5ad9d6d4f8a2de8e200057933c51fc026e546163",
+    "git_dirty": true,
+    "mysql_version": "8.0.46-0ubuntu0.24.04.4"
+  },
+  "workload": {},
+  "injection": {},
+  "variants": [
+    {
+      "name": "ADMIN: serial が見える",
+      "counters": {
+        "db_queries": 3,
+        "serial_visible": 1
+      },
+      "accident": false,
+      "notes": [
+        "getRobot + name + serial を引く"
+      ]
+    },
+    {
+      "name": "VIEWER: serial 拒否（null＋エラー）・id/name は返る・serial の DB は引かない",
+      "counters": {
+        "db_queries": 2,
+        "name_ok": 1,
+        "serial_null": 1
+      },
+      "accident": true,
+      "notes": [
+        "error: [{\"message\":\"internal error\",\"path\":[\"robot\",\"serial\"],\"locations\":[{\"line\":1,\"column\":40}]}]"
+      ]
+    },
+    {
+      "name": "OPERATOR: serial 拒否（ADMIN 未満）",
+      "counters": {
+        "serial_null": 1
+      },
+      "accident": true,
+      "notes": [
+        "error: [{\"message\":\"internal error\",\"path\":[\"robot\",\"serial\"],\"locations\":[{\"line\":1,\"column\":40}]}]"
+      ]
+    }
+  ],
+  "verdict": "認可はフィールド単位に @auth(requires:) で宣言し、解決の前にロールを検査する（拒否時は DB に触れない）。ロールもテナントと同様に主体から決め、GraphQL 引数には置かない。nullable にすれば拒否は該当フィールドだけを null にする。",
+  "scope": [
+    "MySQL 8.0 / gqlgen v0.17 / serial=@auth(requires: ADMIN) / ロールは X-Role（実運用は JWT）",
+    "ロール強さ VIEWER\u003cOPERATOR\u003cADMIN。@auth は不足なら next を呼ばず拒否",
+    "serial は nullable。拒否時は serial だけ null になり他フィールドは返る"
+  ],
+  "uncertainty": [
+    "ここはフィールド単位のロール認可のみ。行単位（この robot を操作してよいか）は別途",
+    "ロールの出所（JWT 検証・失効）は本実験外。ここは検証済みロールが context にある前提"
+  ],
+  "artifacts": [
+    "internal/gql: @auth ディレクティブ（authz.go）とロール context",
+    "docs/graphql.md: 認可（フィールド単位ロール）"
+  ],
+  "next": [
+    "EXP-26 永続化クエリ allowlist・レート制限"
+  ]
+}

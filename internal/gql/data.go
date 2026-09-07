@@ -90,6 +90,17 @@ func nameOf(ctx context.Context, sc *repo.Scope, robotID string) (string, error)
 	return name, err
 }
 
+// serialOf は robot_profile から serial を1件（@auth(ADMIN) 済みの前提で呼ばれる）。
+func serialOf(ctx context.Context, sc *repo.Scope, robotID string) (string, error) {
+	const q = `SELECT serial FROM robot_profile WHERE tenant_id = :tenant AND robot_id = ?`
+	var serial string
+	err := sc.QueryRow(ctx, "gql.robot.serial", q, robotID).Scan(&serial)
+	if errors.Is(err, repo.ErrNotFound) {
+		return "", nil
+	}
+	return serial, err
+}
+
 // commandsForRobot は1台ぶんの命令（素朴版・N+1 の温床）。
 func commandsForRobot(ctx context.Context, sc *repo.Scope, robotID string, first int) ([]Command, error) {
 	const q = `SELECT command_id, type, state, scheduled_for

@@ -134,6 +134,8 @@ files, _ := r.Save("...")
 | EXP-22 | ステータスでテーブルを分けるべきか | 済（[docs/status-table-split.md](status-table-split.md)） |
 | EXP-23 | gqlgen のパフォーマンス（N+1・DataLoader・射影・ページ上限） | 済（[docs/graphql.md](graphql.md)） |
 | EXP-24 | gqlgen のセキュリティ（テナント分離・複雑度 DoS・内観・エラー秘匿） | 済（[docs/graphql.md](graphql.md)） |
+| EXP-25 | gqlgen の認可（@auth ディレクティブ・フィールド単位ロール） | 済（[docs/graphql.md](graphql.md)） |
+| EXP-26 | gqlgen の受付制御（永続化クエリ allowlist・レート制限） | 済（[docs/graphql.md](graphql.md)） |
 
 ## 実行時ガード
 

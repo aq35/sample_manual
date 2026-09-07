@@ -25,6 +25,10 @@ type ServerConfig struct {
 	Introspection bool
 	// MaxPageSize: robots(first) の上限。
 	MaxPageSize int
+	// AllowList: 非 nil なら「登録済みクエリ以外を実行しない」（永続化クエリ・EXP-26）。
+	AllowList *AllowList
+	// RateLimiter: 非 nil ならテナント単位のレート制限（EXP-26）。
+	RateLimiter *RateLimiter
 }
 
 // DefaultServerConfig は本番向けの既定（内観オフ・複雑度上限あり）。
@@ -37,6 +41,8 @@ func NewServer(db *repo.DB, cfg ServerConfig) *handler.Server {
 	r := &Resolver{DB: db, MaxPageSize: cfg.MaxPageSize}
 
 	c := Config{Resolvers: r}
+	// @auth ディレクティブ（フィールドの必要ロールを解決前に検査する）。
+	c.Directives.Auth = authDirective
 	// 複雑度: commands / robots は取得件数(first)に比例して重い。childComplexity×first を計上する。
 	c.Complexity.Robot.Commands = func(childComplexity int, first *int) int {
 		n := 20
@@ -54,6 +60,14 @@ func NewServer(db *repo.DB, cfg ServerConfig) *handler.Server {
 	// パース済みクエリをキャッシュ（同じクエリの再パースを避ける）。
 	srv.SetQueryCache(lru.New[*ast.QueryDocument](1000))
 
+	// 永続化クエリ allowlist（登録済み以外は実行しない）。
+	if cfg.AllowList != nil {
+		srv.Use(cfg.AllowList)
+	}
+	// テナント単位のレート制限。
+	if cfg.RateLimiter != nil {
+		srv.Use(cfg.RateLimiter)
+	}
 	// 複雑度の上限（DoS 対策）。
 	if cfg.ComplexityLimit > 0 {
 		srv.Use(extension.FixedComplexityLimit(cfg.ComplexityLimit))
@@ -86,11 +100,23 @@ func NewServer(db *repo.DB, cfg ServerConfig) *handler.Server {
 // tenantOf は実際の認証（JWT/セッション）からテナントを返す関数に差し替える。テナントを
 // GraphQL 引数から取ってはいけない（詐称される・EXP-24）。withLoaders=false なら素朴経路（N+1）。
 func Middleware(db *repo.DB, tenantOf func(*http.Request) (model.TenantID, bool), withLoaders bool, next http.Handler) http.Handler {
+	return MiddlewareWithRole(db, tenantOf, nil, withLoaders, next)
+}
+
+// MiddlewareWithRole は Middleware に加えて、認証済みロールを context に載せる（@auth 用）。
+// roleOf が nil、または (,false) を返した場合はロール未設定（@auth フィールドは拒否される）。
+func MiddlewareWithRole(db *repo.DB, tenantOf func(*http.Request) (model.TenantID, bool),
+	roleOf func(*http.Request) (Role, bool), withLoaders bool, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		t, ok := tenantOf(req)
 		ctx := req.Context()
 		if ok && t != "" {
 			ctx = WithTenant(ctx, t)
+			if roleOf != nil {
+				if role, rok := roleOf(req); rok {
+					ctx = WithRole(ctx, role)
+				}
+			}
 			if withLoaders {
 				ctx = WithLoaders(ctx, newLoaders(db.Tenant(t)))
 			}

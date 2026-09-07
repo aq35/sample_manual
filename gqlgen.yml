@@ -39,5 +39,7 @@ models:
     fields:
       name:
         resolver: true
+      serial:
+        resolver: true
       commands:
         resolver: true

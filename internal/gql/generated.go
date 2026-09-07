@@ -34,6 +34,7 @@ type ResolverRoot interface {
 }
 
 type DirectiveRoot struct {
+	Auth func(ctx context.Context, obj any, next graphql.Resolver, requires Role) (res any, err error)
 }
 
 type ComplexityRoot struct {
@@ -55,6 +56,7 @@ type ComplexityRoot struct {
 		ID       func(childComplexity int) int
 		Name     func(childComplexity int) int
 		Online   func(childComplexity int) int
+		Serial   func(childComplexity int) int
 		Status   func(childComplexity int) int
 	}
 
@@ -76,6 +78,7 @@ type QueryResolver interface {
 type RobotResolver interface {
 	Name(ctx context.Context, obj *Robot) (string, error)
 
+	Serial(ctx context.Context, obj *Robot) (*string, error)
 	Commands(ctx context.Context, obj *Robot, first *int) ([]Command, error)
 }
 
@@ -180,6 +183,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Robot.Online(childComplexity), true
+	case "Robot.serial":
+		if e.ComplexityRoot.Robot.Serial == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Robot.Serial(childComplexity), true
 	case "Robot.status":
 		if e.ComplexityRoot.Robot.Status == nil {
 			break
@@ -318,6 +327,8 @@ func (ec *executionContext) childFields_Robot(ctx context.Context, field graphql
 		return ec.fieldContext_Robot_battery(ctx, field)
 	case "online":
 		return ec.fieldContext_Robot_online(ctx, field)
+	case "serial":
+		return ec.fieldContext_Robot_serial(ctx, field)
 	case "commands":
 		return ec.fieldContext_Robot_commands(ctx, field)
 	}
@@ -451,6 +462,20 @@ func (ec *executionContext) childFields___Type(ctx context.Context, field graphq
 // endregion ************************** internal!.gotpl ***************************
 
 // region    ***************************** args.gotpl *****************************
+
+func (ec *executionContext) dir_auth_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "requires",
+		func(ctx context.Context, v any) (Role, error) {
+			return ec.unmarshalNRole2githubᚗcomᚋaq35ᚋsample_manualᚋinternalᚋgqlᚐRole(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["requires"] = arg0
+	return args, nil
+}
 
 func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
@@ -945,6 +970,47 @@ func (ec *executionContext) _Robot_online(ctx context.Context, field graphql.Col
 }
 func (ec *executionContext) fieldContext_Robot_online(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("Robot", field, false, false, errors.New("field of type Boolean does not have child fields"))
+}
+
+func (ec *executionContext) _Robot_serial(ctx context.Context, field graphql.CollectedField, obj *Robot) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Robot_serial(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.Robot().Serial(ctx, obj)
+		},
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				requires, err := ec.unmarshalNRole2githubᚗcomᚋaq35ᚋsample_manualᚋinternalᚋgqlᚐRole(ctx, "ADMIN")
+				if err != nil {
+					var zeroVal *string
+					return zeroVal, err
+				}
+				if ec.Directives.Auth == nil {
+					var zeroVal *string
+					return zeroVal, errors.New("directive auth is not implemented")
+				}
+				return ec.Directives.Auth(ctx, obj, directive0, requires)
+			}
+
+			next = directive1
+			return next
+		},
+		func(ctx context.Context, selections ast.SelectionSet, v *string) graphql.Marshaler {
+			return ec.marshalOString2ᚖstring(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_Robot_serial(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Robot", field, true, true, errors.New("field of type String does not have child fields"))
 }
 
 func (ec *executionContext) _Robot_commands(ctx context.Context, field graphql.CollectedField, obj *Robot) (ret graphql.Marshaler) {
@@ -2358,6 +2424,44 @@ func (ec *executionContext) _Robot(ctx context.Context, sel ast.SelectionSet, ob
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&out.Invalids, 1)
 			}
+		case "serial":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Robot_serial(ctx, field, obj)
+				if res == graphql.RequiredNull {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.IsDeferred() {
+				deferredFieldSet.AddField(field)
+				fieldIndex := len(deferredFieldSet.Values) - 1
+				deferredFieldSet.Concurrently(fieldIndex, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, deferredFieldSet)
+				})
+
+				for _, deferrable := range field.Deferrables {
+					view, ok := deferLabelToView[deferrable.Label]
+					if !ok {
+						view = deferredFieldSet.NewView()
+						deferLabelToView[deferrable.Label] = view
+					}
+					view.AddIndices(fieldIndex)
+				}
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "commands":
 			field := field
 
@@ -2962,6 +3066,16 @@ func (ec *executionContext) unmarshalNRobotStatus2githubᚗcomᚋaq35ᚋsample_m
 }
 
 func (ec *executionContext) marshalNRobotStatus2githubᚗcomᚋaq35ᚋsample_manualᚋinternalᚋgqlᚐRobotStatus(ctx context.Context, sel ast.SelectionSet, v RobotStatus) graphql.Marshaler {
+	return v
+}
+
+func (ec *executionContext) unmarshalNRole2githubᚗcomᚋaq35ᚋsample_manualᚋinternalᚋgqlᚐRole(ctx context.Context, v any) (Role, error) {
+	var res Role
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNRole2githubᚗcomᚋaq35ᚋsample_manualᚋinternalᚋgqlᚐRole(ctx context.Context, sel ast.SelectionSet, v Role) graphql.Marshaler {
 	return v
 }
 
