@@ -21,6 +21,56 @@ flowchart LR
 ここを取り違えると努力が無駄になる：**DB 待ちの Worker に CPU を足しても速くならない**し、
 **CPU 待ちの Web にメモリを足しても捌けない**。だから「まずどこが先に埋まるか」を掴んでから手を打つ。
 
+## なぜ Web=CPU・Worker=DB なのか
+
+**仕事の中身が「計算」か「待ち」か**の違い。1 vCPU は「1秒に 1,000ms ぶんの計算枠」。
+
+- **Web の仕事は計算（CPU を使う・待たない）**：TLS 暗号化/復号・JSON の組み立て/解析・GraphQL の
+  パース/検証/resolve・SSE の fan-out（変更 × 購読者を直列化）。どれも外部の返事を待たない**純計算**なので
+  CPU 枠を食い尽くす。一方メモリは接続が安く（1本 ~34KB・[EXP-59](concern-subscription-capacity.md)）**余る**。
+- **Worker の仕事は待ち（CPU を使わない）**：DB にクエリを投げて**答えを待つ**のが中心。
+  **待っている間 CPU は空く（I/O 待ち）**ので、CPU もメモリも余り、律速は **DB 往復**になる。
+
+```mermaid
+flowchart LR
+  W["Web の1リクエスト"] --> WC["暗号化・JSON・GraphQL・fan-out<br/>＝ずっと計算 → CPU を使い切る"]
+  K["Worker の1件"] --> KC["DBに投げて答えを待つ<br/>＝待ち時間は CPU 空き → DB往復が律速"]
+```
+
+Web の CPU 家計（[worked-examples](worked-examples.md) の 1vCPU 例）：
+
+```
+Query 100rps × ~5ms  = 500 ms/s
+SSE fan-out          = 240 ms/s
+Mutation 20rps × 3ms =  60 ms/s
+------------------------------
+合計 ≒ 800 ms/s ＝ 1 vCPU の 80%   ← メモリ(23%)より先に一杯
+```
+
+> ひとことで：**Web は 1 vCPU を計算で使い切る／Worker は 1 vCPU をほとんど使わず DB の返事待ちで過ごす**。
+> 同じ 1 vCPU でも、Web は使う・Worker は使わない。
+
+### 「DB が埋まる」とは（プール飽和）
+
+Web が「CPU（＋DB プール）」律速と言うときの **DB プール**の話。アプリは DB 接続を**プール（例：20本）**で
+使い回す。同時に走るクエリが 20 を超えると、**21本目は空きが出るまで待たされる**（キューに並ぶ）。
+これが「**DB が埋まる**」＝プール飽和（[EXP-5](pool-saturation.md) の「膝」）。
+
+```mermaid
+flowchart LR
+  Q1["クエリ1..20"] --> P["DBプール 20本<br/>（全部使用中）"]
+  Q2["クエリ21"] -.->|"空くまで待つ"| P
+  P --> DB[("MySQL")]
+```
+
+- **プールが埋まる**（アプリ側）：接続が全部使用中 → 新しいクエリが待つ。**同時実行数がプール本数で頭打ち**。
+- **DB 自体が埋まる**（サーバ側）：MySQL の CPU・ディスク IO・ロックが飽和し、1クエリが遅くなる。
+  これは**全プロセスの合計接続**が DB の天井を超えたとき（[poolbudget](../internal/poolbudget)・[redundancy](redundancy.md)）。
+- **なぜ Web で効くか**：プールが埋まると、CPU が空いていても**クエリ待ちで応答が遅くなる**。だから
+  Web の同時実行は「**CPU** と **DB プール**の**小さい方**」で頭打ちになる。
+- **打ち手**：遅いクエリを速くする（索引・射影・[query-timeout](query-timeout.md) で長居を切る）／プールを
+  適正化（大きすぎると DB を殺す・[EXP-5](pool-saturation.md)）／読みをレプリカへ逃がす（[read-replica](read-replica.md)）。
+
 ---
 
 ## Worker での対応
