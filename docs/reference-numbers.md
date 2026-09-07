@@ -6,6 +6,7 @@
 
 > 具体的なイメージが欲しいときは、この単価に数字を代入した **[Worker/Web 単体の実寸サンプル
 > （メモリ・CPU の圧迫を計算＋図で）](worked-examples.md)** を先に見ると分かりやすい。
+> 用語（律速・fan-out・covering index など）が分からないときは **[用語集](glossary.md)** へ。
 
 ---
 

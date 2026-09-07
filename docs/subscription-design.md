@@ -3,6 +3,7 @@
 hub でリアルタイムに状態を配るときの3つの設計判断を、実測つきでまとめる。
 容量の前提は [docs/capacity.md](capacity.md)（1タスク SSE 1万〜1.5万本）、
 数値の早見表は [docs/reference-numbers.md](reference-numbers.md)。
+用語（SSE・hub・fan-out・coalesce・re-auth など）は [docs/glossary.md](glossary.md)。
 
 ---
 

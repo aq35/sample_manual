@@ -5,6 +5,7 @@
 末尾に**漏れチェック**（埋まっている／まだ開いている）を置く。
 
 数値の早見表は [docs/reference-numbers.md](reference-numbers.md)。
+用語（律速・冪等・fan-out など）が分からないときは [docs/glossary.md](glossary.md)。
 
 ---
 

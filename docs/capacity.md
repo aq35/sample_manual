@@ -6,6 +6,9 @@
 実装は [internal/capacitylab](../internal/capacitylab)、receipt は
 [docs/results/exp-31](results/exp-31/exp-31-task-capacity.md)。
 
+> 「律速」＝一番遅い所が全体の速さを決めること（英: bottleneck）。他の用語は [用語集](glossary.md) へ。
+> 具体的な数字のイメージは [worked-examples.md](worked-examples.md)（Worker/Web 単体サンプル）。
+
 ## 実測した単位コスト
 
 | 測ったもの | 値 |

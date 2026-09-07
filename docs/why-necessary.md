@@ -5,6 +5,8 @@
 （[EXP-50](../internal/memlab)/[EXP-51](../internal/looplab)/[EXP-31](capacity.md)）から。
 結論は各節末の **「素朴だと破綻 → だからこの設計」**。
 
+> 用語（律速・fan-out・coalesce など）が分からないときは **[用語集](glossary.md)** へ。
+
 ---
 
 ## 標準ワークロードの定義（この計算の前提）
