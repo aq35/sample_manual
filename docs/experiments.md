@@ -177,6 +177,7 @@ files, _ := r.Save("...")
 | [docs/worked-examples.md](worked-examples.md) | Worker/Web 単体の実寸サンプル（メモリ・CPU 圧迫の計算＋mermaid 図） |
 | [docs/why-necessary.md](why-necessary.md) | なぜ必要か（標準ワーカー/標準Web のメモリ・ストレージ計算 → 破綻 → 設計） |
 | [docs/design-principles.md](design-principles.md) | 関心ごと × 考え方 × どうあるべき の一覧（漏れチェックつき） |
+| [docs/worker-vs-web.md](worker-vs-web.md) | 関心ごと × Worker/Web 対応表（セキュリティ/lifecycle/性能/マイグレーション） |
 | [docs/glossary.md](glossary.md) | 用語集（律速・冪等・fan-out 等を平易な説明＋英語＋たとえで） |
 | [docs/deep-dives.md](deep-dives.md) | 図で深掘り（索引先頭tenant_id/ワーカーの単位/サブスク性能/GET_LOCK vs lease） |
 | [docs/checklist.md](checklist.md) | 作る・レビューするときのやることリスト（全網羅・表・記事リンク付き） |
