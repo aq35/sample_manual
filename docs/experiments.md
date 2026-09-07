@@ -153,6 +153,8 @@ files, _ := r.Save("...")
 | EXP-41 | gqlgen サブスクリプションを hub で作る | 済（[docs/graphql.md](graphql.md)） |
 | EXP-42 | hub のテナント分離（混線ゼロ・poller 独立） | 済（[docs/sse-fan-in.md](sse-fan-in.md)） |
 | EXP-43 | 複数プロセス跨ぎの SSE fan-out（pub/sub・topic=テナント分離） | 済（[docs/sse-fan-in.md](sse-fan-in.md)） |
+| EXP-44 | トランザクショナル outbox（exactly-once の外部作用） | 済（[docs/outbox.md](outbox.md)） |
+| EXP-45 | poison / dead-letter（無限リトライしない） | 済（[docs/dead-letter.md](dead-letter.md)） |
 
 ## 実行時ガード
 

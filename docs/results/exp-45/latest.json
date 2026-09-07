@@ -1,0 +1,10 @@
+{
+  "ended_at": "2026-09-07T11:53:59Z",
+  "git_dirty": true,
+  "git_sha": "bec717ea663fa1d0408b9eff7ca91a1bf185710d",
+  "json": "exp-45-poison-dead-letter.json",
+  "md": "exp-45-poison-dead-letter.md",
+  "meter_version": "expkit/2",
+  "name": "poison-dead-letter",
+  "unit": "EXP-45"
+}

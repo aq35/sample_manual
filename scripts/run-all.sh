@@ -151,6 +151,12 @@ run "57-exp42-hub-isolation-${stamp}.txt" "(57) EXP-42 hub のテナント分離
     go test ./internal/ssehub/ -run TestEXP42 -v -timeout 20m
 run "58-exp43-pubsub-${stamp}.txt" "(58) EXP-43 pub/sub 跨ぎの SSE fan-out" \
     go test ./internal/pubsub/ -run TestEXP43 -v -timeout 20m
+if [[ -n "${MYSQL_DSN:-}" ]]; then
+  run "59-exp44-outbox-${stamp}.txt" "(59) EXP-44 トランザクショナル outbox" \
+      go test ./internal/outboxlab/ -run TestEXP44 -v -timeout 20m
+  run "60-exp45-deadletter-${stamp}.txt" "(60) EXP-45 poison / dead-letter" \
+      go test ./internal/dlqlab/ -run TestEXP45 -v -timeout 20m
+fi
 
 # ---- MySQL が無くても走る（追加ぶん・可観測性/容量計算/サブスク配線）----
 run "52-exp37-observability-${stamp}.txt" "(52) EXP-37 可観測性（カーディナリティ・コスト）" \
