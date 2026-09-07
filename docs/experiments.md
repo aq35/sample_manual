@@ -148,6 +148,7 @@ files, _ := r.Save("...")
 | EXP-36 | クエリのタイムアウトとキャンセル伝播 | 済（[docs/query-timeout.md](query-timeout.md)） |
 | EXP-37 | 可観測性（メトリクスのカーディナリティ・コスト） | 済（[docs/observability.md](observability.md)） |
 | EXP-38 | 多数が同一テナントで SSE 購読するとき（DB ファンイン対策・hub 上限） | 済（[docs/sse-fan-in.md](sse-fan-in.md)） |
+| EXP-39 | 動く SSE エンドポイント（poller＋fan-out＋レジストリ・1コンテナ） | 済（[docs/sse-fan-in.md](sse-fan-in.md)） |
 
 ## 実行時ガード
 

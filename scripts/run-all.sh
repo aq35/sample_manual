@@ -144,6 +144,8 @@ if [[ -n "${MYSQL_DSN:-}" ]]; then
       go test ./internal/cancellab/ -run TestEXP36 -v -timeout 20m
   run "53-exp38-sse-${stamp}.txt" "(53) EXP-38 SSE ファンイン対策・hub 上限" \
       go test ./internal/ssehub/ -run TestEXP38 -v -timeout 20m
+  run "54-exp39-sse-endpoint-${stamp}.txt" "(54) EXP-39 動く SSE エンドポイント" \
+      go test ./internal/ssehub/ -run TestEXP39 -v -timeout 20m
 fi
 
 # ---- MySQL が無くても走る（追加ぶん・可観測性）----

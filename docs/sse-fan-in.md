@@ -72,6 +72,25 @@ flowchart LR
 - 1タスクの hub で数千購読者は余裕。**専用 SSE 層が要るのは接続がメモリ/fd 上限を超えるか、
   隔離したいとき**。そのときは poller＋SSE ゲートウェイを **pub/sub** で繋ぐ。
 
+## 動くエンドポイント（EXP-39・1コンテナで成立）
+
+核（hub）だけでなく、**poller＋fan-out＋レジストリ＋HTTP ハンドラ**を通しで実装し、httptest で
+実際に SSE 接続を張って検証した（[internal/ssehub/registry.go](../internal/ssehub/registry.go)、
+receipt は [docs/results/exp-39](results/exp-39/exp-39-sse-endpoint.md)）。
+
+- **12 本の SSE 接続**でも、テナントの poller は interval ごとに **1回だけ** DB を引く
+  （実測 reads=20 ≒ tick 数。素朴なら 12×20=240）。版変更は全接続が受信。
+- **全接続が切れると poller が止まりレジストリが空**になる（active_tenants 1→0、reads が止まる）＝
+  goroutine も DB ポーリングも漏らさない（参照カウント）。
+- **これは 1 コンテナ（1 プロセス）内で成立**。専用 SSE 層は「接続がメモリ/fd 上限を超える or
+  隔離したい」ときだけ（上記）。
+
+作りの要点（[registry.go](../internal/ssehub/registry.go) / ハンドラ）:
+- テナント初の購読者で `hub＋poller` を起動、最後の1人で `cancel()`＋削除（参照カウント）。
+- ハンドラは `text/event-stream`、**毎イベント `Flusher.Flush()`**、`req.Context().Done()` で切断検知、
+  15秒ごとの `: ping`（idle 切断防止＋死活）。テナントは**認証から**（URL に置かない）。
+- 初期スナップショットは **poller のキャッシュ**から配る（接続ごとの DB 読みは無い）。
+
 ## 保証しない範囲・未検証
 
 - fan-out の実測は in-memory コスト。実 SSE のソケット書き込み・TLS・接続メモリは [EXP-31](capacity.md)。

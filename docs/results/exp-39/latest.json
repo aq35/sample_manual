@@ -1,0 +1,10 @@
+{
+  "ended_at": "2026-09-07T10:37:19Z",
+  "git_dirty": true,
+  "git_sha": "b6c96f6391b9b0c4f355077925d54c522c4c6b08",
+  "json": "exp-39-sse-endpoint.json",
+  "md": "exp-39-sse-endpoint.md",
+  "meter_version": "expkit/2",
+  "name": "sse-endpoint",
+  "unit": "EXP-39"
+}
