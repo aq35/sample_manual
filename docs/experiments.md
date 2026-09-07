@@ -179,6 +179,7 @@ files, _ := r.Save("...")
 | [docs/why-necessary.md](why-necessary.md) | なぜ必要か（標準ワーカー/標準Web のメモリ・ストレージ計算 → 破綻 → 設計） |
 | [docs/design-principles.md](design-principles.md) | 関心ごと × 考え方 × どうあるべき の一覧（漏れチェックつき） |
 | [docs/worker-vs-web.md](worker-vs-web.md) | 関心ごと × Worker/Web 対応表（セキュリティ/lifecycle/性能/マイグレーション） |
+| [docs/responsibilities.md](responsibilities.md) | Web と Worker に求められること（責務の入口・capstone） |
 | ┗ [concern-security](concern-security.md) / [concern-lifecycle](concern-lifecycle.md) / [concern-performance](concern-performance.md) / [concern-migration](concern-migration.md) | 各関心の詳細記事（目的・前提・対応・意味と効果・図） |
 | ┗ [concern-subscription-capacity](concern-subscription-capacity.md) | gqlgen subscription は何本提供できるか（律速・hub キャッシュ・資材の家計簿） |
 | [docs/architecture.md](architecture.md) | システム構成図＋分かりにくい用語を小さな図で補強 |
