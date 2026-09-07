@@ -1,0 +1,10 @@
+{
+  "ended_at": "2026-09-07T08:20:53Z",
+  "git_dirty": true,
+  "git_sha": "4107029732fff1eedefb60dd2050a48f89d81131",
+  "json": "exp-29-web-worker-pool-separation.json",
+  "md": "exp-29-web-worker-pool-separation.md",
+  "meter_version": "expkit/2",
+  "name": "web-worker-pool-separation",
+  "unit": "EXP-29"
+}

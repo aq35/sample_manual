@@ -64,3 +64,21 @@ web と worker を別プロセスにしても、**合計が DB 上限を超え�
 | `DB_MAX_CONNECTIONS` | 1000 | 任意 |
 | `DB_RESERVED_CONNECTIONS` | 100 | 任意 |
 | `WEB_REPLICAS` / `WORKER_REPLICAS` / `WORKER_POOL` | 40 / 2 / 20 | 任意（予算計算用） |
+
+## 実測: 共有プールだと Worker が待たされる（EXP-29）
+
+「分けた方がいい」を数字で。総接続数を同じ（10）にして、Web と Worker で1プールを共有した
+場合と、役割ごとに分けた場合で、Worker の軽い問い合わせのレイテンシを比べた。
+
+実装は [internal/procseplab](../internal/procseplab)、receipt は
+[docs/results/exp-29](results/exp-29/exp-29-web-worker-pool-separation.md)。
+
+| 構成 | Worker p50 | Worker p95 |
+| --- | --- | --- |
+| 共有（Web8+Worker2 を1プール） | 48ms | **150ms** |
+| 分離（Worker 専用2 / Web 8） | 0.19ms | **0.27ms** |
+
+- Web バースト（`SLEEP(50ms)`×16 並行）が接続を占有し、共有だと Worker の `SELECT 1` が
+  acquire 待ちで p95 が **550 倍**。総接続数は同じなので、効いているのは「分けたこと」。
+- 役割ごとにプールを持てば、Worker は Web の影響を受けない。プロセス/コンテナを分ければ
+  CPU・メモリ・障害も隔離できる。接続予算の配分は [poolbudget](../internal/poolbudget) で。

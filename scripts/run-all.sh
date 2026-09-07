@@ -126,6 +126,10 @@ if [[ -n "${MYSQL_DSN:-}" ]]; then
       go test ./internal/gqllab/ -run TestEXP27 -v -timeout 20m
   run "43-exp28-gqlrowauthz-${stamp}.txt" "㊸ EXP-28 gqlgen 行レベル認可" \
       go test ./internal/gqllab/ -run TestEXP28 -v -timeout 20m
+  run "44-exp29-procsep-${stamp}.txt" "㊹ EXP-29 Web/Worker のプール分離" \
+      go test ./internal/procseplab/ -run TestEXP29 -v -timeout 20m
+  run "45-exp30-redundancy-${stamp}.txt" "㊺ EXP-30 冗長化とアプリ構造" \
+      go test ./internal/redundancylab/ -run TestEXP30 -v -timeout 20m
 fi
 
 # ---- MySQL が無くても走る（追加ぶん）----

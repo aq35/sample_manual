@@ -138,6 +138,8 @@ files, _ := r.Save("...")
 | EXP-26 | gqlgen の受付制御（永続化クエリ allowlist・レート制限） | 済（[docs/graphql.md](graphql.md)） |
 | EXP-27 | gqlgen mutation の冪等性・入力検証 | 済（[docs/graphql.md](graphql.md)） |
 | EXP-28 | gqlgen の行レベル認可（この対象を操作してよいか） | 済（[docs/graphql.md](graphql.md)） |
+| EXP-29 | Web と Worker の接続プール分離（共有 vs 分離） | 済（[docs/web-worker-split.md](web-worker-split.md)） |
+| EXP-30 | 冗長化（複数レプリカ）でアプリはどうあるべきか | 済（[docs/redundancy.md](redundancy.md)） |
 
 ## 実行時ガード
 
