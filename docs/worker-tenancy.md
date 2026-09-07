@@ -52,7 +52,9 @@
 
 1. **スコープ強制（最重要・共有の生命線）**：全クエリが `repo.Scope` で `:tenant` を強制し、
    テナントは **ctx から**取る（クライアント入力を信じない）。1本でも生 SQL が混じると越境しうるので、
-   `sqllint`（rawdb/layerimport）で**機械的に禁止**する。→ [security-layers](security-layers.md) / [static-analysis](static-analysis.md)
+   `sqllint`（rawdb/layerimport）で**機械的に禁止**する。
+   **実測**: 境界を1本外すと他テナントの全行を読み・書きしてしまう（強制ありは cross-leak=0）
+   → [tenant-scope](tenant-scope.md)（EXP-58）/ [security-layers](security-layers.md) / [static-analysis](static-analysis.md)
 2. **最小権限の DB 資格情報**：Worker の権限を必要な表・操作に絞る。可能なら**テナント群ごとに別資格情報**。
    定期ローテーション。→ [credential-rotation](credential-rotation.md) / [secrets](secrets.md)
 3. **共有状態の非混線**：hub・キャッシュにテナントを跨ぐデータを載せない（cross-leak=0 を検証）。

@@ -1,0 +1,82 @@
+{
+  "unit": "EXP-58",
+  "name": "tenant-scope-enforcement",
+  "title": "共有ワーカーでスコープ強制を外すと越境する。強制ありは cross-leak=0",
+  "meter_version": "expkit/2",
+  "hypothesis": "1) スコープ強制あり（WHERE tenant_id=? を必ず付ける）: テナント A の処理は A の行だけ。 他テナント B への読み漏れ=0・書き込み=0（cross-leak=0）。 2) スコープ書き忘れ（status だけで絞る）: B の行まで読める（情報漏洩）し、B の行まで done にしてしまう（データ破壊）。cross-leak\u003e0。 3) 共有ワーカーの安全は『プロセス分離』でなく『クエリのテナント境界強制』で決まる。",
+  "started_at": "2026-09-07T21:28:37.210820314Z",
+  "ended_at": "2026-09-07T21:28:37.289812951Z",
+  "env": {
+    "captured_at": "2026-09-07T21:28:37.211070263Z",
+    "go_version": "go1.26.0",
+    "os": "linux",
+    "arch": "amd64",
+    "num_cpu": 4,
+    "gomaxprocs": 4,
+    "hostname": "vm",
+    "git_sha": "67f65330bcc427ac77e3424836d4ff290771acf1",
+    "git_dirty": true,
+    "mysql_version": "8.0.46-0ubuntu0.24.04.4"
+  },
+  "workload": {},
+  "injection": {},
+  "variants": [
+    {
+      "name": "スコープ強制あり・読み: A だけ見える（cross-leak=0）",
+      "counters": {
+        "cross_leak": 0,
+        "mine": 100
+      },
+      "accident": false
+    },
+    {
+      "name": "スコープ書き忘れ・読み: B の行まで見える（情報漏洩）",
+      "counters": {
+        "cross_leak": 100,
+        "mine": 100
+      },
+      "accident": true,
+      "notes": [
+        "A の処理なのに B の 100 行が読めた（越境）"
+      ]
+    },
+    {
+      "name": "スコープ強制あり・書き: A だけ done（他テナント破壊=0）",
+      "counters": {
+        "cross_write": 0,
+        "mine_done": 100
+      },
+      "accident": false
+    },
+    {
+      "name": "スコープ書き忘れ・書き: B の行まで done（データ破壊）",
+      "counters": {
+        "cross_write": 100,
+        "mine_done": 100
+      },
+      "accident": true,
+      "notes": [
+        "A の処理なのに B の 100 行を done にした（越境更新）"
+      ]
+    }
+  ],
+  "verdict": "共有ワーカーの安全は『プロセスを分けること』でなく『全クエリにテナント境界を強制すること』で決まる。WHERE tenant_id=? を強制すればテナント A の処理は A の 100 行だけを触り、他テナント B への読み漏れ=0・書き込み=0。境界を1本書き忘れると B の 100 行まで読め（情報漏洩）、done にしてしまう（データ破壊）。だから境界は人手でなく repo.Scope で機械注入し、生 SQL は sqllint で禁止する。プロセス分離は最後の砦。",
+  "scope": [
+    "MySQL 8.0 / 共有表 scope_item に tenantA・tenantB 各 100 行が同居 / A の処理を実行",
+    "cross_leak = 他テナント(B)の行を読んだ数、cross_write = 他テナント(B)の行を done にした数",
+    "scoped = クエリに WHERE tenant_id=? を付ける（repo.Scope 相当）。unscoped = 書き忘れ"
+  ],
+  "uncertainty": [
+    "実コードでは repo.Scope が :tenant を機械的に注入し、生 SQL は sqllint(rawdb/layerimport)で禁止する（EXP-8/9）",
+    "テナントは ctx から取る（クライアント入力を信じない）。ここは processing を固定して境界の有無だけを見た",
+    "共有ワーカーの分離はプロセス境界でなく『全クエリのスコープ強制』で決まる。だから機械強制が要る",
+    "高感度テナントはさらにプロセス/資格情報を分けてブラスト半径を物理的に限定（docs/worker-tenancy.md）"
+  ],
+  "artifacts": [
+    "internal/scopelab: ProcessRead/ProcessWrite（スコープ強制の有無で越境を測る）",
+    "docs/tenant-scope.md: 共有ワーカーのテナントスコープ強制"
+  ],
+  "next": [
+    "（セキュリティ実測の追加ぶん）"
+  ]
+}

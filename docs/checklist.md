@@ -80,7 +80,7 @@ Go + MySQL の常時稼働アプリ（Worker / Web API）を**作るとき・レ
 
 | やること | なぜ | どう確認 | 根拠 |
 | --- | --- | --- | --- |
-| 全クエリがテナント境界を越えない（`repo.Scope` で強制） | 越境は即・情報漏洩 | テナントは ctx から？入力から取っていないか | [security-layers](security-layers.md) |
+| 全クエリがテナント境界を越えない（`repo.Scope` で強制） | 越境は即・情報漏洩（境界1本外すと全越境・[EXP-58](tenant-scope.md)） | テナントは ctx から？入力から取っていないか | [tenant-scope](tenant-scope.md) / [security-layers](security-layers.md) |
 | テナントは ctx から取得（クライアント入力を信じない） | なりすまし防止 | ハンドラが tenant を引数で受けていないか | [security-layers](security-layers.md) |
 | フィールド単位の認可（@auth） | 見せてよい列はロールで違う | 制限列が誰でも見えていないか | [security-layers](security-layers.md) |
 | 行レベル認可（この対象を操作してよいか） | 自テナント内でも権限は分かれる | canOperate/grant を通すか | [security-layers](security-layers.md) |

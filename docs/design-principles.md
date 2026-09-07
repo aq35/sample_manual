@@ -66,7 +66,7 @@
 
 | 関心 | 考え方 | どうあるべき | 実験 |
 | --- | --- | --- | --- |
-| テナント分離 | 全クエリがテナント境界を越えない | `repo.Scope` で `:tenant` を強制。ctx から取得 | [EXP-24](security-layers.md) |
+| テナント分離 | 全クエリがテナント境界を越えない（境界1本外すと全越境） | `repo.Scope` で `:tenant` を強制。ctx から取得。生SQLは lint で禁止 | [EXP-58](tenant-scope.md)/[EXP-24](security-layers.md) |
 | フィールド認可 | 見せてよい列はロールで違う | `@auth` ディレクティブでフィールド単位 | [EXP-25](security-layers.md) |
 | 行レベル認可 | この対象を操作してよいか | `canOperate`/grant 表で対象ごとに判定 | [EXP-28](security-layers.md) |
 | DoS（複雑度） | 重いクエリで殺される | 複雑度上限・深さ制限・レート制限 | [EXP-24](graphql.md)/[EXP-26](graphql.md) |
