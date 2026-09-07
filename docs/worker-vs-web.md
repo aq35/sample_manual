@@ -9,7 +9,11 @@
 
 ---
 
-## 1. セキュリティ（マルチテナント・越境禁止）
+> 各関心の**詳細記事**（大きな目的・前提・対応・意味と効果・図）:
+> [セキュリティ](concern-security.md) / [lifecycle](concern-lifecycle.md) /
+> [パフォーマンス](concern-performance.md) / [マイグレーション](concern-migration.md)。
+
+## 1. セキュリティ（マルチテナント・越境禁止）　→ 詳細: [concern-security](concern-security.md)
 
 | 項目 | Worker | Web | 根拠 |
 | --- | --- | --- | --- |
@@ -29,7 +33,7 @@
 
 ---
 
-## 2. 長く継続する・コンテナの生き死に（lifecycle）
+## 2. 長く継続する・コンテナの生き死に（lifecycle）　→ 詳細: [concern-lifecycle](concern-lifecycle.md)
 
 コンテナは ephemeral（いつでも落ちる・再取得される）。**重要な状態はメモリでなく DB に**が大前提。
 
@@ -50,7 +54,7 @@
 
 ---
 
-## 3. パフォーマンス
+## 3. パフォーマンス　→ 詳細: [concern-performance](concern-performance.md)
 
 | 項目 | Worker | Web | 根拠 |
 | --- | --- | --- | --- |
@@ -69,7 +73,7 @@
 
 ---
 
-## 4. マイグレーション（スキーマ変更）
+## 4. マイグレーション（スキーマ変更）　→ 詳細: [concern-migration](concern-migration.md)
 
 **Worker と Web はデプロイ中に新旧が同時に動く**。だから両方が**新旧スキーマ互換**である必要がある。
 
