@@ -87,6 +87,8 @@ flowchart LR
 - **小さすぎ**＝待ちが増える、**大きすぎ**＝DB を殺す（コンテキストスイッチ・メモリ・ロック競合）。
 - **合計を予算内に**：Web レプリカ数×プール ＋ Worker 数×プール の**合計**が DB の上限を超えないこと
   （[poolbudget](../internal/poolbudget)・[redundancy](redundancy.md)）。1台ぶんでなく**全プロセスの和**で見る。
+  超えると新規接続が **1040(Too many connections)** で拒否される＝オートスケールが自らを壊す
+  （[connection-budget](connection-budget.md)・EXP-60 で実測。Guard で起動時に fail-fast）。
 - **監視**：`db.Stats().WaitCount` / `WaitDuration` が 0 でなければ**すでに飽和**（この2つを出しておく）。
 
 ### RDS Proxy でも同じか → **基本は同じ**（天井は上がらない）

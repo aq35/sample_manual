@@ -1,0 +1,10 @@
+{
+  "ended_at": "2026-09-08T21:50:30Z",
+  "git_dirty": true,
+  "git_sha": "e25bdc5b9f67016e2efa5bbcc25b5aaac71ad94c",
+  "json": "exp-60-connection-budget-autoscale.json",
+  "md": "exp-60-connection-budget-autoscale.md",
+  "meter_version": "expkit/2",
+  "name": "connection-budget-autoscale",
+  "unit": "EXP-60"
+}

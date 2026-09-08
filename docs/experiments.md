@@ -169,6 +169,7 @@ files, _ := r.Save("...")
 | EXP-57 | utf8mb4 と index 長・照合（3072B 上限・_ci/_bin） | 済（[docs/charset.md](charset.md)） |
 | EXP-58 | 共有ワーカーのテナントスコープ強制（越境の実測・cross-leak） | 済（[docs/tenant-scope.md](tenant-scope.md)） |
 | EXP-59 | gqlgen subscription 1本あたりの実メモリ（容量見積りの裏取り） | 済（[docs/concern-subscription-capacity.md](concern-subscription-capacity.md)） |
+| EXP-60 | 接続予算とオートスケール・ストーム（1040 拒否の実測・Guard） | 済（[docs/connection-budget.md](connection-budget.md)） |
 
 ## 設計の早見表・原則
 

@@ -172,6 +172,8 @@ if [[ -n "${MYSQL_DSN:-}" ]]; then
       go test ./internal/charsetlab/ -run TestEXP57 -v -timeout 20m
   run "73-exp58-scope-${stamp}.txt" "(73) EXP-58 共有ワーカーのテナントスコープ強制" \
       go test ./internal/scopelab/ -run TestEXP58 -v -timeout 20m
+  run "75-exp60-budget-${stamp}.txt" "(75) EXP-60 接続予算とオートスケール・ストーム" \
+      go test ./internal/budgetlab/ -run TestEXP60 -v -timeout 20m
 fi
 
 # ---- MySQL が無くても走る（追加ぶん・可観測性/容量計算/サブスク配線）----
