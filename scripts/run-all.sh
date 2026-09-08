@@ -189,6 +189,8 @@ run "64-exp47-ordering-${stamp}.txt" "(64) EXP-47 順序・冪等消費（版で
     go test ./internal/orderlab/ -run TestEXP47 -v -timeout 20m
 run "74-exp59-submem-${stamp}.txt" "(74) EXP-59 gqlgen subscription の実メモリ単価" \
     go test ./internal/subcaplab/ -run TestEXP59 -v -timeout 20m
+run "76-exp61-cost-${stamp}.txt" "(76) EXP-61 月予算での縦/横/Aurora の優先順位" \
+    go test ./internal/costlab/ -run TestEXP61 -v -timeout 20m
 run "65-exp50-memcost-${stamp}.txt" "(65) EXP-50 型ごとのメモリ単価" \
     go test ./internal/memlab/ -run TestEXP50 -v -timeout 20m
 run "66-exp51-loopcost-${stamp}.txt" "(66) EXP-51 ループとアロケーションのコスト" \
