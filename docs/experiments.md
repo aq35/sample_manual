@@ -180,6 +180,7 @@ files, _ := r.Save("...")
 | [docs/worked-examples.md](worked-examples.md) | Worker/Web 単体の実寸サンプル（メモリ・CPU 圧迫の計算＋mermaid 図） |
 | [docs/why-necessary.md](why-necessary.md) | なぜ必要か（標準ワーカー/標準Web のメモリ・ストレージ計算 → 破綻 → 設計） |
 | [docs/design-principles.md](design-principles.md) | 関心ごと × 考え方 × どうあるべき の一覧（漏れチェックつき） |
+| [docs/query-policy.md](query-policy.md) | クエリ方針（単純+バッチを既定・索引は狙って・巨大SQLはガード付き例外） |
 | [docs/worker-vs-web.md](worker-vs-web.md) | 関心ごと × Worker/Web 対応表（セキュリティ/lifecycle/性能/マイグレーション） |
 | [docs/responsibilities.md](responsibilities.md) | Web と Worker に求められること（責務の入口・capstone） |
 | ┗ [concern-security](concern-security.md) / [concern-lifecycle](concern-lifecycle.md) / [concern-performance](concern-performance.md) / [concern-migration](concern-migration.md) | 各関心の詳細記事（目的・前提・対応・意味と効果・図） |
