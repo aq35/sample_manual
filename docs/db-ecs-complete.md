@@ -56,6 +56,7 @@ flowchart LR
   （[EXP-62](event-driven-worker.md)：接触 61→13）。**キャッシュ ≠ ポーリング廃止**。
 - **キャッシュしていいのは不変・低頻度だけ**：robot→tenant registry・frozen contract・descriptor
   （[cache](cache.md)/[architecture](architecture.md)）。
+- **フロント側キャッシュも同じ原則**（速く見せる道具で正しさの根拠でない・順番は後ろ）：[frontend-cache](frontend-cache.md)。
 
 ## 3. ライフサイクルの「触れない」は原子的 CAS で（制約＋reconcile）
 
