@@ -45,6 +45,7 @@ flowchart LR
 | 既に常駐 worker がある小規模 | 正しさに寄与せず複雑さ増だけ | DB poll＋doorbell+backoff で十分 |
 
 > 判定基準：**「これが重複したら／落ちたら／順序が入れ替わったら壊れる？」→ 壊れるなら DB 側に置く。**
+> EventBridge と SQS を**別々に機構分解**した深掘りは [sqs-eventbridge-limits](sqs-eventbridge-limits.md)（苦手は別物）。
 
 ## 2. キャッシュの当て所（1秒ポーリングを消す前に）
 

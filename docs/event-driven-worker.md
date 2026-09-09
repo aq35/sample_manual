@@ -71,6 +71,7 @@ exactly-once [EXP-44](outbox.md)。
 
 - ①の論理秒・backoff cap は説明用。実運用は SQS 可視性タイムアウト≒lease、指数＋ジッタ（[EXP-17](adaptive-backoff.md)）。
 - MySQL に LISTEN/NOTIFY は無い → 跨プロセス通知は SQS/EventBridge で代替（[sse-fan-in](sse-fan-in.md) の pub/sub と同じ姿勢）。
+- **各サービスが苦手なことの機構レベル深掘り**（EventBridge と SQS を別々に分解）は [sqs-eventbridge-limits](sqs-eventbridge-limits.md)。
 - **実 SQS/EventBridge** での failover 跨ぎ fence 単調性・重複/順序入替配信下の exactly-once は **LIVE_ENV_REQUIRED（未実測）**。
   実環境を1回通して測るまで「確定」とは書かない（[rds-proxy](rds-proxy.md) と同じ扱い）。
 - crash 回収の速さは lease ttl と reconcile 周期で決まる（短いほど速いが誤失効の危険・clock skew は [EXP-2](fencing.md)）。
