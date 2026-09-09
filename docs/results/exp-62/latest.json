@@ -1,0 +1,10 @@
+{
+  "ended_at": "2026-09-09T09:52:37Z",
+  "git_dirty": true,
+  "git_sha": "4288f85700e3779f3318fb4dc3fd205d383f7529",
+  "json": "exp-62-worker-doorbell-vs-floor.json",
+  "md": "exp-62-worker-doorbell-vs-floor.md",
+  "meter_version": "expkit/2",
+  "name": "worker-doorbell-vs-floor",
+  "unit": "EXP-62"
+}

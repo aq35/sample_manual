@@ -171,6 +171,7 @@ files, _ := r.Save("...")
 | EXP-59 | gqlgen subscription 1本あたりの実メモリ（容量見積りの裏取り） | 済（[docs/concern-subscription-capacity.md](concern-subscription-capacity.md)） |
 | EXP-60 | 接続予算とオートスケール・ストーム（1040 拒否の実測・Guard） | 済（[docs/connection-budget.md](connection-budget.md)） |
 | EXP-61 | 月予算での縦/横/Aurora の優先順位（律速→lever の判断モデル） | 済（[docs/cost-scaling-priority.md](cost-scaling-priority.md)） |
+| EXP-62 | イベント駆動 worker（doorbell＋floor・完了は DB CAS・crash は reconcile） | 済（[docs/event-driven-worker.md](event-driven-worker.md)） |
 
 ## 設計の早見表・原則
 
