@@ -1,0 +1,10 @@
+{
+  "ended_at": "2026-09-09T23:19:31Z",
+  "git_dirty": true,
+  "git_sha": "069b327e0d5e77451d119547203d969d7af9149d",
+  "json": "exp-63-tenant-assignment-lease.json",
+  "md": "exp-63-tenant-assignment-lease.md",
+  "meter_version": "expkit/2",
+  "name": "tenant-assignment-lease",
+  "unit": "EXP-63"
+}

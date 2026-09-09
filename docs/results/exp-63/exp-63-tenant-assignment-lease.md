@@ -1,0 +1,95 @@
+# EXP-63 テナント割り当てを DB lease で持つ：均等・失敗時全責任・二重所有0・fence 単調
+
+| | |
+| --- | --- |
+| Experiment | EXP-63 / tenant-assignment-lease |
+| Starting SHA | `069b327e0d5e` (作業ツリーに未コミットの変更あり) |
+| Meter version | `expkit/2` |
+| Hypothesis (frozen before result) | 割り当てを DB の1テーブル（1テナント1行の lease）に持ち、各 worker が target=CEIL(全/生存) まで claim・超えたら shed するだけで：① 平常は 10/10 に収束（均等）、② A 死亡で live↓→target↑ により B が全20を自動担当（失敗時全責任・特別コード不要）、③ A' 復帰で 10/10 に再収束。全体で二重所有=0（tenant_id が PK）・fence は単調非減少。④ 静的ピンは A 死亡で担当10が宙に浮く（orphan=10）。 |
+| Environment | go1.26.0 linux/amd64 cpu=4 gomaxprocs=4 mysql=8.0.46-0ubuntu0.24.04.4 sha=069b327e0d5e+dirty |
+| Started / Ended | 2026-09-09T23:19:26Z / 2026-09-09T23:19:31Z |
+
+## Results
+
+### ① 平常（2台生存）: 動的 claim で均等 10/10 — OK
+
+| 数えたもの | 値 |
+| --- | --- |
+| held_A | 10 |
+| held_B | 10 |
+| live | 2 |
+| orphan | 0 |
+| target | 10 |
+
+- target=CEIL(20/2)=10。A=10 B=10＝均等・宙に浮くテナント0
+
+### ② A 死亡 → survivor B が全責任（自動・特別コード不要） — OK
+
+| 数えたもの | 値 |
+| --- | --- |
+| held_A_stale | 0 |
+| held_B | 20 |
+| live | 1 |
+| orphan | 0 |
+| target | 20 |
+
+- live 2→1 で target 10→20。B が失効した A担当を claim し held=20、orphan=0
+
+### ③ A' 復帰 → 10/10 に自動リバランス（shed＋claim） — OK
+
+| 数えたもの | 値 |
+| --- | --- |
+| held_A | 10 |
+| held_B | 10 |
+| live | 2 |
+| orphan | 0 |
+
+- target 20→10 で B が shed、A' が claim。A=10 B=10
+
+### 全体不変条件: 二重所有0（PK）・fence 単調非減少 — OK
+
+| 数えたもの | 値 |
+| --- | --- |
+| double_owned | 0 |
+| fence_monotone | 1 |
+| max_fence | 2 |
+| tenants | 20 |
+| valid_owned_sum | 20 |
+
+- tenant_id が PK＝1テナント1owner（二重所有は構造的に不可能）。fence は claim ごと+1 で単調（最大2）
+
+### ④ 対照：静的ピン → A 死亡で A担当が宙に浮く（2台の意味が消える） — **事故あり**
+
+| 数えたもの | 値 |
+| --- | --- |
+| orphan_after_A_dead | 10 |
+| pinned_A | 10 |
+
+- owner を固定すると B は A のピン分を拾えず orphan=10（動的 claim なら0＝②で実証）
+
+## Verdict
+
+テナント割り当てを DB の lease（1テナント1行）で持ち、各 worker が target=CEIL(全/生存) まで claim・超えたら shed するだけで、① 平常は 10/10 に均等収束、② A 死亡で live↓→target↑ により survivor B が 全20を自動担当（失敗時全責任は if 文でなく式の結果＝特別コード不要）、③ A' 復帰で 10/10 に再収束した。全体で二重所有=0（tenant_id が PK＝行がロック）・fence は claim ごと+1 で単調（古い担当の上書きを弾く）。④ 対照として静的ピン（owner 固定）は A 死亡で A担当の10が宙に浮き orphan=10（2台にした意味が消える）。＝均等も失敗時全責任も『owner を固定せず動的 claim＋fair-share』で DB が自動的に満たす。
+
+## 適用範囲
+
+- MySQL 8.0 / lease は DB 時計(NOW(3))・ttl=2s・stale=1s / テナント20・worker2
+- 1ティック=心拍→renew→target=CEIL(全/生存)→過少claim/過多shed。claim は SKIP LOCKED＋CAS(fence+1)
+- held=owner=me かつ期限内。orphan=有効な担当が居ないテナント数（0が健全）
+
+## 保証しない範囲・未検証
+
+- 実時間依存（sleep で lease 失効を待つ）。ttl/stale/tick は説明用の短い値。実運用は clock skew に応じ調整（EXP-2）
+- 収束は逐次ティックで模擬（テスト内で A/B を順に回す）。実際は各コンテナが独立ループ。SKIP LOCKED で取り合いは裁ける
+- failover の空白は約 ttl（可用性の谷）。correctness は fence が担保、ttl は速さだけに効く（EXP-2）
+- survivor が全担当を背負える器か（接続/メモリ）は容量側の前提（EXP-60/tenant-worker-capacity）
+
+## 再利用できる成果物
+
+- internal/assignlab: DB lease による fair-share 割り当て（claim/shed/renew/heartbeat/fence）
+- docs/web-worker-deploy.md §8: 多重化テナントワーカーのデプロイ（lease＝排他＋引継ぎ）
+
+## 次の実験
+
+- （3台以上・shard 化・実コンテナでの独立ループは容量計画側／LIVE_ENV は未実測）
+

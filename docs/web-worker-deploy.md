@@ -150,7 +150,9 @@ flowchart TB
 ## 8. 多重化テナントワーカーのデプロイ（1コンテナに複数テナント×lease 排他）
 
 1コンテナが**複数テナントの worker（goroutine）を多重ホスト**し、各テナントを **lease＋fence で排他**する形
-（`internal/tenantworker`）。この形はデプロイの正解がはっきりする。
+（`internal/tenantworker`）。この形はデプロイの正解がはっきりする。**割り当てを DB lease で持ち、均等配分・
+失敗時 survivor が全担当・二重所有0・fence 単調を実測で証明したのが [EXP-63](tenant-assignment.md)**
+（テーブル定義・claim/shed の SQL・fair-share の式つき）。
 
 > **lease とは**＝期限つきの「担当権」。DB の行に「このテナントは worker X が時刻 T まで担当」と書き、
 > **期限内は X だけが触れる**。生存中は renew で延長、落ちたら期限切れで他が取り直す（自動回収・番人不要）。

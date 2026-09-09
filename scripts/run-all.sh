@@ -176,6 +176,8 @@ if [[ -n "${MYSQL_DSN:-}" ]]; then
       go test ./internal/budgetlab/ -run TestEXP60 -v -timeout 20m
   run "77-exp62-doorbell-${stamp}.txt" "(77) EXP-62 イベント駆動 worker（doorbell＋floor）" \
       go test ./internal/doorbelllab/ -run TestEXP62 -v -timeout 20m
+  run "78-exp63-tenant-assignment-${stamp}.txt" "(78) EXP-63 テナント割り当て lease（均等・失敗時全責任・fence 単調）" \
+      go test ./internal/assignlab/ -run TestEXP63 -v -timeout 20m
 fi
 
 # ---- MySQL が無くても走る（追加ぶん・可観測性/容量計算/サブスク配線）----
