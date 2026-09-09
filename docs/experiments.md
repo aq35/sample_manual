@@ -182,6 +182,7 @@ files, _ := r.Save("...")
 | [docs/why-necessary.md](why-necessary.md) | なぜ必要か（標準ワーカー/標準Web のメモリ・ストレージ計算 → 破綻 → 設計） |
 | [docs/design-principles.md](design-principles.md) | 関心ごと × 考え方 × どうあるべき の一覧（漏れチェックつき） |
 | [docs/db-ecs-complete.md](db-ecs-complete.md) | DB＋ECS で完結するモデル（SQS/EventBridge の向く/向かない・キャッシュの当て所・制約＋reconcile） |
+| [docs/tenant-worker-capacity.md](tenant-worker-capacity.md) | per-tenant worker の容量見積り（20テナント/Aurora1000接続の現実値） |
 | [docs/query-policy.md](query-policy.md) | クエリ方針（単純+バッチを既定・索引は狙って・巨大SQLはガード付き例外） |
 | [docs/tenant-header-routing-vs-auth.md](tenant-header-routing-vs-auth.md) | テナントヘッダ：ルーティングOK/認可NG（越境防止の信頼境界） |
 | [docs/worker-vs-web.md](worker-vs-web.md) | 関心ごと × Worker/Web 対応表（セキュリティ/lifecycle/性能/マイグレーション） |
