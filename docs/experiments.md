@@ -196,6 +196,7 @@ files, _ := r.Save("...")
 | [docs/deep-dives.md](deep-dives.md) | 図で深掘り（索引先頭tenant_id/ワーカーの単位/サブスク性能/GET_LOCK vs lease） |
 | [docs/checklist.md](checklist.md) | 作る・レビューするときのやることリスト（全網羅・表・記事リンク付き） |
 | [docs/worker-tenancy.md](worker-tenancy.md) | Worker をテナント単位か共有か（トレードオフ・セキュリティ重視の結論） |
+| [docs/web-worker-deploy.md](web-worker-deploy.md) | Web/Worker 分離時のデプロイ構成（時期/スペック/オートスケール差・CodePipeline 2経路・migration先頭） |
 | [docs/worker-connection-model.md](worker-connection-model.md) | 常時接続ワーカー（WS多重化・再接続・1コンテナ1接続の是非・outbox） |
 | [docs/domain-themes.md](domain-themes.md) | 適用テーマ候補と具体テーブル設計（マルチテナント越境禁止のDDL雛形） |
 | [docs/subscription-design.md](subscription-design.md) | hub の破棄粒度・途中失権・状態×タスクの購読設計 |

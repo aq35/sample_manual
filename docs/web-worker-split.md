@@ -1,6 +1,8 @@
 # Worker / Web の分離と接続予算（統合スケルトン）
 
 これまでの実験の結論を、実際に動く形に結線したもの。
+**分けた後のデプロイ運用（デプロイ時期・タスクスペック・オートスケール・CodePipeline）は
+[web-worker-deploy](web-worker-deploy.md)。**
 
 - 統合ワーカー: `internal/tenantworker`（lease × fan-out × backoff × テナント別処理 × fence）
 - Web プロセス: `cmd/web`（別プロセス・別プール・予算ガード・graceful shutdown）
