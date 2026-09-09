@@ -184,7 +184,7 @@ files, _ := r.Save("...")
 | [docs/db-ecs-complete.md](db-ecs-complete.md) | DB＋ECS で完結するモデル（SQS/EventBridge の向く/向かない・キャッシュの当て所・制約＋reconcile） |
 | [docs/tenant-worker-capacity.md](tenant-worker-capacity.md) | per-tenant worker の容量見積り（20テナント/Aurora1000接続の現実値） |
 | [docs/frontend-cache.md](frontend-cache.md) | フロントキャッシュは最後の一押し（真実は DB・不変/非鮮度/非認可だけ載せる） |
-| [docs/sqs-eventbridge-limits.md](sqs-eventbridge-limits.md) | EventBridge/SQS が苦手なことの深掘り（別々に機構分解・正しさは DB へ戻る） |
+| [docs/sqs-eventbridge-limits.md](sqs-eventbridge-limits.md) | EventBridge/SQS の得意・苦手の深掘り（機構分解・10ユースケース・一生終わらない系＝常駐worker） |
 | [docs/query-policy.md](query-policy.md) | クエリ方針（単純+バッチを既定・索引は狙って・巨大SQLはガード付き例外） |
 | [docs/tenant-header-routing-vs-auth.md](tenant-header-routing-vs-auth.md) | テナントヘッダ：ルーティングOK/認可NG（越境防止の信頼境界） |
 | [docs/worker-vs-web.md](worker-vs-web.md) | 関心ごと × Worker/Web 対応表（セキュリティ/lifecycle/性能/マイグレーション） |

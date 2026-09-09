@@ -1,8 +1,9 @@
-# EventBridge / SQS が苦手なこと（深掘り：別々に分解）
+# EventBridge / SQS の得意・苦手（深掘り：別々に分解）
 
 前提：[db-ecs-complete](db-ecs-complete.md) と [event-driven-worker](event-driven-worker.md)(EXP-62) で
 「event は doorbell、正しさは DB CAS」を示した。ここでは **EventBridge と SQS を別物として**、
-それぞれ何が苦手かを**機構レベルで**分解する。結論を先に：
+それぞれの**得意（§D）**と**苦手（§A/§B）を機構レベルで**分解し、**一生終わらない系（§E）**まで扱う。
+結論を先に：
 
 - **EventBridge＝ルータ＋近似 cron**。苦手：*正確な時刻・順序・exactly-once・状態保持・不在検知・生 WS 宛先*。
   「起きたことを配る / 周期で叩く」専用。**保持（hold）しない・pull できない・approximate に発火**。
@@ -155,6 +156,83 @@ FIFO（グループ内順序/5分 dedup/スループット上限）がある。*
 EventBridge は「いつ・どこへ」、SQS は「貯めて確実に渡す」、**正しさ（二度やらない・古いの弾く・順序・現在状態・
 落ちたの拾う）は DB**。
 
+---
+
+## D. 得意なこと（strengths：苦手の裏返し）
+
+苦手を機構で押さえたら、得意は自ずと決まる。**4つの動詞**で分けるのが一番漏れない。
+
+| 動詞 | 担当 | なぜ |
+| --- | --- | --- |
+| **決める**（二度やらない・古いの弾く・順序） | **DB CAS / version** | 正しさは配信でなく DB が持つ（[EXP-62](event-driven-worker.md)/[EXP-2](fencing.md)/[EXP-47](event-ordering.md)） |
+| **覚える・集計**（現在状態・件数・ロールアップ） | **DB** | イベントは状態を持てない・集計は窓を畳む計算 |
+| **遂行**（貯めて確実に渡す・retry・DLQ・背圧） | **SQS** | 耐久ワークキューの本領 |
+| **配る・振り分ける・起こす**（fan-out・route・cron） | **EventBridge** | 状態を持たない push 型ルータ＋近似 cron の本領 |
+
+### D-1. SQS の得意＝「決まったことの遂行」
+決まったジョブを **貯める・確実に1件ずつ渡す・失敗は retry/DLQ・消費速度に合わせて待たせる（背圧）**。
+動詞は **運ぶ・遂行させる**。ただし「二度やらない・古い worker を弾く」は持てない → **遂行の"正しさ"は
+worker 側の DB CAS**（[EXP-62](event-driven-worker.md)②/[EXP-2](fencing.md)）。SQS は「確実に届ける」まで、
+「確実に1回**効かせる**」は DB。
+
+### D-2. EventBridge の得意＝「振り分け＋目覚まし」（集計ではない）
+状態を持たないので**集計はできない**。得意は **配る（fan-out 1→N）・振り分ける（content filter/routing）・
+起こす（schedule/cron tick）**。AWS サービスイベントや SaaS イベントを受けて振り分けるのも得意。
+
+> **集計はどこ？** 集計＝状態を時間/窓で畳む計算 → **DB(`GROUP BY`/ロールアップ)か worker**。
+> EventBridge は「集計しろ、の合図(cron)」を出すだけ：
+> `EventBridge(毎時tick) → worker → DB GROUP BY(結果も保存)`。リアルタイム連続集計が要るなら Kinesis/Flink 系（別物）。
+
+### D-3. EventBridge でできる 10 ユースケース
+どれも共通形は **`EventBridge(起こす/振り分ける) → (SQS durable) → worker → DB CAS(決める/覚える)`**。
+
+| # | ユースケース | EventBridge の役割 | 実体・正しさ |
+| --- | --- | --- | --- |
+| 1 | 定時バッチ起床（毎時集計・日次ロールアップ） | cron tick で worker を起こす | 集計は worker＋DB `GROUP BY` |
+| 2 | reconcile sweep の定期起動（lease 失効/stuck 回収） | 周期 tick で floor を回す合図 | DB 時計 lease＋reconcile（[EXP-62](event-driven-worker.md)③） |
+| 3 | 保持ジョブ起動（古いパーティション DROP） | cron で retention worker 起床 | DROP は worker＋DB（[EXP-48](retention.md)） |
+| 4 | 一度きりの未来実行（トライアル30日後終了 等） | Scheduler で未来時刻に1回起こす | 真実は DB `run_at`、取りこぼしは poll |
+| 5 | AWS サービスイベントで起動（S3 に置かれた→import） | 作成イベントを受けて worker 起動 | 結果は DB、冪等は `UNIQUE`/CAS |
+| 6 | content-based routing（振り分け） | パターンで「注文系→A、ロボット系→B」 | 各 worker が DB で処理 |
+| 7 | fan-out 1→N（メンテ開始→通知/監査/キャッシュ無効化） | 1イベントを複数ターゲットへ複製 | 各レーンは DB/outbox で確実化 |
+| 8 | 外部通知のトリガ（メンテ5分前にロボットへ） | 「通知しろ」の合図 | outbox→relay→push(at-least-once)、robot は version 冪等（[EXP-44](outbox.md)） |
+| 9 | SaaS/パートナーイベント統合（決済 webhook 等） | 外部イベントをバスへ入れ振り分け | 実体は DB に記録 |
+| 10 | 定期自動化起動（証明書ローテ・バックアップ・メトリクス収集） | 定時 tick でジョブ起床 | 実作業は worker＋DB/S3（[credential-rotation](credential-rotation.md)/[backup-restore](backup-restore.md)） |
+
+---
+
+## E. 一生終わらない系（長時間・常駐）は event/queue が苦手 → 常駐 worker＋DB lease
+
+「一生終わらない系」は event/queue の担当ではない。**この設計が常駐（always-on）worker を選ぶ理由**そのもの。
+種類を分けて見る。
+
+### E-1. 長時間の「1ジョブ」— SQS も EventBridge も苦手
+- **SQS**：visibility timeout は**最大12時間**。処理がそれを超えると**再表示→別 worker が同じ仕事を取る＝二重実行**。
+  heartbeat 延命はできるが「1メッセージ＝超長ジョブ」はモデルが合わない（§B-1）。
+- **EventBridge**：そもそも**実行しない・保持しない**。起こすだけで「まだ走ってる」概念が無い。Lambda ターゲットも**15分上限**。
+
+→ 長い仕事は「**開始の合図**」だけ event/SQS に任せ、**進捗・lease・完了は DB**、本体は worker が回す。
+
+### E-2. 一生終わらない常駐ループ（poll/reconcile の floor）— そもそも event の仕事でない
+- events は **episodic（出来事ごとに1発）**。**forever（永久に回り続ける）は continuous compute ＝ 常駐プロセス**。
+- 「pending あるか／lease 切れたか」を永遠に確認し続ける floor は、**常駐 ECS worker** が持つ（[EXP-62](event-driven-worker.md) の floor）。
+- 構成は **「常駐 worker ＋ doorbell」**：floor は常駐が保証、event は tight poll を減らす最適化。
+
+### E-3. scale-to-zero との矛盾
+- event 駆動の売りは **scale-to-zero（仕事ゼロなら compute ゼロ）**。だが**一生終わらない floor** が要るなら
+  **最低1台は生かし続ける**（lease singleton）→ floor には event の「ゼロまで縮む」旨みが**効かない**。
+  これが「純イベント駆動でなく常駐 worker」を選ぶ根拠（[worker-tenancy](worker-tenancy.md)）。
+
+### E-4. 長い仕事の正しい畳み方（DB が面倒を見る）
+```
+開始の合図: EventBridge/SQS → 常駐 worker が claim（lease 取得）
+実行中    : worker が lease を定期延長（生存の証）・進捗は DB に書く
+crash     : lease 失効 → reconcile が別 worker に引き継がせる（EXP-2 / EXP-62③）
+完了      : DB CAS で1回だけ（EXP-62②）
+```
+- **長時間クエリ自体**も上限を付ける（`MAX_EXECUTION_TIME`／context timeout・[query-timeout](query-timeout.md)）。一生終わらない SQL を走らせない。
+- 長命 worker は **graceful shutdown**（lease を手放してから落ちる・[shutdown](shutdown.md)）。
+
 ## まとめ
 
 - **EventBridge の弱点は "保持しない・pull できない・近似発火" という push 型ルータの本質**：時刻・順序・
@@ -163,6 +241,10 @@ EventBridge は「いつ・どこへ」、SQS は「貯めて確実に渡す」�
   スケジュール・状態照会・単体 fan-out を任せると壊れる。
 - **両者に共通して欠けるのは DB の4性質（exactly-once CAS / 不在検知 poll / 順序 version / 現在状態）**。
   だから **event は doorbell、正しさは DB**（[db-ecs-complete](db-ecs-complete.md)）。
+- **得意は動詞で分ける**：**決める・覚える・集計＝DB／遂行＝SQS／配る・振り分ける・起こす＝EventBridge**。
+  集計は EventBridge でなく DB/worker（EventBridge は「集計しろ」の合図だけ）。
+- **一生終わらない系（長時間1ジョブ・常駐 floor）は event/queue でなく "常駐 worker＋DB lease"**。
+  event は開始の合図、生存・引き継ぎ・完了は DB。scale-to-zero は floor には効かない。
 
 ## 保証しない範囲・未検証
 
