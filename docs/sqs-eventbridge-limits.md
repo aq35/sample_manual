@@ -199,6 +199,32 @@ worker 側の DB CAS**（[EXP-62](event-driven-worker.md)②/[EXP-2](fencing.md)
 | 9 | SaaS/パートナーイベント統合（決済 webhook 等） | 外部イベントをバスへ入れ振り分け | 実体は DB に記録 |
 | 10 | 定期自動化起動（証明書ローテ・バックアップ・メトリクス収集） | 定時 tick でジョブ起床 | 実作業は worker＋DB/S3（[credential-rotation](credential-rotation.md)/[backup-restore](backup-restore.md)） |
 
+### D-4. 具体ウォークスルー：月次バッチ（#1/#4 の花形・レア×高ステークス）
+
+月次バッチ（請求締め・月次ロールアップ）は EventBridge Scheduler cron の教科書的な得意分野。ただし
+**「月1回＝年12回」でレア×高ステークスなので、§A の弱点がむしろ強く効く**。得意（起こす）は EventBridge に、
+**「その月を1回だけ・飛んだら追い実行・長ければ lease」は DB** に締める。
+
+| 効く弱点 | 月次での怖さ | DB 側の締め |
+| --- | --- | --- |
+| **取りこぼし**（backfill しない・§A-1） | 停止中に発火した月が**丸ごと欠落** | DB `last_run_at` を真実にし、worker が「対象月 未実行?」を見て **catch-up** |
+| **二重発火**（at-least-once・§A-2） | 月次請求が**二重課金** | `UNIQUE(period_ym)` / CAS `WHERE last_period < :ym` で**その月1回**（[EXP-62](event-driven-worker.md)②） |
+| **長時間**（§E） | 先月分の全集計が visibility/15分を超過 | 常駐 worker が **lease 延長＋reconcile 引き継ぎ**（§E-4/[EXP-2](fencing.md)） |
+| **月境界の TZ** | 「1日0:00」が誰の TZ か（DSN は UTC 固定） | テナント TZ の月初/月末を明示変換（[timezone](timezone.md)） |
+
+```
+EventBridge Scheduler(毎月1日 cron) ──tick(起こすだけ)──▶ 常駐 worker
+  worker:
+   1. DB で「対象月 未実行?」を確認（落ちてても catch-up・二重tickは CAS で1回）
+   2. 対象月を CAS で確保（UNIQUE(period_ym)）
+   3. テナント分を fan-out（SQS）→ 各 worker がテナント scope 付きで集計（EXP-58）
+   4. 集計結果を DB へ保存（GROUP BY / ロールアップ）
+```
+
+- **集計そのものは DB/worker**（EventBridge は起こすだけ・§D-2）。
+- **per-tenant を一斉に巨大トランザクションにしない** → batch＋coalesce、接続予算内で（[EXP-60](connection-budget.md)）。
+- 済んだ生データは日/月パーティションで保持・DROP（[EXP-48](retention.md)）。
+
 ---
 
 ## E. 一生終わらない系（長時間・常駐）は event/queue が苦手 → 常駐 worker＋DB lease
