@@ -3,11 +3,11 @@
 | | |
 | --- | --- |
 | Experiment | EXP-64 / reclaim-time-and-cas |
-| Starting SHA | `d89589afc98a` |
+| Starting SHA | `d5beaeb87c79` |
 | Meter version | `expkit/2` |
 | Hypothesis (frozen before result) | 回収を『status=in_progress を全部戻す』(①時間なし)で書くと、heartbeat が新しい＝生きている担当の行まで 奪い、二重実行になる。heartbeat が lease より古い行だけを CAS(WHERE に status と heartbeat)で戻すと、 生きている担当は奪わず(奪取0)、落ちた担当ぶんだけを affected_rows として回収できる。 また回収候補の抽出は、索引末尾を heartbeat_at にすると completed の山を舐めずに済む。 |
-| Environment | go1.26.0 linux/amd64 cpu=4 gomaxprocs=4 mysql=8.0.46-0ubuntu0.24.04.4 sha=d89589afc98a |
-| Started / Ended | 2026-09-10T22:45:27Z / 2026-09-10T22:45:37Z |
+| Environment | go1.26.0 linux/amd64 cpu=4 gomaxprocs=4 mysql=8.0.46-0ubuntu0.24.04.4 sha=d5beaeb87c79 |
+| Started / Ended | 2026-09-10T22:49:33Z / 2026-09-10T22:49:43Z |
 
 ## Workload
 
@@ -40,15 +40,15 @@
 
 | 測ったもの | 値 |
 | --- | --- |
-| p50_ms | 0.369 |
+| p50_ms | 0.411 |
 
 ### 回収候補の抽出: 索引なし（completed の山を舐める） — **事故あり**
 
 | 測ったもの | 値 |
 | --- | --- |
-| p50_ms | 41.670 |
+| p50_ms | 41.723 |
 
-- 索引あり 369.374µs → なし 41.670855ms
+- 索引あり 411.46µs → なし 41.723436ms
 
 ## Verdict
 

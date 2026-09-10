@@ -4,18 +4,18 @@
   "title": "不正データの入口を DB 制約(ENUM/CHECK/FK)で塞ぐ（アプリのバリデーションは経路しか守れない）",
   "meter_version": "expkit/2",
   "hypothesis": "アプリのバリデーションはアプリ経路しか守らない。直接 DB 入力(手動 SQL・別ツール・移行)はそれを迂回する。 同じ不正 INSERT を、ガード無し表(ゆるい型・制約なし)には landing し、DB 制約(ENUM/CHECK/FK)有り表には 入口で弾かれる。よって直接 DB 入力に対する最後の砦は DB 制約であり、アプリ側チェックだけでは足りない。 ※不正値を丸めずに弾くには STRICT sql_mode が要る(MySQL 8 の既定で入る)。",
-  "started_at": "2026-09-10T22:45:38.631610973Z",
-  "ended_at": "2026-09-10T22:45:38.660960704Z",
+  "started_at": "2026-09-10T22:49:43.784081283Z",
+  "ended_at": "2026-09-10T22:49:43.80407074Z",
   "env": {
-    "captured_at": "2026-09-10T22:45:38.631816312Z",
+    "captured_at": "2026-09-10T22:49:43.784091271Z",
     "go_version": "go1.26.0",
     "os": "linux",
     "arch": "amd64",
     "num_cpu": 4,
     "gomaxprocs": 4,
     "hostname": "vm",
-    "git_sha": "d89589afc98afb7207897f5b950e0be7d952f03c",
-    "git_dirty": true,
+    "git_sha": "d5beaeb87c79b8b076a2d33f2cfd21926df7561b",
+    "git_dirty": false,
     "mysql_version": "8.0.46-0ubuntu0.24.04.4"
   },
   "workload": {

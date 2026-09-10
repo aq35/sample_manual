@@ -4,18 +4,18 @@
   "title": "Web と Worker のレースを状態 CAS と version（楽観ロック）で止める",
   "meter_version": "expkit/2",
   "hypothesis": "状態遷移は遷移元を WHERE に入れた CAS(affected_rows=1 で勝者確定)で守る。claim も complete も同じ。 入力の同時編集は version(楽観ロック)で守る。worker は読んだ version を WHERE に入れて書き、 Web が先に編集していたら affected_rows=0 で結果を捨てて読み直す。 CAS/version が無いと、二重 claim・cancel の消失・stale result が起きる。",
-  "started_at": "2026-09-10T22:45:44.949227825Z",
-  "ended_at": "2026-09-10T22:45:48.024537006Z",
+  "started_at": "2026-09-10T22:49:44.315866381Z",
+  "ended_at": "2026-09-10T22:49:47.4419Z",
   "env": {
-    "captured_at": "2026-09-10T22:45:44.949404655Z",
+    "captured_at": "2026-09-10T22:49:44.315881269Z",
     "go_version": "go1.26.0",
     "os": "linux",
     "arch": "amd64",
     "num_cpu": 4,
     "gomaxprocs": 4,
     "hostname": "vm",
-    "git_sha": "d89589afc98afb7207897f5b950e0be7d952f03c",
-    "git_dirty": true,
+    "git_sha": "d5beaeb87c79b8b076a2d33f2cfd21926df7561b",
+    "git_dirty": false,
     "mysql_version": "8.0.46-0ubuntu0.24.04.4"
   },
   "workload": {},
@@ -25,7 +25,7 @@
       "name": "A claim: 無条件 UPDATE（読取り→書込みの隙間）",
       "metrics": {
         "double_claims": 200,
-        "total_claims": 1025
+        "total_claims": 1049
       },
       "accident": true,
       "notes": [

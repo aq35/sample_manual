@@ -3,11 +3,11 @@
 | | |
 | --- | --- |
 | Experiment | EXP-66 / web-worker-race |
-| Starting SHA | `d89589afc98a` (作業ツリーに未コミットの変更あり) |
+| Starting SHA | `d5beaeb87c79` |
 | Meter version | `expkit/2` |
 | Hypothesis (frozen before result) | 状態遷移は遷移元を WHERE に入れた CAS(affected_rows=1 で勝者確定)で守る。claim も complete も同じ。 入力の同時編集は version(楽観ロック)で守る。worker は読んだ version を WHERE に入れて書き、 Web が先に編集していたら affected_rows=0 で結果を捨てて読み直す。 CAS/version が無いと、二重 claim・cancel の消失・stale result が起きる。 |
-| Environment | go1.26.0 linux/amd64 cpu=4 gomaxprocs=4 mysql=8.0.46-0ubuntu0.24.04.4 sha=d89589afc98a+dirty |
-| Started / Ended | 2026-09-10T22:45:44Z / 2026-09-10T22:45:48Z |
+| Environment | go1.26.0 linux/amd64 cpu=4 gomaxprocs=4 mysql=8.0.46-0ubuntu0.24.04.4 sha=d5beaeb87c79 |
+| Started / Ended | 2026-09-10T22:49:44Z / 2026-09-10T22:49:47Z |
 
 ## Results
 
@@ -16,7 +16,7 @@
 | 測ったもの | 値 |
 | --- | --- |
 | double_claims | 200.000 |
-| total_claims | 1025.000 |
+| total_claims | 1049.000 |
 
 - 同じ pending を複数 worker が掴む＝二重処理。掴んだ総数が行数 200 を超える
 

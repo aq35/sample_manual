@@ -3,11 +3,11 @@
 | | |
 | --- | --- |
 | Experiment | EXP-65 / ingest-guard |
-| Starting SHA | `d89589afc98a` (作業ツリーに未コミットの変更あり) |
+| Starting SHA | `d5beaeb87c79` |
 | Meter version | `expkit/2` |
 | Hypothesis (frozen before result) | アプリのバリデーションはアプリ経路しか守らない。直接 DB 入力(手動 SQL・別ツール・移行)はそれを迂回する。 同じ不正 INSERT を、ガード無し表(ゆるい型・制約なし)には landing し、DB 制約(ENUM/CHECK/FK)有り表には 入口で弾かれる。よって直接 DB 入力に対する最後の砦は DB 制約であり、アプリ側チェックだけでは足りない。 ※不正値を丸めずに弾くには STRICT sql_mode が要る(MySQL 8 の既定で入る)。 |
-| Environment | go1.26.0 linux/amd64 cpu=4 gomaxprocs=4 mysql=8.0.46-0ubuntu0.24.04.4 sha=d89589afc98a+dirty |
-| Started / Ended | 2026-09-10T22:45:38Z / 2026-09-10T22:45:38Z |
+| Environment | go1.26.0 linux/amd64 cpu=4 gomaxprocs=4 mysql=8.0.46-0ubuntu0.24.04.4 sha=d5beaeb87c79 |
+| Started / Ended | 2026-09-10T22:49:43Z / 2026-09-10T22:49:43Z |
 
 ## Workload
 
