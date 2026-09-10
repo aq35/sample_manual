@@ -107,6 +107,8 @@ files, _ := r.Save("...")
 
 ## 実験の単位
 
+> **大分類 × 実験内容 × こうあるべき の早見表**は [experiments-overview.md](experiments-overview.md) にある（全実験の結論を1枚で）。
+
 | Unit | 内容 | 状態 |
 | --- | --- | --- |
 | EXP-0 | 測定器の自己検査 | 済（`internal/expkit`） |
@@ -173,6 +175,7 @@ files, _ := r.Save("...")
 | EXP-61 | 月予算での縦/横/Aurora の優先順位（律速→lever の判断モデル） | 済（[docs/cost-scaling-priority.md](cost-scaling-priority.md)） |
 | EXP-62 | イベント駆動 worker（doorbell＋floor・完了は DB CAS・crash は reconcile） | 済（[docs/event-driven-worker.md](event-driven-worker.md)） |
 | EXP-63 | テナント割り当てを DB lease で（均等10/10・失敗時 survivor が全20・二重所有0・fence 単調・静的ピンは orphan10） | 済（[docs/tenant-assignment.md](tenant-assignment.md)） |
+| EXP-64 | 回収(in_progress→pending)は時間指定(heartbeat)と CAS で書く（①時間なしは生存担当を奪い二重実行・②は奪取0/affected_rows=stale・回収抽出索引は末尾 heartbeat_at） | コード済・実測待ち（[docs/worker-state-time.md](worker-state-time.md)） |
 
 ## 設計の早見表・原則
 

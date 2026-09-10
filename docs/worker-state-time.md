@@ -1,6 +1,6 @@
 # 「欲しい状態」は時間指定が要るのか要らないのか（Worker クエリの切り分け）
 
-- 関連実験: `internal/statuslab`（EXP-22・状態で表を分けるか）/ `internal/lease`・`internal/assignlab`（EXP-63・lease）/ `internal/cadencelab`（EXP-12・命令キュー）/ `internal/doorbelllab`（EXP-62・crash 回収）
+- 関連実験: `internal/statuslab`（EXP-22・状態で表を分けるか / **EXP-64・回収は時間指定と CAS で書く**）/ `internal/lease`・`internal/assignlab`（EXP-63・lease）/ `internal/cadencelab`（EXP-12・命令キュー）/ `internal/doorbelllab`（EXP-62・crash 回収）
 - 根拠: `調査` §2.2（3本のループ）/ §2.7（冪等）/ §2.8（担当決め）/ §4.4（表を分ける）/ §4.6（InnoDB 固有）
 
 Worker が状態機械（`pending → in_progress → completed`）を DB で回すとき、
@@ -97,17 +97,24 @@ CREATE TABLE job (
 
 ---
 
-## 5. 検証したいこと（未実施）
+## 5. 検証
 
-`internal/statuslab` に②側の最小実験を足すと、この仮説の②が数字で裏付く。
+**(3) 二重実行の再現は EXP-64 で実装済み**（`internal/statuslab/exp64.go` / `exp64_test.go`）。
+`MYSQL_DSN=... go test ./internal/statuslab/ -run TestEXP64 -v` で走る。
 
-1. **回収クエリの索引効果**: 大量の terminal + 少数の in_progress を入れ、
-   `WHERE status='in_progress' AND heartbeat_at < NOW(3)-INTERVAL ? SECOND` を
-   `(tenant,status,heartbeat_at)` あり／なしで比較（①の `FindPending` と同じ構図の②版）。
+- 生存担当（heartbeat 新しい）500 + 落ちた担当（heartbeat 古い）500 + completed 10万 を入れ、
+  回収①（`WHERE status='in_progress'` の全 UPDATE）と
+  回収②（`... AND heartbeat_at < NOW(3) - INTERVAL ? SECOND` の CAS）を before/after で比較。
+- 検証: ①は生存担当を奪う（`stolen_alive > 0` ＝二重実行）／②は奪取 0・`affected_rows` が stale 件ちょうど。
+- あわせて回収候補の抽出を索引 `(tenant,status,heartbeat_at)` あり／なしで比較（**(1) の索引効果**も同実験に同梱）。
+
+> このリポジトリの環境では MySQL に接続できないため**まだ実行して数字は取れていない**（`MYSQL_DSN` 未設定で skip する CI 安全形）。
+> `scripts/mysql-up.sh` で MySQL を立ててから走らせると、上の検証（`t.Errorf`）が実測で確定する。
+
+**未実施:**
+
 2. **兼用列 vs 分離列**: `run_after` と `heartbeat_at` を1本の `updated_at` に兼ねた場合に、
-   取得と回収のどちらが全走査に落ちるかを EXPLAIN で確認。
-3. **二重実行の再現**: 回収を①（時間なし）で書くと二重実行が起きること、
-   ②（`heartbeat_at`）+ CAS `affected_rows` 確認で止まることを before/after で。
+   取得と回収のどちらが全走査に落ちるかを EXPLAIN で確認（H1 の裏付け）。
 
 ---
 
