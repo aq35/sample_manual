@@ -4,6 +4,17 @@
 - スキーマ: `internal/ingestlab/schema.sql`
 - 根拠: EXP-45（[dead-letter](dead-letter.md)・すり抜けた poison の隔離）/ `調査` §2.7（冪等）
 
+## 実測（MySQL 8.0.46・不正3種を直接 INSERT）
+
+[結果](results/exp-65/exp-65-ingest-guard.md)。同じ不正 INSERT（未知状態 `frozen`・負の金額 `-1`・存在しない参照 `ref=999`）を両表へ:
+
+| 表 | landing した不正 |
+| --- | --- |
+| ガード無し（VARCHAR・制約なし） | **3 / 3**（全部そのまま残る＝poison） |
+| DB制約有り（ENUM+CHECK+FK） | **0 / 3**（ENUM/CHECK/FK が経路に関係なく拒否） |
+
+正しい行はガード有り表にも問題なく入る（制約が正常系を壊さない）。`@@sql_mode` に STRICT があることを検証済み。
+
 ## 何が起きるか
 
 通常の動作確認では入らないデータが混入して、worker の処理が前に進まなくなる（1件の poison が

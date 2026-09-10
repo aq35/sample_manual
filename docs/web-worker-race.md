@@ -15,6 +15,16 @@ Web（人が操作）と Worker（裏で処理）は**同じ行を同時に触�
 | **B cancel 中の complete** | Web が cancel した仕事を worker が完了で上書き → **cancel が消える** |
 | **C 入力の途中編集** | worker が読んだ後に Web が入力を編集 → worker が**古い入力の結果**を書く（stale result） |
 
+## 実測（MySQL 8.0.46・race_job 200件・claim は concurrency=8）
+
+[結果](results/exp-66/exp-66-web-worker-race.md)。無ガードでは3レースとも全件で事故が起き、CAS/version で全て0になった:
+
+| レース | 無ガード（id だけ） | CAS / version |
+| --- | --- | --- |
+| A 二重 claim | 二重掴み **200行**（掴んだ総数 1025 > 行数 200） | 二重 **0**（掴んだ総数 = 200 ちょうど） |
+| B cancel 消失 | **200 件**の cancel が completed に上書き | **0**（cancel 済みには一致せず破棄） |
+| C stale result | **200 件**の古い入力の結果が残る | **0**（version 不一致で破棄・読み直し） |
+
 ## こうあるべき
 
 ### 原則: 「id だけで UPDATE」を禁止し、遷移元を WHERE に入れる（CAS）

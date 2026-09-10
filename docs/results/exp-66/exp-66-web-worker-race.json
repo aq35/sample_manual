@@ -1,0 +1,105 @@
+{
+  "unit": "EXP-66",
+  "name": "web-worker-race",
+  "title": "Web と Worker のレースを状態 CAS と version（楽観ロック）で止める",
+  "meter_version": "expkit/2",
+  "hypothesis": "状態遷移は遷移元を WHERE に入れた CAS(affected_rows=1 で勝者確定)で守る。claim も complete も同じ。 入力の同時編集は version(楽観ロック)で守る。worker は読んだ version を WHERE に入れて書き、 Web が先に編集していたら affected_rows=0 で結果を捨てて読み直す。 CAS/version が無いと、二重 claim・cancel の消失・stale result が起きる。",
+  "started_at": "2026-09-10T22:45:44.949227825Z",
+  "ended_at": "2026-09-10T22:45:48.024537006Z",
+  "env": {
+    "captured_at": "2026-09-10T22:45:44.949404655Z",
+    "go_version": "go1.26.0",
+    "os": "linux",
+    "arch": "amd64",
+    "num_cpu": 4,
+    "gomaxprocs": 4,
+    "hostname": "vm",
+    "git_sha": "d89589afc98afb7207897f5b950e0be7d952f03c",
+    "git_dirty": true,
+    "mysql_version": "8.0.46-0ubuntu0.24.04.4"
+  },
+  "workload": {},
+  "injection": {},
+  "variants": [
+    {
+      "name": "A claim: 無条件 UPDATE（読取り→書込みの隙間）",
+      "metrics": {
+        "double_claims": 200,
+        "total_claims": 1025
+      },
+      "accident": true,
+      "notes": [
+        "同じ pending を複数 worker が掴む＝二重処理。掴んだ総数が行数 200 を超える"
+      ]
+    },
+    {
+      "name": "A claim: 状態 CAS（WHERE status='pending'・affected_rows=1）",
+      "metrics": {
+        "double_claims": 0,
+        "total_claims": 200
+      },
+      "accident": false,
+      "notes": [
+        "1行は1人にしか渡らない。掴んだ総数=行数ちょうど・二重0"
+      ]
+    },
+    {
+      "name": "B complete: 状態を見ない UPDATE ... WHERE id",
+      "metrics": {
+        "lost_cancels": 200
+      },
+      "accident": true,
+      "notes": [
+        "Web の cancel を worker の完了が上書き。200 件の cancel が消えて completed に"
+      ]
+    },
+    {
+      "name": "B complete: 状態 CAS（WHERE status='in_progress' AND owner）",
+      "metrics": {
+        "lost_cancels": 0
+      },
+      "accident": false,
+      "notes": [
+        "cancel 済みには一致しない(affected_rows=0)ので worker は結果を破棄。消えた cancel 0"
+      ]
+    },
+    {
+      "name": "C 結果書込: version を見ない UPDATE ... WHERE id",
+      "metrics": {
+        "stale_writes": 200
+      },
+      "accident": true,
+      "notes": [
+        "Web が編集した後の行に、古い input で計算した結果を書く。200 件が stale"
+      ]
+    },
+    {
+      "name": "C 結果書込: version 楽観ロック（WHERE version=読んだ値）",
+      "metrics": {
+        "stale_writes": 0
+      },
+      "accident": false,
+      "notes": [
+        "version 不一致で affected_rows=0 → 結果を捨てて読み直す。stale 0"
+      ]
+    }
+  ],
+  "verdict": "Web と Worker が同じ行を触るなら、状態遷移は遷移元を WHERE に入れた CAS(affected_rows で勝者確定)、入力の同時編集は version(楽観ロック)で守る。claim も complete も『状態を見ずに id だけで UPDATE』は禁止。CAS/version が無いと、二重 claim・cancel の消失・stale result が起きる。",
+  "scope": [
+    "MySQL 8.0 / race_job 200件 / claim は concurrency=8 で奪い合い",
+    "A は並行(goroutine)、B・C は Web→Worker の順を決定的に起こして上書き/stale を測る",
+    "状態 CAS=遷移元を WHERE に入れる、version=読んだ値を WHERE に入れる"
+  ],
+  "uncertainty": [
+    "A の無条件版の二重数は並行タイミング依存（環境で変わる）。CAS の不変量(二重0・total=n)だけが確定的",
+    "SELECT ... FOR UPDATE SKIP LOCKED でも claim は守れる（別解）。ここでは楽観 CAS を測った",
+    "version は競合が激しいとやり直しが増える（repository-layer §2.3・楽観ロックはタダではない）"
+  ],
+  "artifacts": [
+    "internal/racelab: ClaimRace(A) / CancelThenComplete(B) / StaleInputRace(C)",
+    "docs/web-worker-race.md: Web と Worker のレースコンディション対策"
+  ],
+  "next": [
+    "なし"
+  ]
+}

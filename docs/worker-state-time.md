@@ -108,8 +108,14 @@ CREATE TABLE job (
 - 検証: ①は生存担当を奪う（`stolen_alive > 0` ＝二重実行）／②は奪取 0・`affected_rows` が stale 件ちょうど。
 - あわせて回収候補の抽出を索引 `(tenant,status,heartbeat_at)` あり／なしで比較（**(1) の索引効果**も同実験に同梱）。
 
-> このリポジトリの環境では MySQL に接続できないため**まだ実行して数字は取れていない**（`MYSQL_DSN` 未設定で skip する CI 安全形）。
-> `scripts/mysql-up.sh` で MySQL を立ててから走らせると、上の検証（`t.Errorf`）が実測で確定する。
+**実測（MySQL 8.0.46・生存500/落ち500/completed 10万・lease 30s）**（[結果](results/exp-64/exp-64-reclaim-time-and-cas.md)）:
+
+| | ①時間なし（全 UPDATE） | ②heartbeat+CAS |
+| --- | --- | --- |
+| 回収した件数 | 1000（生存も落ちも全部） | **500**（落ちた担当ぶんちょうど＝affected_rows） |
+| 生存担当から奪った数（二重実行） | **500** | **0** |
+
+回収候補の抽出（②の SELECT）: 索引あり **0.37ms** → 索引なし **41.7ms**（**約113倍**。索引末尾を `heartbeat_at` にする効果）。
 
 **未実施:**
 

@@ -1,0 +1,10 @@
+{
+  "ended_at": "2026-09-10T22:45:38Z",
+  "git_dirty": true,
+  "git_sha": "d89589afc98afb7207897f5b950e0be7d952f03c",
+  "json": "exp-65-ingest-guard.json",
+  "md": "exp-65-ingest-guard.md",
+  "meter_version": "expkit/2",
+  "name": "ingest-guard",
+  "unit": "EXP-65"
+}
