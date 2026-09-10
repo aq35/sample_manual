@@ -23,8 +23,10 @@ go test ./internal/lint/ -v          # 検査そのものの検査（analysistes
 | `nocontext` | `Exec`/`Query`/`QueryRow`/`Begin`/`Prepare`（Context なし） | [shutdown.md](shutdown.md) |
 | `loopquery` | ループの中の1件ずつの問い合わせ（N+1） | [query-plan-skew.md](query-plan-skew.md) 4 |
 | `domaintime` | 業務ロジックでの `time.Now()` | [fencing.md](fencing.md) 2.2 |
+| `exhaustive` | enum 的 named 型の switch の case 取りこぼし（Go に sum type が無い穴） | [exhaustive-and-error-kinds.md](exhaustive-and-error-kinds.md)（EXP-67） |
 
 各検査の Doc に「**何を見ていて、何を見ていないか**」を書いてある。
+（`exhaustive` は EXP-67 で追加。`layerimport` を含め検査は増えている。）
 
 ## 2. 実装しないと決めたもの（理由つき）
 

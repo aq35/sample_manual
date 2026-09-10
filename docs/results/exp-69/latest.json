@@ -1,0 +1,10 @@
+{
+  "ended_at": "2026-09-10T23:29:09Z",
+  "git_dirty": true,
+  "git_sha": "6d32b21568889de62990d1efcdc8a82f0f189ac7",
+  "json": "exp-69-json-parse-cost.json",
+  "md": "exp-69-json-parse-cost.md",
+  "meter_version": "expkit/2",
+  "name": "json-parse-cost",
+  "unit": "EXP-69"
+}

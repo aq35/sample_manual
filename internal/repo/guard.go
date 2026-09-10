@@ -143,6 +143,9 @@ func checkStatement(q string, opt statementOptions) error {
 			!strings.Contains(low, " limit ") && !strings.Contains(low, "count(") {
 			return fmt.Errorf("%w: LIMIT の無い SELECT（一覧は Keyset を使う。全件が要るなら AllowUnbounded）", ErrTooManyRows)
 		}
+	case kindInsert, kindOther:
+		// kind 固有の追加チェックは無い（テナントの目印は switch より前で全 kind に要求済み）。
+		// ★新しい kind を足したらここが exhaustive 検査に引っかかる（EXP-67）。意図的に明示している。
 	}
 	return nil
 }

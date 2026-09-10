@@ -178,6 +178,9 @@ files, _ := r.Save("...")
 | EXP-64 | 回収(in_progress→pending)は時間指定(heartbeat)と CAS で書く（①時間なしは生存担当を奪い二重実行・②は奪取0/affected_rows=stale・回収抽出索引は末尾 heartbeat_at） | 済（[docs/worker-state-time.md](worker-state-time.md)） |
 | EXP-65 | 不正データの入口を DB 制約で塞ぐ（アプリ検証はアプリ経路のみ・直接DB入力は迂回・ENUM/CHECK/FK が全経路の最後の砦・STRICT 前提・すり抜けは防御読取り＋EXP-45） | 済（[docs/data-integrity-ingest.md](data-integrity-ingest.md)） |
 | EXP-66 | Web と Worker のレースを状態 CAS と version で止める（A二重claim・Bcancel消失・Cstale result／id だけの UPDATE を禁止・affected_rows で勝敗確認） | 済（[docs/web-worker-race.md](web-worker-race.md)） |
+| EXP-67 | 状態機械の網羅を静的解析で強制（Go に sum type が無い穴・exhaustive アナライザ・repo で本物1件を明示化） | 済（[docs/exhaustive-and-error-kinds.md](exhaustive-and-error-kinds.md)） |
+| EXP-68 | エラー分類は bool でなく3値の型(Transient/Permanent/Unknown)・Unknown を恒久と偽らない・取りこぼしは EXP-67 が拾う | 済（[docs/exhaustive-and-error-kinds.md](exhaustive-and-error-kinds.md)） |
+| EXP-69 | 受信パースは構造体で受ける（map は約5.6倍 allocs）・encoding/json/v2 は v1 struct と同等（map の代替にならない） | 済（[docs/json-v2.md](json-v2.md)） |
 
 ## 設計の早見表・原則
 

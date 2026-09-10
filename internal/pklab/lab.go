@@ -22,10 +22,10 @@ import (
 type Kind int
 
 const (
-	BigintAuto  Kind = iota // BIGINT AUTO_INCREMENT（単調増加・追記）
-	UUIDCharV4              // CHAR(36) ランダム UUID（散らばる・太い）
-	UUIDBinV4              // BINARY(16) ランダム UUID（散らばる・細い）
-	UUIDBinOrdered         // BINARY(16) 時刻順 UUID（追記に戻す）
+	BigintAuto     Kind = iota // BIGINT AUTO_INCREMENT（単調増加・追記）
+	UUIDCharV4                 // CHAR(36) ランダム UUID（散らばる・太い）
+	UUIDBinV4                  // BINARY(16) ランダム UUID（散らばる・細い）
+	UUIDBinOrdered             // BINARY(16) 時刻順 UUID（追記に戻す）
 )
 
 func (k Kind) Table() string {
@@ -130,6 +130,7 @@ func Insert(ctx context.Context, db *sql.DB, k Kind, tenant string, n, chunk int
 				}
 				b.WriteString("(?,?,?)")
 				var id any
+				//smlint:allow exhaustive 理由: BigintAuto は外側 switch の case で処理済み。ここは default 側で到達しない
 				switch k {
 				case UUIDCharV4:
 					id = hyphenate(randUUIDv4())

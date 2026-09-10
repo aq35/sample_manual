@@ -1,0 +1,84 @@
+{
+  "unit": "EXP-68",
+  "name": "error-classification",
+  "title": "エラー分類を bool でなく3値(Transient/Permanent/Unknown)で持ち、取りこぼしを検出する",
+  "meter_version": "expkit/2",
+  "hypothesis": "bool(retry可否)だと Permanent と Unknown が同じ false に潰れ、『知らない』を『恒久』と偽る （下流の扱い＝DLQ+アラート vs 不明として surface を分けられない）。 3値の型で持てば両者を区別でき、かつ『恒久以外は retry』の素朴設計が Unknown を無限 retry する事故も避けられる。 Kind を足したときの switch 取りこぼしは EXP-67 の exhaustive 検査が拾う。",
+  "started_at": "2026-09-10T23:27:20.310867074Z",
+  "ended_at": "2026-09-10T23:27:20.320570035Z",
+  "env": {
+    "captured_at": "2026-09-10T23:27:20.310913977Z",
+    "go_version": "go1.26.0",
+    "os": "linux",
+    "arch": "amd64",
+    "num_cpu": 4,
+    "gomaxprocs": 4,
+    "hostname": "vm",
+    "git_sha": "6d32b21568889de62990d1efcdc8a82f0f189ac7",
+    "git_dirty": true
+  },
+  "workload": {},
+  "injection": {},
+  "variants": [
+    {
+      "name": "bool 分類（EXP-49）: Permanent と Unknown が潰れる",
+      "metrics": {
+        "false_bucket_size": 2
+      },
+      "accident": true,
+      "notes": [
+        "retry不可バケツ = [permanent, unknown]。恒久と不明が同居し、下流で分けられない"
+      ]
+    },
+    {
+      "name": "3値分類（EXP-68）: 3つに分かれる",
+      "metrics": {
+        "distinct_kinds": 3
+      },
+      "accident": false,
+      "notes": [
+        "transient→transient / permanent→permanent / unknown→unknown（Unknown を恒久と偽らない）"
+      ]
+    },
+    {
+      "name": "Unknown への retry: 素朴『恒久以外 retry』",
+      "metrics": {
+        "attempts": 5,
+        "retries_unknown": 1
+      },
+      "accident": true,
+      "notes": [
+        "Unknown を Transient 扱いして maxAttempts=5 回まで無駄に叩く"
+      ]
+    },
+    {
+      "name": "Unknown への retry: 3値 ShouldRetry（fail-safe）",
+      "metrics": {
+        "attempts": 1,
+        "retries_unknown": 0
+      },
+      "accident": false,
+      "notes": [
+        "Unknown は retry しない（1回で返す）。下流で『不明』として surface する"
+      ]
+    }
+  ],
+  "verdict": "エラー分類は bool でなく3値(Transient/Permanent/Unknown)の型で持つ。bool は恒久と不明を潰し、『知らない』を『恒久』と偽る（下流を分けられない・素朴設計は Unknown を無限 retry）。3値なら retry 判断と下流の扱いを分けられ、Kind の取りこぼしは EXP-67 の exhaustive が拾う。",
+  "scope": [
+    "エラー値を直接構築して分類（MySQL 1213/1062・未知の error）。DB は不要",
+    "3値 = Transient / Permanent / Unknown。retry 判断と下流の扱いを分けるための型",
+    "取りこぼし（Kind を足して switch 未更新）は EXP-67 の exhaustive 検査が担保"
+  ],
+  "uncertainty": [
+    "どの MySQL 番号を Permanent とみなすかは運用依存（ここでは代表的な数種）",
+    "Unknown の下流処理（surface / 限定 retry / DLQ）は業務要件。ここでは『retry しない＋区別できる』までを示す",
+    "実 DB 由来のエラーでの分類網羅は EXP-49（retrylab）側で実測済み"
+  ],
+  "artifacts": [
+    "internal/errclass: Kind(3値)・Classify・ShouldRetry(exhaustive な switch)・Naive(事故側)",
+    "EXP-67 exhaustive: Kind を足すと ShouldRetry の未網羅を検出"
+  ],
+  "next": [
+    "EXP-69 encoding/json/v2 のパースコスト"
+  ]
+}
