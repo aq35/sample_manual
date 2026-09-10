@@ -187,6 +187,7 @@ files, _ := r.Save("...")
 | [docs/frontend-cache.md](frontend-cache.md) | フロントキャッシュは最後の一押し（真実は DB・不変/非鮮度/非認可だけ載せる） |
 | [docs/sqs-eventbridge-limits.md](sqs-eventbridge-limits.md) | EventBridge/SQS の得意・苦手の深掘り（機構分解・10ユースケース・一生終わらない系＝常駐worker） |
 | [docs/query-policy.md](query-policy.md) | クエリ方針（単純+バッチを既定・索引は狙って・巨大SQLはガード付き例外） |
+| [docs/worker-state-time.md](worker-state-time.md) | 欲しい状態は時間指定が要るか要らないか（①状態そのもの/②状態+経過時間・回収を①で書くと二重実行・索引末尾はid/時刻・仮説つき） |
 | [docs/tenant-header-routing-vs-auth.md](tenant-header-routing-vs-auth.md) | テナントヘッダ：ルーティングOK/認可NG（越境防止の信頼境界） |
 | [docs/worker-vs-web.md](worker-vs-web.md) | 関心ごと × Worker/Web 対応表（セキュリティ/lifecycle/性能/マイグレーション） |
 | [docs/responsibilities.md](responsibilities.md) | Web と Worker に求められること（責務の入口・capstone） |
