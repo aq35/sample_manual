@@ -176,6 +176,8 @@ files, _ := r.Save("...")
 | EXP-62 | イベント駆動 worker（doorbell＋floor・完了は DB CAS・crash は reconcile） | 済（[docs/event-driven-worker.md](event-driven-worker.md)） |
 | EXP-63 | テナント割り当てを DB lease で（均等10/10・失敗時 survivor が全20・二重所有0・fence 単調・静的ピンは orphan10） | 済（[docs/tenant-assignment.md](tenant-assignment.md)） |
 | EXP-64 | 回収(in_progress→pending)は時間指定(heartbeat)と CAS で書く（①時間なしは生存担当を奪い二重実行・②は奪取0/affected_rows=stale・回収抽出索引は末尾 heartbeat_at） | コード済・実測待ち（[docs/worker-state-time.md](worker-state-time.md)） |
+| EXP-65 | 不正データの入口を DB 制約で塞ぐ（アプリ検証はアプリ経路のみ・直接DB入力は迂回・ENUM/CHECK/FK が全経路の最後の砦・STRICT 前提・すり抜けは防御読取り＋EXP-45） | コード済・実測待ち（[docs/data-integrity-ingest.md](data-integrity-ingest.md)） |
+| EXP-66 | Web と Worker のレースを状態 CAS と version で止める（A二重claim・Bcancel消失・Cstale result／id だけの UPDATE を禁止・affected_rows で勝敗確認） | コード済・実測待ち（[docs/web-worker-race.md](web-worker-race.md)） |
 
 ## 設計の早見表・原則
 

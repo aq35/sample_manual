@@ -14,6 +14,8 @@
 | 状態同期・冪等・回収 | EXP-49 一時 vs 恒久エラー | 分類してから扱う。恒久は fail-fast、一時だけ backoff で再試行 | [retry](retry.md) |
 | 状態同期・冪等・回収 | EXP-62 イベント駆動 worker | event は floor(poll/reconcile)の**上に載せる遅延最適化**で置換ではない。完了は DB CAS、crash は reconcile | [event-driven-worker](event-driven-worker.md) |
 | 状態同期・冪等・回収 | EXP-64 回収(in_progress→pending) | **時間指定(heartbeat < lease)＋CAS(affected_rows で奪取確認)** で書く。状態だけの回収は生存担当を奪い二重実行 | [worker-state-time](worker-state-time.md) |
+| データ健全性・レース | EXP-65 不正データの入口 | アプリ検証はアプリ経路のみ。直接 DB 入力を止める最後の砦は **DB 制約(ENUM/CHECK/FK・STRICT 前提)**。すり抜けは防御読取り＋EXP-45 隔離 | [data-integrity-ingest](data-integrity-ingest.md) |
+| データ健全性・レース | EXP-66 Web/Worker レース | 「id だけで UPDATE」禁止。状態遷移は**遷移元を WHERE に入れた CAS**、入力の同時編集は **version(楽観ロック)**、`affected_rows` で勝敗確認 | [web-worker-race](web-worker-race.md) |
 | 排他・担当決め | EXP-2 lease / fencing / clock skew | 排他は lease＋**fence 番号**。基準時刻は DB 側。古い担当の遅れた書き込みは fence で弾く | [fencing](fencing.md) |
 | 排他・担当決め | EXP-63 テナント割り当て | DB lease で均等割り。担当が落ちたら survivor が引き継ぎ、二重所有0・fence 単調・静的ピンは orphan を生む | [tenant-assignment](tenant-assignment.md) |
 | 排他・担当決め | EXP-16 担当テナント数(IN サイズ) | IN を無制限に伸ばさない。上限を決めて分割して引く | [owned-tenant-limit](owned-tenant-limit.md) |
@@ -77,6 +79,7 @@
 ## 大分類ごとの「一段上の結論」
 
 - **状態同期・冪等・回収** … イベントは差分、状態は取りに行く。書き込みは版で冪等に。回収は時間＋CAS。
+- **データ健全性・レース** … 不正の最後の砦は DB 制約（アプリ検証は経路しか守らない）。Web/Worker の同時更新は「id だけで UPDATE」禁止・状態 CAS と version で調停。
 - **排他・担当決め** … lease＋fence。基準時刻は必ず DB。二重稼働は「普段は動く」ので仕組みで殺す。
 - **ライフサイクル** … 落ちる/切れる/移行する前提。前進できる形と手順を先に決める。
 - **接続・プール** … `sql.Open` は1つ、プール3設定は必須、予算は掛け算で上限を守る。
