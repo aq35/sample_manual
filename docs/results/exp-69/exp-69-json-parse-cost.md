@@ -3,11 +3,11 @@
 | | |
 | --- | --- |
 | Experiment | EXP-69 / json-parse-cost |
-| Starting SHA | `6d32b2156888` (作業ツリーに未コミットの変更あり) |
+| Starting SHA | `abf645a59574` |
 | Meter version | `expkit/2` |
 | Hypothesis (frozen before result) | map[string]any は構造体展開より重い（§6.1）。encoding/json/v2 は同じ構造体展開で v1 と 同等〜改善のはず（少なくとも桁で悪化しない）。同じ入力で ns/op・B/op・allocs/op を比べる。 v2 は GOEXPERIMENT=jsonv2 のときだけ測る（未有効なら skip し、その事実を記録する）。 |
-| Environment | go1.26.0-X:jsonv2 linux/amd64 cpu=4 gomaxprocs=4 mysql= sha=6d32b2156888+dirty |
-| Started / Ended | 2026-09-10T23:29:05Z / 2026-09-10T23:29:09Z |
+| Environment | go1.26.0-X:jsonv2 linux/amd64 cpu=4 gomaxprocs=4 mysql= sha=abf645a59574 |
+| Started / Ended | 2026-09-10T23:33:07Z / 2026-09-10T23:33:12Z |
 
 ## Workload
 
@@ -25,16 +25,16 @@
 | 測ったもの | 値 |
 | --- | --- |
 | allocs_per_op | 4763.000 |
-| bytes_per_op | 433068.000 |
-| ns_per_op | 1767963.000 |
+| bytes_per_op | 433059.000 |
+| ns_per_op | 1851168.000 |
 
 ### v1 map[string]any（§6.1 の重い受け方） — **事故あり**
 
 | 測ったもの | 値 |
 | --- | --- |
 | allocs_per_op | 26782.000 |
-| bytes_per_op | 791869.000 |
-| ns_per_op | 4577731.000 |
+| bytes_per_op | 791868.000 |
+| ns_per_op | 4622893.000 |
 
 ### v2 構造体展開（encoding/json/v2） — OK
 
@@ -42,7 +42,7 @@
 | --- | --- |
 | allocs_per_op | 4763.000 |
 | bytes_per_op | 433057.000 |
-| ns_per_op | 1482590.000 |
+| ns_per_op | 1555618.000 |
 
 ## Verdict
 

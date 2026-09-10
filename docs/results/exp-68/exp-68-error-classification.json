@@ -4,18 +4,18 @@
   "title": "エラー分類を bool でなく3値(Transient/Permanent/Unknown)で持ち、取りこぼしを検出する",
   "meter_version": "expkit/2",
   "hypothesis": "bool(retry可否)だと Permanent と Unknown が同じ false に潰れ、『知らない』を『恒久』と偽る （下流の扱い＝DLQ+アラート vs 不明として surface を分けられない）。 3値の型で持てば両者を区別でき、かつ『恒久以外は retry』の素朴設計が Unknown を無限 retry する事故も避けられる。 Kind を足したときの switch 取りこぼしは EXP-67 の exhaustive 検査が拾う。",
-  "started_at": "2026-09-10T23:27:20.310867074Z",
-  "ended_at": "2026-09-10T23:27:20.320570035Z",
+  "started_at": "2026-09-10T23:33:07.662596205Z",
+  "ended_at": "2026-09-10T23:33:07.671394431Z",
   "env": {
-    "captured_at": "2026-09-10T23:27:20.310913977Z",
+    "captured_at": "2026-09-10T23:33:07.662615991Z",
     "go_version": "go1.26.0",
     "os": "linux",
     "arch": "amd64",
     "num_cpu": 4,
     "gomaxprocs": 4,
     "hostname": "vm",
-    "git_sha": "6d32b21568889de62990d1efcdc8a82f0f189ac7",
-    "git_dirty": true
+    "git_sha": "abf645a59574975b67c9606e06c05c34fa8915ee",
+    "git_dirty": false
   },
   "workload": {},
   "injection": {},

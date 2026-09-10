@@ -4,18 +4,18 @@
   "title": "受信ペイロードのパースを v1 struct / map[string]any / json/v2 で比べる",
   "meter_version": "expkit/2",
   "hypothesis": "map[string]any は構造体展開より重い（§6.1）。encoding/json/v2 は同じ構造体展開で v1 と 同等〜改善のはず（少なくとも桁で悪化しない）。同じ入力で ns/op・B/op・allocs/op を比べる。 v2 は GOEXPERIMENT=jsonv2 のときだけ測る（未有効なら skip し、その事実を記録する）。",
-  "started_at": "2026-09-10T23:29:05.726465509Z",
-  "ended_at": "2026-09-10T23:29:09.967418958Z",
+  "started_at": "2026-09-10T23:33:07.997500846Z",
+  "ended_at": "2026-09-10T23:33:12.420497635Z",
   "env": {
-    "captured_at": "2026-09-10T23:29:05.726538844Z",
+    "captured_at": "2026-09-10T23:33:07.997556297Z",
     "go_version": "go1.26.0-X:jsonv2",
     "os": "linux",
     "arch": "amd64",
     "num_cpu": 4,
     "gomaxprocs": 4,
     "hostname": "vm",
-    "git_sha": "6d32b21568889de62990d1efcdc8a82f0f189ac7",
-    "git_dirty": true
+    "git_sha": "abf645a59574975b67c9606e06c05c34fa8915ee",
+    "git_dirty": false
   },
   "workload": {
     "items": 1000,
@@ -29,8 +29,8 @@
       "name": "v1 構造体展開（[]Item）",
       "metrics": {
         "allocs_per_op": 4763,
-        "bytes_per_op": 433068,
-        "ns_per_op": 1767963
+        "bytes_per_op": 433059,
+        "ns_per_op": 1851168
       },
       "accident": false
     },
@@ -38,8 +38,8 @@
       "name": "v1 map[string]any（§6.1 の重い受け方）",
       "metrics": {
         "allocs_per_op": 26782,
-        "bytes_per_op": 791869,
-        "ns_per_op": 4577731
+        "bytes_per_op": 791868,
+        "ns_per_op": 4622893
       },
       "accident": true
     },
@@ -48,7 +48,7 @@
       "metrics": {
         "allocs_per_op": 4763,
         "bytes_per_op": 433057,
-        "ns_per_op": 1482590
+        "ns_per_op": 1555618
       },
       "accident": false
     }

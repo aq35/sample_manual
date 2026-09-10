@@ -3,11 +3,11 @@
 | | |
 | --- | --- |
 | Experiment | EXP-68 / error-classification |
-| Starting SHA | `6d32b2156888` (作業ツリーに未コミットの変更あり) |
+| Starting SHA | `abf645a59574` |
 | Meter version | `expkit/2` |
 | Hypothesis (frozen before result) | bool(retry可否)だと Permanent と Unknown が同じ false に潰れ、『知らない』を『恒久』と偽る （下流の扱い＝DLQ+アラート vs 不明として surface を分けられない）。 3値の型で持てば両者を区別でき、かつ『恒久以外は retry』の素朴設計が Unknown を無限 retry する事故も避けられる。 Kind を足したときの switch 取りこぼしは EXP-67 の exhaustive 検査が拾う。 |
-| Environment | go1.26.0 linux/amd64 cpu=4 gomaxprocs=4 mysql= sha=6d32b2156888+dirty |
-| Started / Ended | 2026-09-10T23:27:20Z / 2026-09-10T23:27:20Z |
+| Environment | go1.26.0 linux/amd64 cpu=4 gomaxprocs=4 mysql= sha=abf645a59574 |
+| Started / Ended | 2026-09-10T23:33:07Z / 2026-09-10T23:33:07Z |
 
 ## Results
 

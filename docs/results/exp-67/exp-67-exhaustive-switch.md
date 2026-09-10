@@ -3,11 +3,11 @@
 | | |
 | --- | --- |
 | Experiment | EXP-67 / exhaustive-switch |
-| Starting SHA | `6d32b2156888` (作業ツリーに未コミットの変更あり) |
+| Starting SHA | `abf645a59574` |
 | Meter version | `expkit/2` |
 | Hypothesis (frozen before result) | Go は case の書き忘れをコンパイルで防げない（sum type / enum が無い）。 『同じ named 型の定数が2つ以上』を enum とみなし、その型を tag に持つ switch が全メンバを 網羅しているか（default 無しで）を型情報つきで検出できる。default のある switch は対象外。 ネストした switch の絞り込み（外側 case で除外済み）は追えないので、そこは理由つき逃げ道で通す。 |
-| Environment | go1.26.0 linux/amd64 cpu=4 gomaxprocs=4 mysql= sha=6d32b2156888+dirty |
-| Started / Ended | 2026-09-10T23:25:22Z / 2026-09-10T23:25:23Z |
+| Environment | go1.26.0 linux/amd64 cpu=4 gomaxprocs=4 mysql= sha=abf645a59574 |
+| Started / Ended | 2026-09-10T23:33:05Z / 2026-09-10T23:33:07Z |
 
 ## Results
 

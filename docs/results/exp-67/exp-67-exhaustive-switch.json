@@ -4,18 +4,18 @@
   "title": "enum 的 named 型の switch 網羅を go/analysis で強制する（Go に sum type が無い弱点を補う）",
   "meter_version": "expkit/2",
   "hypothesis": "Go は case の書き忘れをコンパイルで防げない（sum type / enum が無い）。 『同じ named 型の定数が2つ以上』を enum とみなし、その型を tag に持つ switch が全メンバを 網羅しているか（default 無しで）を型情報つきで検出できる。default のある switch は対象外。 ネストした switch の絞り込み（外側 case で除外済み）は追えないので、そこは理由つき逃げ道で通す。",
-  "started_at": "2026-09-10T23:25:22.787290396Z",
-  "ended_at": "2026-09-10T23:25:23.955007553Z",
+  "started_at": "2026-09-10T23:33:05.99949844Z",
+  "ended_at": "2026-09-10T23:33:07.226916469Z",
   "env": {
-    "captured_at": "2026-09-10T23:25:22.787311121Z",
+    "captured_at": "2026-09-10T23:33:05.999505484Z",
     "go_version": "go1.26.0",
     "os": "linux",
     "arch": "amd64",
     "num_cpu": 4,
     "gomaxprocs": 4,
     "hostname": "vm",
-    "git_sha": "6d32b21568889de62990d1efcdc8a82f0f189ac7",
-    "git_dirty": true
+    "git_sha": "abf645a59574975b67c9606e06c05c34fa8915ee",
+    "git_dirty": false
   },
   "workload": {},
   "injection": {},
